@@ -1,6 +1,5 @@
 import React from 'react';
 import {Form, Button} from "react-bootstrap";
-import HelloTriangle from '../main';
 
 type SidebarProps = {
   setNodeData: (nodeData : Array<number>) => void
