@@ -2,6 +2,8 @@
 shaders = [
     "triangle_vert.wgsl",
     "triangle_frag.wgsl",
+    "compute_terrain.wgsl",
+    "normalize_terrain.wgsl",
 ]
 compiled_shaders = ""
 

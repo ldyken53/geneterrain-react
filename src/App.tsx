@@ -1,10 +1,10 @@
 import './App.css';
-import HelloTriangle from './main';
+import Page from './components/Page';
 
 function App() {
   return (
     <div className="App">
-      <HelloTriangle />
+      <Page />
     </div>
   );
 }

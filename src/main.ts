@@ -1,10 +1,11 @@
-import { makeSample, SampleInit } from './SampleLayout';
-
+import { makeSample, SampleInit } from './components/SampleLayout';
+import TerrainGenerator from './terrain_generator';
 import { triangle_vert, triangle_frag } from './wgsl';
 
-const init: SampleInit = async ({ canvasRef }) => {
+const init: SampleInit = async ({ canvasRef, nodeData }) => {
   const adapter = (await navigator.gpu.requestAdapter())!;
   const device = await adapter.requestDevice();
+
 
   if (canvasRef.current === null) return;
   const context = canvasRef.current.getContext('webgpu')!;
@@ -15,6 +16,11 @@ const init: SampleInit = async ({ canvasRef }) => {
     canvasRef.current.clientHeight * devicePixelRatio,
   ];
   const presentationFormat = context.getPreferredFormat(adapter);
+
+  var terrainGenerator : TerrainGenerator = new TerrainGenerator(device, canvasRef.current.clientWidth, canvasRef.current.clientHeight);
+  if (nodeData.length > 0) {
+    terrainGenerator.computeTerrain(nodeData, 1000, [0, 0, 1, 1], null);
+  }
 
   context.configure({
     device,
@@ -74,9 +80,10 @@ const init: SampleInit = async ({ canvasRef }) => {
   requestAnimationFrame(frame);
 };
 
-const HelloTriangle: () => JSX.Element = () =>
-  makeSample({
+const WebGPU: (nodeData) => JSX.Element = (nodeData) => {
+  return makeSample({
     init,
+    nodeData
   });
-
-export default HelloTriangle;
+}
+export default WebGPU;

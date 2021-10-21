@@ -4,21 +4,25 @@ import styles from './SampleLayout.module.css';
 
 export type SampleInit = (params: {
   canvasRef: React.RefObject<HTMLCanvasElement>;
+  nodeData: Array<number>;
 }) => void | Promise<void>;
 
 const SampleLayout: React.FunctionComponent<
   React.PropsWithChildren<{
     init: SampleInit;
+    nodeData: Array<number>;
   }>
 > = (props) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const guiParentRef = useRef<HTMLDivElement | null>(null);
   const init = props.init;
+  const nodeData = props.nodeData;
 
   useEffect(() => {
     try {
       const p = init({
         canvasRef,
+        nodeData
       });
 
       if (p instanceof Promise) {
@@ -52,5 +56,6 @@ export default SampleLayout;
 export const makeSample: (
   ...props: Parameters<typeof SampleLayout>
 ) => JSX.Element = (props) => {
+  console.log(props.nodeData);
   return <SampleLayout {...props} />;
 };

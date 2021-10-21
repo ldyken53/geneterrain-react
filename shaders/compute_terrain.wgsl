@@ -1,18 +1,4 @@
-export const  triangle_vert = `[[stage(vertex)]]
-fn main([[builtin(vertex_index)]] VertexIndex : u32)
-     -> [[builtin(position)]] vec4<f32> {
-  var pos = array<vec2<f32>, 3>(
-      vec2<f32>(0.0, 0.5),
-      vec2<f32>(-0.5, -0.5),
-      vec2<f32>(0.5, -0.5));
-
-  return vec4<f32>(pos[VertexIndex], 0.0, 1.0);
-}`;
-export const  triangle_frag = `[[stage(fragment)]]
-fn main() -> [[location(0)]] vec4<f32> {
-  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
-}`;
-export const  compute_terrain = `// compute terrain wgsl
+// compute terrain wgsl
 struct Node {
     value : f32;
     x : f32;
@@ -59,28 +45,4 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
     ignore(atomicMin(&range.x, i32(floor(value))));
     ignore(atomicMax(&range.y, i32(ceil(value))));
     pixels.pixels[pixel_index] = value;
-}`;
-export const  normalize_terrain = `// normalize terrain wgsl
-[[block]] struct Uniforms {
-  image_width : u32;
-  image_height : u32;
-  nodes_length : u32;
-  width_factor : f32;
-};
-[[block]] struct Pixels {
-    pixels : array<f32>;
-};
-[[block]] struct Range {
-    x : i32;
-    y : i32;
-};
-
-[[group(0), binding(0)]] var<storage, write> pixels : Pixels;
-[[group(0), binding(1)]] var<uniform> uniforms : Uniforms;
-[[group(0), binding(2)]] var<storage, read_write> range : Range;
-
-[[stage(compute), workgroup_size(1, 1, 1)]]
-fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
-    var pixel_index : u32 = global_id.x + global_id.y * uniforms.image_width;
-    pixels.pixels[pixel_index] = (pixels.pixels[pixel_index] - f32(range.x)) / f32(range.y - range.x);
-}`;
+}
