@@ -2,7 +2,10 @@ import React from 'react';
 import {Form, Button} from "react-bootstrap";
 
 type SidebarProps = {
-  setNodeData: (nodeData : Array<number>) => void
+  setNodeData: (nodeData : Array<number>) => void,
+  setWidthFactor: (widthFactor : number) => void,
+  setPeakValue: (value : number) => void,
+  setValleyValue: (value : number) => void
 }
 type SidebarState = {
   nodeData: Array<number>
@@ -66,12 +69,23 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     render() {
       return (
         <div className="sidebar"> 
-        <Form onSubmit={this.handleSubmit}>
+        <Form style={{color: 'white'}} onSubmit={this.handleSubmit}>
           <Form.Group controlId="formFile" className="mt-3 mb-3">
-            <Form.Label style={{fontWeight: "bold"}}>Select Example Files</Form.Label>
+            <Form.Label>Select Example Files</Form.Label>
             <Form.Control className="form-control" type="file" multiple onChange={this.readFiles}/>
+            <Button className="mt-2" type="submit" variant="secondary" value="Submit">Submit</ Button>
           </Form.Group>
-          <Button type="submit" variant="secondary" value="Submit">Submit</ Button>
+          <Form.Group> 
+            <Form.Label> Width Factor </ Form.Label>
+            <br/>
+            <input type="range" defaultValue={1000} min={0} max={2000} onChange={(e) => this.props.setWidthFactor(parseFloat(e.target.value))} />
+          </Form.Group>
+          <Form.Group> 
+            <Form.Label> Peak and Valley Values </ Form.Label>
+            <br/>
+            <input type="range" defaultValue={0.8} min={0.5} max={1} step={0.01} onChange={(e) => this.props.setPeakValue(parseFloat(e.target.value))} />
+            <input type="range" defaultValue={0.2} min={0} max={0.5} step={0.01} onChange={(e) => this.props.setValleyValue(parseFloat(e.target.value))} />
+          </Form.Group>
         </Form>
         </ div>
       );

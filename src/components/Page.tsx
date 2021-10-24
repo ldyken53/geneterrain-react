@@ -1,44 +1,50 @@
 import React from 'react';
-import { initWebGPU } from '../webgpu/init';
 import Sidebar from './Sidebar';
 import { createRef, MutableRefObject } from 'react';
-
+import Renderer from "../webgpu/render";
+import colormap from './rainbow.png';
 
 type PageState = {
-    nodeData: Array<number>,
     widthFactor: number,
-    canvasRef: MutableRefObject<HTMLCanvasElement | null>
+    canvasRef: MutableRefObject<HTMLCanvasElement | null>,
+    renderer: Renderer | null,
 }
 class Page extends React.Component<{}, PageState> {
     constructor(props) {
         super(props);
-        this.state = {nodeData: [], widthFactor: 1000, canvasRef: createRef<HTMLCanvasElement | null>()};
+        this.state = {widthFactor: 1000, canvasRef: createRef<HTMLCanvasElement | null>(), renderer: null};
     }
 
-    componentDidMount() {
-        console.log("mount");
-        try {
-            const p = initWebGPU(this.state.canvasRef);
-    
-            if (p instanceof Promise) {
-                p.catch((err: Error) => {
-                console.error(err);
-                });
-            }
-        } catch (err) {
-        console.error(err);
-        }
+    async componentDidMount() {
+        const adapter = (await navigator.gpu.requestAdapter())!;
+        const device = await adapter.requestDevice(); 
+        var colormapImage = new Image();
+        colormapImage.src = colormap;
+        await colormapImage.decode();
+        const imageBitmap = await createImageBitmap(colormapImage);
+        this.setState({renderer: new Renderer(adapter, device, this.state.canvasRef, imageBitmap)});
     }
 
-    setNodeData(data : Array<number>) {
-        this.setState({nodeData: data});
+    setNodeData(nodeData : Array<number>) {
+        this.state.renderer!.setNodeData(nodeData);
     }
 
+    setWidthFactor(widthFactor : number) {
+        this.state.renderer!.setWidthFactor(widthFactor);
+    }
+
+    setPeakValue(value : number) {
+        this.state.renderer!.setPeakValue(value);
+    }
+
+    setValleyValue(value : number) {
+        this.state.renderer!.setValleyValue(value);
+    }
   
     render() {
       return (
         <div>
-            <Sidebar setNodeData={this.setNodeData.bind(this)} />
+            <Sidebar setValleyValue={this.setValleyValue.bind(this)} setPeakValue={this.setPeakValue.bind(this)} setWidthFactor={this.setWidthFactor.bind(this)} setNodeData={this.setNodeData.bind(this)} />
             <div className="canvasContainer">
                 <canvas ref={this.state.canvasRef} width={600} height={600}></canvas>
             </div>

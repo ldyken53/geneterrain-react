@@ -12,9 +12,9 @@ class TerrainGenerator {
     public normalizeTerrainPipeline : GPUComputePipeline;
     public computeTerrainBGLayout : GPUBindGroupLayout;
     public normalizeTerrainBGLayout : GPUBindGroupLayout;
+    public nodeData : Array<number> = [];
     
     constructor(device : GPUDevice, width, height) {
-        console.log(width, height);
         this.device = device;
         this.width = width;
         this.height = height;
@@ -126,8 +126,11 @@ class TerrainGenerator {
         });
     }
 
-    async computeTerrain(nodeData, widthFactor, translation, globalRange) {
-        console.log(nodeData);
+    computeTerrain(nodeData = this.nodeData, widthFactor = 1000, translation = [0, 0, 1, 1], globalRange = null) {
+        if (nodeData.length == 0) {
+            return;
+        }
+        this.nodeData = nodeData;
         // Set up node data buffer
         this.nodeDataBuffer = this.device.createBuffer({
             size: nodeData.length * 4,
@@ -200,7 +203,7 @@ class TerrainGenerator {
         pass.endPass();
         //commandEncoder.writeTimestamp();
         this.device.queue.submit([commandEncoder.finish()]);
-        await this.device.queue.onSubmittedWorkDone();
+        // await this.device.queue.onSubmittedWorkDone();
 
         // Look into submitting normalization and compute in one pass to improve speed, remove synchronizations
         // Use writetimestamp for more accurate kernel timing
@@ -236,7 +239,7 @@ class TerrainGenerator {
         pass.dispatch(this.width, this.height, 1);
         pass.endPass();
         this.device.queue.submit([commandEncoder.finish()]);
-        await this.device.queue.onSubmittedWorkDone();
+        // await this.device.queue.onSubmittedWorkDone();
     }
 }
 
