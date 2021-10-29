@@ -269,7 +269,7 @@ class Renderer {
     // TODO: Implement the translation and global range options
     this.terrainGenerator!.computeTerrain(nodeData);
     var nodePositions : Array<number> = [];
-    var radius : number = 0.005;
+    var radius : number = 0.01;
     for (var i = 0; i < nodeData.length; i+=4) {
       var x = nodeData[i+1] * 2 - 1;
       var y = nodeData[i+2] * 2 - 1;

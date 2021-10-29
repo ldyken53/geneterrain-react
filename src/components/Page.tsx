@@ -46,7 +46,7 @@ class Page extends React.Component<{}, PageState> {
         <div>
             <Sidebar setValleyValue={this.setValleyValue.bind(this)} setPeakValue={this.setPeakValue.bind(this)} setWidthFactor={this.setWidthFactor.bind(this)} setNodeData={this.setNodeData.bind(this)} />
             <div className="canvasContainer">
-                <canvas ref={this.state.canvasRef} width={600} height={600}></canvas>
+                <canvas ref={this.state.canvasRef} width={800} height={800}></canvas>
             </div>
         </div>
       );
