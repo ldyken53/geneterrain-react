@@ -5,7 +5,6 @@ class Renderer {
   public uniform2DBuffer : GPUBuffer | null = null;
   public terrainGenerator : TerrainGenerator | null = null;
   public device : GPUDevice;
-  public nodeDataBuffer : GPUBuffer | null = null;
   public bindGroup2D : GPUBindGroup | null = null;
   public nodeBindGroup : GPUBindGroup | null = null;
   public pipeline : GPURenderPipeline | null = null;
@@ -199,7 +198,7 @@ class Renderer {
     });
     new Uint32Array(imageSizeBuffer.getMappedRange()).set(presentationSize);
     imageSizeBuffer.unmap();
-    this.nodeDataBuffer = device.createBuffer({
+    const nodeDataBuffer = device.createBuffer({
       size: 16,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
@@ -262,7 +261,7 @@ class Renderer {
         {
           binding: 0,
           resource: {
-            buffer: this.nodeDataBuffer,
+            buffer: nodeDataBuffer,
           }
         }
       ]
@@ -311,21 +310,13 @@ class Renderer {
   setNodeData(nodeData : Array<number>) {
     // TODO: Implement the translation and global range options
     this.terrainGenerator!.computeTerrain(nodeData);
-    // Set up node data buffer
-    this.nodeDataBuffer = this.device.createBuffer({
-        size: nodeData.length * 4,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-        mappedAtCreation: true,
-    });
-    new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
-    this.nodeDataBuffer.unmap();
     this.nodeBindGroup = this.device.createBindGroup({
       layout: this.pipeline!.getBindGroupLayout(1),
       entries: [
         {
           binding: 0,
           resource: {
-            buffer: this.nodeDataBuffer,
+            buffer: this.terrainGenerator!.nodeDataBuffer,
           }
         }
       ]
