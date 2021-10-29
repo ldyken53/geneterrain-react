@@ -20,9 +20,8 @@ class TerrainGenerator {
         this.height = height;
 
         this.nodeDataBuffer = this.device.createBuffer({
-            size: 4,
+            size: 16,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-            mappedAtCreation: true,
         });
         this.rangeBuffer = this.device.createBuffer({
             size: 2 * 4,

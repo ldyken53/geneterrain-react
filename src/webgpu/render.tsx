@@ -1,10 +1,14 @@
 import TerrainGenerator from './terrain_generator';
-import { display_2d_vert, display_2d_frag } from './wgsl';
+import { display_2d_vert, display_2d_frag, node_vert, node_frag } from './wgsl';
 
 class Renderer {
   public uniform2DBuffer : GPUBuffer | null = null;
   public terrainGenerator : TerrainGenerator | null = null;
   public device : GPUDevice;
+  public nodeDataBuffer : GPUBuffer | null = null;
+  public bindGroup2D : GPUBindGroup | null = null;
+  public nodeBindGroup : GPUBindGroup | null = null;
+  public pipeline : GPURenderPipeline | null = null;
 
   constructor(adapter : GPUAdapter, device : GPUDevice, canvasRef : React.RefObject<HTMLCanvasElement>, colormap : ImageBitmap) {
     this.device = device;
@@ -24,8 +28,109 @@ class Renderer {
       format: presentationFormat,
       size: presentationSize,
     });
+
+//     this.nodePositionBuffer = device.createBuffer({
+//       size: 4 * 2 * 4,
+//       usage: GPUBufferUsage.VERTEX,
+//       mappedAtCreation: true
+//     });
+//     new Float32Array(this.nodePositionBuffer.getMappedRange()).set([
+//       0.5, 0.5, 
+//       0, 0.5, 
+//       0.75, -0.5,
+//       -0.8, 0.6,
+//     ]);
+//     this.nodePositionBuffer.unmap();
+
+//     const nodePipeline = device.createRenderPipeline({
+//       vertex: {
+//         module: device.createShaderModule({
+//           code: node_vert,
+//         }),
+//         entryPoint: 'main',
+//         buffers: [
+//           {
+//               arrayStride: 2 * 4,
+//               stepMode: "instance" as GPUVertexStepMode,
+//               attributes: [
+//                   {
+//                       format: "float32x2" as GPUVertexFormat,
+//                       offset: 0,
+//                       shaderLocation: 0
+//                   }
+//               ]
+//           }
+//         ],
+//       },
+//       fragment: {
+//         module: device.createShaderModule({
+//           code: node_frag,
+//         }),
+//         entryPoint: 'main',
+//         targets: [
+//           {
+//             format: presentationFormat,
+//           },
+//         ],
+//       },
+//       primitive: {
+//         topology: 'triangle-strip',
+//       },
+//       depthStencil: {
+//         format: "depth24plus-stencil8",
+//         depthWriteEnabled: true,
+//         depthCompare: "less",
+//       },
+//     });
+
+//     // Create depth texture
+//     var depthTexture = device.createTexture({
+//       size: {
+//         width: presentationSize[0],
+//         height: presentationSize[1],
+//         depthOrArrayLayers: 1,
+//       },
+//       format: "depth24plus-stencil8",
+//       usage: GPUTextureUsage.RENDER_ATTACHMENT,
+//     });
+//     var render = this;
+//     function frame() {
+//       // Sample is no longer the active page.
+//       if (!canvasRef.current) return;
+
+//       const commandEncoder = device.createCommandEncoder();
+//       const textureView = context.getCurrentTexture().createView();
+
+//       const renderPassDescriptor: GPURenderPassDescriptor = {
+//       colorAttachments: [
+//         {
+//           view: textureView,
+//           loadValue: { r: 0.157, g: 0.173, b: 0.204, a: 1.0 },
+//           storeOp: "store" as GPUStoreOp,
+//         },
+//       ],
+//       depthStencilAttachment: {
+//         view: depthTexture.createView(),
+//         depthLoadValue: 1.0,
+//         depthStoreOp: "store",
+//         stencilLoadValue: 0,
+//         stencilStoreOp: "store",
+//       },
+//       };
+
+//       const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+//       passEncoder.setPipeline(nodePipeline);
+//       passEncoder.setVertexBuffer(0, render.nodePositionBuffer!);
+//       passEncoder.draw(4, 4, 0, 0);
+//       passEncoder.endPass();
+
+//       device.queue.submit([commandEncoder.finish()]);
+//       requestAnimationFrame(frame);
+//     }
+
+// requestAnimationFrame(frame);
   
-    const pipeline = device.createRenderPipeline({
+    this.pipeline = device.createRenderPipeline({
       vertex: {
         module: device.createShaderModule({
           code: display_2d_vert,
@@ -94,6 +199,10 @@ class Renderer {
     });
     new Uint32Array(imageSizeBuffer.getMappedRange()).set(presentationSize);
     imageSizeBuffer.unmap();
+    this.nodeDataBuffer = device.createBuffer({
+      size: 16,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
 
     // Load colormap texture
     const colorTexture = device.createTexture({
@@ -120,8 +229,8 @@ class Renderer {
 
     this.terrainGenerator = new TerrainGenerator(device, presentationSize[0], presentationSize[1]);
 
-    const bindGroup2D = device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(0),
+    this.bindGroup2D = device.createBindGroup({
+      layout: this.pipeline.getBindGroupLayout(0),
       entries: [
         {
           binding: 0,
@@ -147,7 +256,18 @@ class Renderer {
         }
       ],
     });
-    
+    this.nodeBindGroup = device.createBindGroup({
+      layout: this.pipeline.getBindGroupLayout(1),
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: this.nodeDataBuffer,
+          }
+        }
+      ]
+    });
+    var render = this;
     function frame() {
         // Sample is no longer the active page.
         if (!canvasRef.current) return;
@@ -173,9 +293,10 @@ class Renderer {
         };
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-        passEncoder.setPipeline(pipeline);
+        passEncoder.setPipeline(render.pipeline!);
         passEncoder.setVertexBuffer(0, dataBuf2D);
-        passEncoder.setBindGroup(0, bindGroup2D);
+        passEncoder.setBindGroup(0, render.bindGroup2D!);
+        passEncoder.setBindGroup(1, render.nodeBindGroup!);
         passEncoder.draw(6, 1, 0, 0);
         passEncoder.endPass();
 
@@ -188,8 +309,27 @@ class Renderer {
   }
 
   setNodeData(nodeData : Array<number>) {
-    // TODO: Implement the translation, and global range options
+    // TODO: Implement the translation and global range options
     this.terrainGenerator!.computeTerrain(nodeData);
+    // Set up node data buffer
+    this.nodeDataBuffer = this.device.createBuffer({
+        size: nodeData.length * 4,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        mappedAtCreation: true,
+    });
+    new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
+    this.nodeDataBuffer.unmap();
+    this.nodeBindGroup = this.device.createBindGroup({
+      layout: this.pipeline!.getBindGroupLayout(1),
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: this.nodeDataBuffer,
+          }
+        }
+      ]
+    });
   }
 
   setWidthFactor(widthFactor : number) {
