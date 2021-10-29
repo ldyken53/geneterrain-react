@@ -99,21 +99,11 @@ export const  display_2d_frag = `// Fragment shader
     width : u32;
     height : u32;
 };
-struct Node {
-    value : f32;
-    x : f32;
-    y : f32;
-    size : f32;
-};
-[[block]] struct Nodes {
-    nodes : array<Node>;
-};
 
 [[group(0), binding(0)]] var myTexture: texture_2d<f32>;
 [[group(0), binding(1)]] var<storage, read> pixels : Pixels;
 [[group(0), binding(2)]] var<uniform> uniforms : Uniforms;
 [[group(0), binding(3)]] var<uniform> image_size : Image;
-[[group(1), binding(0)]] var<storage, read> nodes : Nodes;
 
 fn outside_grid(p : vec2<u32>) -> bool {
     return any(p == vec2<u32>(u32(0))) || p.x == image_size.width || p.y == image_size.height;
@@ -121,11 +111,6 @@ fn outside_grid(p : vec2<u32>) -> bool {
 
 [[stage(fragment)]]
 fn main([[location(0)]] fragPosition: vec4<f32>) -> [[location(0)]] vec4<f32> {
-    for (var i = 0; i < 455; i=i+1) {
-        if (distance(vec2<f32>(nodes.nodes[i].x, nodes.nodes[i].y), vec2<f32>(fragPosition.x, fragPosition.y)) < 0.002) {
-            return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-        }
-    }
     var ufragPos : vec4<u32> = vec4<u32>(fragPosition * f32(image_size.width));
     var pixelIndex : u32 = ufragPos.x + ufragPos.y * image_size.width;
     var value : f32 = pixels.pixels[pixelIndex];
@@ -272,7 +257,7 @@ fn main(
 export const  node_vert = `// Vertex shader
 struct VertexOutput {
     [[builtin(position)]] Position : vec4<f32>;
-    [[location(0), interpolate(flat)]] position: vec2<f32>;
+    [[location(0)]] position: vec2<f32>;
 };
 
 [[stage(vertex)]]
@@ -285,6 +270,6 @@ fn main([[location(0)]] position : vec2<f32>)
 }`;
 export const  node_frag = `[[stage(fragment)]]
 fn main([[location(0)]] position: vec2<f32>) -> [[location(0)]] vec4<f32> {
-    return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+    return vec4<f32>(0.0, 0.0, 0.0, 1.0);
 }
 `;
