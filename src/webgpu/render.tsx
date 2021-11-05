@@ -1,3 +1,4 @@
+import { Controller } from './ez_canvas_controller';
 import TerrainGenerator from './terrain_generator';
 import { display_2d_vert, display_2d_frag, node_vert, node_frag } from './wgsl';
 
@@ -222,6 +223,40 @@ class Renderer {
     //     }
     //   ]
     // });
+    var viewBoxBuffer = device.createBuffer({
+      size: 4 * 4,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array([0, 0, 1, 1]), 0, 4);
+    var translation = [0, 0, 1, 1];
+    var newTranslation = [0, 0, 1, 1];
+    var controller = new Controller();
+    var terrainGenerator = this.terrainGenerator;
+    controller.mousemove = function (prev, cur, evt) {
+      if (evt.buttons == 1) {
+        var change = [(cur[0] - prev[0]) / presentationSize[0], (prev[1] - cur[1]) / presentationSize[1]];
+        newTranslation = [newTranslation[0] - change[0], newTranslation[1] - change[1], newTranslation[2] - change[0], newTranslation[3] - change[1]]
+        if (Math.abs(newTranslation[0] - translation[0]) > 0.03 || Math.abs(newTranslation[1] - translation[1]) > 0.03) {
+          translation = newTranslation;
+          terrainGenerator!.computeTerrain(undefined, undefined, translation);
+          console.log(translation);
+          device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
+        }
+      }
+    };
+    controller.registerForCanvas(canvasRef.current);
+    var viewBoxBindGroup = device.createBindGroup({
+      layout: this.nodePipeline.getBindGroupLayout(0),
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: viewBoxBuffer,
+          },
+        },
+      ],
+    });
+
     var render = this;
     function frame() {
         // Sample is no longer the active page.
@@ -250,6 +285,7 @@ class Renderer {
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(render.nodePipeline!);
         passEncoder.setVertexBuffer(0, render.nodePositionBuffer!);
+        passEncoder.setBindGroup(0, viewBoxBindGroup);
         passEncoder.draw(render.nodeLength * 6, 1, 0, 0);
         passEncoder.setPipeline(pipeline);
         passEncoder.setVertexBuffer(0, dataBuf2D);
