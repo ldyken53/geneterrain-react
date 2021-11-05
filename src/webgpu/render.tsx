@@ -244,6 +244,20 @@ class Renderer {
         }
       }
     };
+    var zoom = 1;
+    controller.wheel = function (amt) {
+      var change = [amt / 1000, amt / 1000];
+      newTranslation = [newTranslation[0] + change[0], newTranslation[1] + change[1], newTranslation[2] - change[0], newTranslation[3] - change[1]];
+      console.log(newTranslation);
+      if (newTranslation[2] - newTranslation[0] > 0.1 && newTranslation[3] - newTranslation[1] > 0.1) {
+        translation = newTranslation;
+        terrainGenerator!.computeTerrain(undefined, undefined, translation);
+        console.log(translation);
+        device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
+      } else {
+        newTranslation = translation;
+      }
+    };
     controller.registerForCanvas(canvasRef.current);
     var viewBoxBindGroup = device.createBindGroup({
       layout: this.nodePipeline.getBindGroupLayout(0),
