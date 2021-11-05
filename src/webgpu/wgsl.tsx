@@ -269,12 +269,13 @@ struct VertexOutput {
 fn main([[location(0)]] position : vec2<f32>)
      -> VertexOutput {
     var output : VertexOutput;
-    var x : f32 = position.x * (uniforms.view_box.z - uniforms.view_box.x) + uniforms.view_box.x;
-    var y : f32 = position.y * (uniforms.view_box.w - uniforms.view_box.y) + uniforms.view_box.y;
+    // view_box expected to be between 0 and 1, increases to x and y need to be doubled as clip space is (-1, 1)
+    var x : f32 = position.x - 2.0 * uniforms.view_box.x;
+    var y : f32 = position.y - 2.0 * uniforms.view_box.y;
     output.Position = vec4<f32>(x, y, 0.0, 1.0);
-    output.position = vec2<f32>(x, y);
+    output.position = position;
     // flat interpolated position will give bottom right corner, so translate to center
-    output.center = position + vec2<f32>(-0.01, 0.01);
+    output.center = output.position + vec2<f32>(-0.01, 0.01);
     return output;
 }`;
 export const  node_frag = `[[stage(fragment)]]
