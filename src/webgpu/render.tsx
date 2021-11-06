@@ -83,7 +83,7 @@ class Renderer {
         format: "depth24plus-stencil8",
         depthWriteEnabled: true,
         depthCompare: "less",
-      },
+      }
     });
   
     const pipeline = device.createRenderPipeline({
