@@ -246,7 +246,6 @@ class Renderer {
         if (Math.abs(newTranslation[0] - translation[0]) > 0.03 || Math.abs(newTranslation[1] - translation[1]) > 0.03) {
           translation = newTranslation;
           terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);
-          console.log(translation);
           device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
         }
       }

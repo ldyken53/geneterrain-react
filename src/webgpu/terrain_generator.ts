@@ -146,7 +146,6 @@ class TerrainGenerator {
                 usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
             });
         } else {
-            console.log(globalRange);
             this.rangeBuffer = globalRange;
         }
 
@@ -200,9 +199,7 @@ class TerrainGenerator {
         pass.setBindGroup(0, bindGroup);
         pass.setPipeline(this.computeTerrainPipeline);
         pass.dispatch(this.width, this.height, 1);
-        pass.endPass();
         //commandEncoder.writeTimestamp();
-        this.device.queue.submit([commandEncoder.finish()]);
         // await this.device.queue.onSubmittedWorkDone();
 
         // Look into submitting normalization and compute in one pass to improve speed, remove synchronizations
@@ -232,8 +229,6 @@ class TerrainGenerator {
                 },
             ],
         });
-        var commandEncoder = this.device.createCommandEncoder();
-        var pass = commandEncoder.beginComputePass();
         pass.setBindGroup(0, bindGroup);
         pass.setPipeline(this.normalizeTerrainPipeline);
         pass.dispatch(this.width, this.height, 1);
