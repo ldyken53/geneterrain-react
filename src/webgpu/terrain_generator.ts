@@ -125,7 +125,7 @@ class TerrainGenerator {
         });
     }
 
-    computeTerrain(nodeData = this.nodeData, widthFactor = 1000, translation = [0, 0, 1, 1], globalRange = null) {
+    computeTerrain(nodeData = this.nodeData, widthFactor = 1000, translation = [0, 0, 1, 1], globalRange : null | GPUBuffer = null) {
         if (nodeData.length == 0) {
             return;
         }
@@ -146,6 +146,7 @@ class TerrainGenerator {
                 usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
             });
         } else {
+            console.log(globalRange);
             this.rangeBuffer = globalRange;
         }
 

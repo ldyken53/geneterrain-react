@@ -11,6 +11,7 @@ class Renderer {
   public nodePositionBuffer : GPUBuffer | null = null;
   public nodePipeline : GPURenderPipeline | null = null;
   public nodeLength : number = 1;
+  public rangeBuffer : GPUBuffer | null = null;
 
   constructor(adapter : GPUAdapter, device : GPUDevice, canvasRef : React.RefObject<HTMLCanvasElement>, colormap : ImageBitmap) {
     this.device = device;
@@ -29,6 +30,11 @@ class Renderer {
       device,
       format: presentationFormat,
       size: presentationSize,
+    });
+
+    this.rangeBuffer = this.device.createBuffer({
+      size: 2 * 4,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
     });
 
     this.nodePositionBuffer = device.createBuffer({
@@ -232,13 +238,14 @@ class Renderer {
     var newTranslation = [0, 0, 1, 1];
     var controller = new Controller();
     var terrainGenerator = this.terrainGenerator;
+    var render = this;
     controller.mousemove = function (prev, cur, evt) {
       if (evt.buttons == 1) {
         var change = [(cur[0] - prev[0]) / presentationSize[0], (prev[1] - cur[1]) / presentationSize[1]];
         newTranslation = [newTranslation[0] - change[0], newTranslation[1] - change[1], newTranslation[2] - change[0], newTranslation[3] - change[1]]
         if (Math.abs(newTranslation[0] - translation[0]) > 0.03 || Math.abs(newTranslation[1] - translation[1]) > 0.03) {
           translation = newTranslation;
-          terrainGenerator!.computeTerrain(undefined, undefined, translation);
+          terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);
           console.log(translation);
           device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
         }
@@ -248,11 +255,9 @@ class Renderer {
     controller.wheel = function (amt) {
       var change = [amt / 1000, amt / 1000];
       newTranslation = [newTranslation[0] + change[0], newTranslation[1] + change[1], newTranslation[2] - change[0], newTranslation[3] - change[1]];
-      console.log(newTranslation);
       if (newTranslation[2] - newTranslation[0] > 0.1 && newTranslation[3] - newTranslation[1] > 0.1) {
         translation = newTranslation;
-        terrainGenerator!.computeTerrain(undefined, undefined, translation);
-        console.log(translation);
+        terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);
         device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
       } else {
         newTranslation = translation;
@@ -317,7 +322,7 @@ class Renderer {
 
   setNodeData(nodeData : Array<number>) {
     // TODO: Implement the translation and global range options
-    this.terrainGenerator!.computeTerrain(nodeData);
+    this.terrainGenerator!.computeTerrain(nodeData, undefined, undefined, this.rangeBuffer);
     var nodePositions : Array<number> = [];
     var radius : number = 0.01;
     for (var i = 0; i < nodeData.length; i+=4) {
@@ -355,7 +360,7 @@ class Renderer {
   }
 
   setWidthFactor(widthFactor : number) {
-    this.terrainGenerator!.computeTerrain(undefined, widthFactor);
+    this.terrainGenerator!.computeTerrain(undefined, widthFactor, undefined, this.rangeBuffer);
   }
 
   setPeakValue(value : number) {
@@ -364,6 +369,17 @@ class Renderer {
 
   setValleyValue(value : number) {
     this.device.queue.writeBuffer(this.uniform2DBuffer!, 4, new Float32Array([value]), 0, 1);
+  }
+
+  setGlobalRange() {
+    if (this.rangeBuffer) {
+      this.rangeBuffer = null;
+    } else {
+      this.rangeBuffer = this.device.createBuffer({
+        size: 2 * 4,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+      });    
+    }
   }
 }
 export default Renderer;

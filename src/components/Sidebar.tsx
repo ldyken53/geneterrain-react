@@ -5,7 +5,8 @@ type SidebarProps = {
   setNodeData: (nodeData : Array<number>) => void,
   setWidthFactor: (widthFactor : number) => void,
   setPeakValue: (value : number) => void,
-  setValleyValue: (value : number) => void
+  setValleyValue: (value : number) => void,
+  setGlobalRange: () => void
 }
 type SidebarState = {
   nodeData: Array<number>
@@ -85,6 +86,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             <br/>
             <input type="range" defaultValue={0.8} min={0.5} max={1} step={0.01} onChange={(e) => this.props.setPeakValue(parseFloat(e.target.value))} />
             <input type="range" defaultValue={0.2} min={0} max={0.5} step={0.01} onChange={(e) => this.props.setValleyValue(parseFloat(e.target.value))} />
+          </Form.Group>
+          <Form.Group>
+            <Form.Check defaultChecked={true} onClick={(e) => this.props.setGlobalRange()} type="checkbox" label="Use Global Min/Max"></Form.Check>
           </Form.Group>
         </Form>
         </ div>
