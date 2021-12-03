@@ -87,11 +87,6 @@ class Renderer {
       primitive: {
         topology: 'triangle-list',
       },
-      depthStencil: {
-        format: "depth24plus-stencil8",
-        depthWriteEnabled: true,
-        depthCompare: "less",
-      }
     });
   
     const pipeline = device.createRenderPipeline({
@@ -126,11 +121,6 @@ class Renderer {
       },
       primitive: {
         topology: 'triangle-list',
-      },
-      depthStencil: {
-        format: "depth24plus-stencil8",
-        depthWriteEnabled: true,
-        depthCompare: "less",
       },
     });
 
@@ -179,17 +169,6 @@ class Renderer {
       { texture: colorTexture },
       [colormap.width, colormap.height, 1]
     );
-
-    // Create depth texture
-    var depthTexture = device.createTexture({
-      size: {
-        width: presentationSize[0],
-        height: presentationSize[1],
-        depthOrArrayLayers: 1,
-      },
-      format: "depth24plus-stencil8",
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
 
     this.terrainGenerator = new TerrainGenerator(device, presentationSize[0], presentationSize[1]);
 
@@ -300,27 +279,20 @@ class Renderer {
             storeOp: "store" as GPUStoreOp,
           },
         ],
-        depthStencilAttachment: {
-          view: depthTexture.createView(),
-          depthLoadValue: 1.0,
-          depthStoreOp: "store",
-          stencilLoadValue: 0,
-          stencilStoreOp: "store",
-        },
         };
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-        if (render.nodeToggle) {
-          passEncoder.setPipeline(render.nodePipeline!);
-          passEncoder.setVertexBuffer(0, render.nodePositionBuffer!);
-          passEncoder.setBindGroup(0, viewBoxBindGroup);
-          passEncoder.draw(render.nodeLength * 6, 1, 0, 0);
-        }
         if (render.terrainToggle) {
           passEncoder.setPipeline(pipeline);
           passEncoder.setVertexBuffer(0, dataBuf2D);
           passEncoder.setBindGroup(0, render.bindGroup2D!);
           passEncoder.draw(6, 1, 0, 0);
+        }
+        if (render.nodeToggle) {
+          passEncoder.setPipeline(render.nodePipeline!);
+          passEncoder.setVertexBuffer(0, render.nodePositionBuffer!);
+          passEncoder.setBindGroup(0, viewBoxBindGroup);
+          passEncoder.draw(render.nodeLength * 6, 1, 0, 0);
         }
         passEncoder.endPass();
   
