@@ -87,6 +87,9 @@ class Renderer {
       primitive: {
         topology: 'triangle-list',
       },
+      multisample: {
+        count: 4
+      }
     });
   
     const pipeline = device.createRenderPipeline({
@@ -122,6 +125,9 @@ class Renderer {
       primitive: {
         topology: 'triangle-list',
       },
+      multisample: {
+        count: 4
+      }
     });
 
     // Vertices to render
@@ -263,20 +269,28 @@ class Renderer {
       ],
     });
 
+    const texture = device.createTexture({
+      size: presentationSize,
+      sampleCount: 4,
+      format: presentationFormat,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    const view = texture.createView();
+
     var render = this;
     function frame() {
         // Sample is no longer the active page.
         if (!canvasRef.current) return;
 
         const commandEncoder = device.createCommandEncoder();
-        const textureView = context.getCurrentTexture().createView();
 
         const renderPassDescriptor: GPURenderPassDescriptor = {
         colorAttachments: [
           {
-            view: textureView,
+            view,
+            resolveTarget: context.getCurrentTexture().createView(),
             loadValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
-            storeOp: "store" as GPUStoreOp,
+            storeOp: "discard" as GPUStoreOp,
           },
         ],
         };
