@@ -30,6 +30,13 @@
   width: 80%;
 }
 
+.Collapsible {
+  margin: 10px;
+  background-color: #282c34;
+  border: #61dafb;
+  border-radius: 10px;
+}
+
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
