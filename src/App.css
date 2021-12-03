@@ -30,6 +30,10 @@
   width: 80%;
 }
 
+.canvas {
+  background-color: aliceblue;
+}
+
 .Collapsible {
   margin: 10px;
   background-color: #282c34;

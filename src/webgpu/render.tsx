@@ -12,6 +12,8 @@ class Renderer {
   public nodePipeline : GPURenderPipeline | null = null;
   public nodeLength : number = 1;
   public rangeBuffer : GPUBuffer | null = null;
+  public nodeToggle : boolean = true;
+  public terrainToggle : boolean = true;
 
   constructor(adapter : GPUAdapter, device : GPUDevice, canvasRef : React.RefObject<HTMLCanvasElement>, colormap : ImageBitmap) {
     this.device = device;
@@ -256,8 +258,12 @@ class Renderer {
       newTranslation = [newTranslation[0] + change[0], newTranslation[1] + change[1], newTranslation[2] - change[0], newTranslation[3] - change[1]];
       if (newTranslation[2] - newTranslation[0] > 0.1 && newTranslation[3] - newTranslation[1] > 0.1) {
         translation = newTranslation;
-        terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);
-        device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
+        if (render.terrainToggle) {
+          terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);
+        }
+        if (render.nodeToggle) {
+          device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
+        }
       } else {
         newTranslation = translation;
       }
@@ -287,7 +293,7 @@ class Renderer {
         colorAttachments: [
           {
             view: textureView,
-            loadValue: { r: 0.157, g: 0.173, b: 0.204, a: 1.0 },
+            loadValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
             storeOp: "store" as GPUStoreOp,
           },
         ],
@@ -301,14 +307,18 @@ class Renderer {
         };
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-        passEncoder.setPipeline(render.nodePipeline!);
-        passEncoder.setVertexBuffer(0, render.nodePositionBuffer!);
-        passEncoder.setBindGroup(0, viewBoxBindGroup);
-        passEncoder.draw(render.nodeLength * 6, 1, 0, 0);
-        passEncoder.setPipeline(pipeline);
-        passEncoder.setVertexBuffer(0, dataBuf2D);
-        passEncoder.setBindGroup(0, render.bindGroup2D!);
-        passEncoder.draw(6, 1, 0, 0);
+        if (render.nodeToggle) {
+          passEncoder.setPipeline(render.nodePipeline!);
+          passEncoder.setVertexBuffer(0, render.nodePositionBuffer!);
+          passEncoder.setBindGroup(0, viewBoxBindGroup);
+          passEncoder.draw(render.nodeLength * 6, 1, 0, 0);
+        }
+        if (render.terrainToggle) {
+          passEncoder.setPipeline(pipeline);
+          passEncoder.setVertexBuffer(0, dataBuf2D);
+          passEncoder.setBindGroup(0, render.bindGroup2D!);
+          passEncoder.draw(6, 1, 0, 0);
+        }
         passEncoder.endPass();
   
         device.queue.submit([commandEncoder.finish()]);
@@ -379,6 +389,14 @@ class Renderer {
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
       });    
     }
+  }
+
+  toggleTerrainLayer() {
+    this.terrainToggle = !this.terrainToggle;
+  }
+
+  toggleNodeLayer() {
+    this.nodeToggle = !this.nodeToggle;
   }
 }
 export default Renderer;

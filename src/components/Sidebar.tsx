@@ -7,7 +7,9 @@ type SidebarProps = {
   setWidthFactor: (widthFactor : number) => void,
   setPeakValue: (value : number) => void,
   setValleyValue: (value : number) => void,
-  setGlobalRange: () => void
+  setGlobalRange: () => void,
+  toggleNodeLayer: () => void,
+  toggleTerrainLayer: () => void,
 }
 type SidebarState = {
   nodeData: Array<number>
@@ -92,6 +94,10 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             <Form.Group>
               <Form.Check defaultChecked={true} onClick={(e) => this.props.setGlobalRange()} type="checkbox" label="Use Global Min/Max"></Form.Check>
             </Form.Group>
+          </Collapsible>
+          <Collapsible trigger="Layers"> 
+            <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleTerrainLayer()} type="checkbox" label="Terrain Layer"/>
+            <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleNodeLayer()} type="checkbox" label="Node Layer"/>
           </Collapsible>
         </Form>
         </ div>

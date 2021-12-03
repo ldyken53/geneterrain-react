@@ -44,6 +44,14 @@ class Page extends React.Component<{}, PageState> {
     setGlobalRange() {
         this.state.renderer!.setGlobalRange();
     }
+
+    toggleNodeLayer() {
+        this.state.renderer!.toggleNodeLayer();
+    }
+
+    toggleTerrainLayer() {
+        this.state.renderer!.toggleTerrainLayer();
+    }
   
     render() {
       return (
@@ -54,6 +62,8 @@ class Page extends React.Component<{}, PageState> {
                 setWidthFactor={this.setWidthFactor.bind(this)} 
                 setNodeData={this.setNodeData.bind(this)} 
                 setGlobalRange={this.setGlobalRange.bind(this)}
+                toggleNodeLayer={this.toggleNodeLayer.bind(this)}
+                toggleTerrainLayer={this.toggleTerrainLayer.bind(this)}
             />
             <div className="canvasContainer">
                 <canvas ref={this.state.canvasRef} width={800} height={800}></canvas>
