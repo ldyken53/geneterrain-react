@@ -243,20 +243,23 @@ class Renderer {
     var render = this;
     controller.mousemove = function (prev, cur, evt) {
       if (evt.buttons == 1) {
-        var change = [(cur[0] - prev[0]) / presentationSize[0], (prev[1] - cur[1]) / presentationSize[1]];
+        var change = [(cur[0] - prev[0]) * (translation[2] - translation[0]) / presentationSize[0], (prev[1] - cur[1]) * (translation[3] - translation[1]) / presentationSize[1]];
         newTranslation = [newTranslation[0] - change[0], newTranslation[1] - change[1], newTranslation[2] - change[0], newTranslation[3] - change[1]]
-        if (Math.abs(newTranslation[0] - translation[0]) > 0.03 || Math.abs(newTranslation[1] - translation[1]) > 0.03) {
+        if (Math.abs(newTranslation[0] - translation[0]) > 0.03 * (translation[2] - translation[0]) || Math.abs(newTranslation[1] - translation[1]) > 0.03 * (translation[3] - translation[1])) {
           translation = newTranslation;
-          terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);
-          device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
+          if (render.terrainToggle) {
+            terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);
+          }
+          if (render.nodeToggle) {
+            device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
+          }
         }
       }
     };
-    var zoom = 1;
     controller.wheel = function (amt) {
-      var change = [amt / 1000, amt / 1000];
+      var change = [amt / 10000, amt / 10000];
       newTranslation = [newTranslation[0] + change[0], newTranslation[1] + change[1], newTranslation[2] - change[0], newTranslation[3] - change[1]];
-      if (newTranslation[2] - newTranslation[0] > 0.1 && newTranslation[3] - newTranslation[1] > 0.1) {
+      if (newTranslation[2] - newTranslation[0] > 0.01 && newTranslation[3] - newTranslation[1] > 0.01) {
         translation = newTranslation;
         if (render.terrainToggle) {
           terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);

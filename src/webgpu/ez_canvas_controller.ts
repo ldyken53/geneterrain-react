@@ -1,9 +1,3 @@
-function pointDist(a, b)
-{
-    var v = [b[0] - a[0], b[1] - a[1]];
-    return Math.sqrt(Math.pow(v[0], 2.0) + Math.pow(v[1], 2.0));
-}
-
 /* The controller can register callbacks for various events on a canvas:
  *
  * mousemove: function(prevMouse, curMouse, evt)
