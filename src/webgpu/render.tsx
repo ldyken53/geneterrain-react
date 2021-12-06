@@ -81,6 +81,10 @@ class Renderer {
         targets: [
           {
             format: presentationFormat,
+            blend: {
+              color: {srcFactor: "one" as GPUBlendFactor, dstFactor: "one-minus-src-alpha" as GPUBlendFactor},
+              alpha: {srcFactor: "one" as GPUBlendFactor, dstFactor: "one-minus-src-alpha" as GPUBlendFactor}
+            },
           },
         ],
       },
