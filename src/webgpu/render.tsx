@@ -13,7 +13,7 @@ class Renderer {
   public nodeLength : number = 1;
   public rangeBuffer : GPUBuffer | null = null;
   public nodeToggle : boolean = true;
-  public terrainToggle : boolean = true;
+  public terrainToggle : boolean = false;
 
   constructor(adapter : GPUAdapter, device : GPUDevice, canvasRef : React.RefObject<HTMLCanvasElement>, colormap : ImageBitmap) {
     this.device = device;

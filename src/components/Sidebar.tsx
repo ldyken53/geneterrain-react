@@ -96,7 +96,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             </Form.Group>
           </Collapsible>
           <Collapsible trigger="Layers"> 
-            <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleTerrainLayer()} type="checkbox" label="Terrain Layer"/>
+            <Form.Check defaultChecked={false} onClick={(e) => this.props.toggleTerrainLayer()} type="checkbox" label="Terrain Layer"/>
             <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleNodeLayer()} type="checkbox" label="Node Layer"/>
           </Collapsible>
         </Form>
