@@ -66,6 +66,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           for (var element of rawNodes) {
             nodeIDToValue[element.split("\t")[0]] = element.split("\t")[1]
           }
+          console.log(nodeIDToValue);
           layoutReader.readAsText(files[1]);
         };
         nodeReader.readAsText(files[0]);
