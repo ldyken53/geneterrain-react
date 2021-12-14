@@ -14,6 +14,7 @@
     "arcball_camera": "^1.0.1",
     "bootstrap": "^5.1.3",
     "ez_canvas_controller": "^1.0.0",
+    "file-saver": "^2.0.5",
     "gl-matrix": "^3.4.3",
     "react": "^17.0.2",
     "react-bootstrap": "^1.6.4",
@@ -50,5 +51,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/file-saver": "^2.0.4"
   }
 }

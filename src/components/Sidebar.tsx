@@ -10,6 +10,7 @@ type SidebarProps = {
   setGlobalRange: () => void,
   toggleNodeLayer: () => void,
   toggleTerrainLayer: () => void,
+  onSave: () => void,
 }
 type SidebarState = {
   nodeData: Array<number>
@@ -99,6 +100,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             <Form.Check defaultChecked={false} onClick={(e) => this.props.toggleTerrainLayer()} type="checkbox" label="Terrain Layer"/>
             <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleNodeLayer()} type="checkbox" label="Node Layer"/>
           </Collapsible>
+          <Button onClick={(e) => this.props.onSave()}>
+            Save Terrain
+          </Button>
         </Form>
         </ div>
       );
