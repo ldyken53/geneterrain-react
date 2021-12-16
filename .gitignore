@@ -7,6 +7,7 @@
 
 # testing
 /coverage
+/examples
 
 # production
 /build

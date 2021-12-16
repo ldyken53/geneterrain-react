@@ -1,7 +1,7 @@
 import React from 'react';
 import {Form, Button} from "react-bootstrap";
 import Collapsible from 'react-collapsible';
-import { Matrix, matrix, subtract, eigs, column, min, max, index } from 'mathjs';
+import { Matrix, matrix, subtract, eigs, column, min, max, index, sparse } from 'mathjs';
 
 type SidebarProps = {
   setNodeData: (nodeData : Array<number>) => void,
@@ -19,12 +19,13 @@ type SidebarState = {
   nodeData: Array<number>,
   edgeData: Array<number>,
   laplacian: Matrix,
+  adjacencyMatrix: Array<Array<number>>,
   e: {}
 }
 class Sidebar extends React.Component<SidebarProps, SidebarState> {
     constructor(props) {
       super(props);
-      this.state = {nodeData: [], edgeData: [], laplacian: matrix([]), e: {}};
+      this.state = {nodeData: [], edgeData: [], laplacian: sparse([]), adjacencyMatrix: [], e: {}};
   
       this.handleSubmit = this.handleSubmit.bind(this);
       this.readFiles = this.readFiles.bind(this);
@@ -65,8 +66,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             }
           }
           this.setState({edgeData: edgeData});
-          var laplacian : Matrix = subtract(matrix(degreeMatrix), matrix(adjacencyMatrix)) as Matrix;
-          this.setState({laplacian: laplacian});
+          var laplacian : Matrix = subtract(sparse(degreeMatrix), sparse(adjacencyMatrix)) as Matrix;
+          console.log(laplacian);
+          this.setState({laplacian: laplacian, adjacencyMatrix: adjacencyMatrix});
         };
         const layoutReader = new FileReader();
         layoutReader.onload = (event) => {
@@ -123,6 +125,22 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       }
       this.setState({nodeData: nodeData});
       this.props.setNodeData(nodeData);
+      var edgeData : Array<number> = [];
+      const adj = this.state.adjacencyMatrix;
+      for (var i = 0; i < adj.length; i++) {
+        for (var j = 0; j < adj[i].length; j++) {
+          if (adj[i][j] == 1) {
+            edgeData.push(
+              nodeData[i * 4 + 1] * 2 - 1,
+              nodeData[i * 4 + 2] * 2 - 1,
+              nodeData[j * 4 + 1] * 2 - 1,
+              nodeData[j * 4 + 2] * 2 - 1
+            )
+          }
+        }
+      } 
+      this.setState({edgeData: edgeData});
+      this.props.setEdgeData(edgeData);
     }
   
     render() {
