@@ -1,6 +1,7 @@
 import React from 'react';
 import {Form, Button} from "react-bootstrap";
 import Collapsible from 'react-collapsible';
+import { Matrix, matrix, subtract, eigs, column, min, max, index } from 'mathjs';
 
 type SidebarProps = {
   setNodeData: (nodeData : Array<number>) => void,
@@ -16,12 +17,14 @@ type SidebarProps = {
 }
 type SidebarState = {
   nodeData: Array<number>,
-  edgeData: Array<number>
+  edgeData: Array<number>,
+  laplacian: Matrix,
+  e: {}
 }
 class Sidebar extends React.Component<SidebarProps, SidebarState> {
     constructor(props) {
       super(props);
-      this.state = {nodeData: [], edgeData: []};
+      this.state = {nodeData: [], edgeData: [], laplacian: matrix([]), e: {}};
   
       this.handleSubmit = this.handleSubmit.bind(this);
       this.readFiles = this.readFiles.bind(this);
@@ -38,8 +41,11 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         console.log(files);
         var nodeIDToValue = {};
         var nodeIDToPos = {};
+        var nodeIDToIndex = {};
         var nodeData : Array<number> = [];
         var edgeData : Array<number> = [];
+        var degreeMatrix : Array<Array<number>> = [];
+        var adjacencyMatrix : Array<Array<number>> = [];
         const edgeReader = new FileReader();
         edgeReader.onload = (event) => {
           var edgeRaw = (edgeReader.result as string).split("\n");
@@ -52,9 +58,15 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
                 nodeIDToPos[parts[1]][0],
                 nodeIDToPos[parts[1]][1]  
               );
+              degreeMatrix[nodeIDToIndex[parts[0]]][nodeIDToIndex[parts[0]]] += 1;
+              degreeMatrix[nodeIDToIndex[parts[1]]][nodeIDToIndex[parts[1]]] += 1;
+              adjacencyMatrix[nodeIDToIndex[parts[0]]][nodeIDToIndex[parts[1]]] += 1;
+              adjacencyMatrix[nodeIDToIndex[parts[1]]][nodeIDToIndex[parts[0]]] += 1;
             }
           }
           this.setState({edgeData: edgeData});
+          var laplacian : Matrix = subtract(matrix(degreeMatrix), matrix(adjacencyMatrix)) as Matrix;
+          this.setState({laplacian: laplacian});
         };
         const layoutReader = new FileReader();
         layoutReader.onload = (event) => {
@@ -62,6 +74,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           for (var element of layoutData) {
             var parts = element.split("\t");
             if (nodeIDToValue[parts[0]]) {
+              nodeIDToIndex[parts[0]] = nodeData.length / 4;
               // Pushes values to node data in order of struct for WebGPU:
               // nodeValue, nodeX, nodeY, nodeSize
               nodeData.push(parseFloat(nodeIDToValue[parts[0]]), parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
@@ -69,6 +82,14 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             }
           }
           this.setState({nodeData: nodeData});
+          for (var i = 0; i < nodeData.length / 4; i++) {
+            degreeMatrix.push([]);
+            adjacencyMatrix.push([]);
+            for (var j = 0; j < nodeData.length / 4; j++) {
+              degreeMatrix[i].push(0);
+              adjacencyMatrix[i].push(0);
+            }
+          }
           edgeReader.readAsText(files[2]);
         };
         const nodeReader = new FileReader();
@@ -81,6 +102,27 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           layoutReader.readAsText(files[1]);
         };
         nodeReader.readAsText(files[0]);
+    }
+
+    applySpectral() {
+      var e = eigs(this.state.laplacian);
+      console.log(e);
+      var nodeData = this.state.nodeData;
+      var x = column(e.vectors, 1) as Matrix;
+      var y = column(e.vectors, 2) as Matrix;
+      var x_max = max(x);
+      var y_max = max(y);
+      var x_min = min(x);
+      var y_min = min(y);
+      console.log(x_min, x_max, y_min, y_max);
+      console.log(x);
+      console.log(y);
+      for (var i = 0; i < nodeData.length / 4; i++) {
+        nodeData[i * 4 + 1] = (x.get([i, 0]) - x_min) / (x_max - x_min);
+        nodeData[i * 4 + 2] = (y.get([i, 0]) - y_min) / (y_max - y_min);
+      }
+      this.setState({nodeData: nodeData});
+      this.props.setNodeData(nodeData);
     }
   
     render() {
@@ -115,6 +157,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           </Collapsible>
           <Button onClick={(e) => this.props.onSave()}>
             Save Terrain
+          </Button>
+          <Button onClick={(e) => this.applySpectral()}>
+            Apply Spectral Layout
           </Button>
         </Form>
         </ div>
