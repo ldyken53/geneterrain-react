@@ -38,6 +38,10 @@ class Page extends React.Component<{}, PageState> {
         this.state.renderer!.setNodeData(nodeData);
     }
 
+    setEdgeData(edgeData : Array<number>) {
+        this.state.renderer!.setEdgeData(edgeData);
+    }
+
     setWidthFactor(widthFactor : number) {
         this.state.renderer!.setWidthFactor(widthFactor);
     }
@@ -62,6 +66,11 @@ class Page extends React.Component<{}, PageState> {
         this.state.renderer!.toggleTerrainLayer();
     }
 
+    toggleEdgeLayer() {
+        this.state.renderer!.toggleEdgeLayer();
+    }
+
+
     onSave() {
         this.state.renderer!.onSave();
     }
@@ -74,9 +83,11 @@ class Page extends React.Component<{}, PageState> {
                 setPeakValue={this.setPeakValue.bind(this)} 
                 setWidthFactor={this.setWidthFactor.bind(this)} 
                 setNodeData={this.setNodeData.bind(this)} 
+                setEdgeData={this.setEdgeData.bind(this)} 
                 setGlobalRange={this.setGlobalRange.bind(this)}
                 toggleNodeLayer={this.toggleNodeLayer.bind(this)}
                 toggleTerrainLayer={this.toggleTerrainLayer.bind(this)}
+                toggleEdgeLayer={this.toggleEdgeLayer.bind(this)}
                 onSave={this.onSave.bind(this)}
             />
             <div className="canvasContainer">

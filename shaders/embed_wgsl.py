@@ -7,7 +7,9 @@ shaders = [
     "display_3d_vert.wgsl",
     "display_3d_frag.wgsl",
     "node_vert.wgsl",
-    "node_frag.wgsl"
+    "node_frag.wgsl",
+    "edge_vert.wgsl",
+    "edge_frag.wgsl"
 ]
 compiled_shaders = ""
 

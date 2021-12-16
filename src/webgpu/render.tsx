@@ -1,6 +1,6 @@
 import { Controller } from './ez_canvas_controller';
 import TerrainGenerator from './terrain_generator';
-import { display_2d_vert, display_2d_frag, node_vert, node_frag } from './wgsl';
+import { display_2d_vert, display_2d_frag, node_vert, node_frag, edge_vert, edge_frag } from './wgsl';
 import { saveAs } from 'file-saver'; 
 
 class Renderer {
@@ -10,11 +10,15 @@ class Renderer {
   public bindGroup2D : GPUBindGroup | null = null;
   public nodeBindGroup : GPUBindGroup | null = null;
   public nodePositionBuffer : GPUBuffer | null = null;
+  public edgeDataBuffer : GPUBuffer | null = null;
   public nodePipeline : GPURenderPipeline | null = null;
+  public edgePipeline : GPURenderPipeline | null = null;
   public nodeLength : number = 1;
+  public edgeVertexCount : number = 2;
   public rangeBuffer : GPUBuffer | null = null;
   public nodeToggle : boolean = true;
   public terrainToggle : boolean = false;
+  public edgeToggle : boolean = true;
   public colormapImage : HTMLImageElement;
   public outCanvasRef : React.RefObject<HTMLCanvasElement>;
   public canvasSize : [number, number] | null = null;
@@ -47,6 +51,53 @@ class Renderer {
       device,
       format: presentationFormat,
       size: presentationSize,
+    });
+
+    this.edgeDataBuffer = device.createBuffer({
+      size: 4 * 4,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      mappedAtCreation: true
+    });
+
+    let edgeData = [0, 0, 0.01, 0.01];
+    new Float32Array(this.edgeDataBuffer.getMappedRange()).set(edgeData);
+    this.edgeDataBuffer.unmap();
+
+    // setting it to some trivial data so that it won't fail the pipeline before edge data is available
+
+    this.edgePipeline = device.createRenderPipeline({
+      vertex: {
+        module: device.createShaderModule({
+          code: edge_vert
+        }),
+        entryPoint: "main",
+        buffers:[
+          {
+            arrayStride: 2 * 4 * 1,
+            attributes:[{
+              format:"float32x2" as GPUVertexFormat,
+              offset: 0,
+              shaderLocation: 0
+            }
+            ]
+          }
+        ]
+      },
+      fragment: {
+        module: device.createShaderModule({
+          code: edge_frag
+        }),
+        entryPoint: "main",
+        targets:[{
+          format:presentationFormat
+        }]
+      },
+      primitive: {
+        topology: "line-list" //triangle-list is default   
+      },
+      multisample: {
+        count: 4
+      }
     });
 
     this.rangeBuffer = this.device.createBuffer({
@@ -289,7 +340,7 @@ class Renderer {
     });
 
     const texture = device.createTexture({
-      size: [1200, 1200],
+      size: presentationSize,
       sampleCount: 4,
       format: presentationFormat,
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -315,6 +366,11 @@ class Renderer {
         };
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+        if (render.edgeToggle) {
+          passEncoder.setPipeline(render.edgePipeline!);
+          passEncoder.setVertexBuffer(0, render.edgeDataBuffer!);
+          passEncoder.draw(render.edgeVertexCount);
+        }
         if (render.terrainToggle) {
           passEncoder.setPipeline(pipeline);
           passEncoder.setVertexBuffer(0, dataBuf2D);
@@ -338,7 +394,6 @@ class Renderer {
   }
 
   setNodeData(nodeData : Array<number>) {
-    // TODO: Implement the translation and global range options
     this.terrainGenerator!.computeTerrain(nodeData, undefined, undefined, this.rangeBuffer);
     var nodePositions : Array<number> = [];
     var radius : number = 0.01;
@@ -376,6 +431,17 @@ class Renderer {
     // });
   }
 
+  setEdgeData(edgeData : Array<number>) {
+    this.edgeDataBuffer = this.device.createBuffer({
+      size: edgeData.length * 4,
+      usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.VERTEX,
+      mappedAtCreation: true
+    });
+    new Float32Array(this.edgeDataBuffer.getMappedRange()).set(edgeData);
+    this.edgeDataBuffer.unmap();
+    this.edgeVertexCount = edgeData.length / 2;
+  }
+
   setWidthFactor(widthFactor : number) {
     this.terrainGenerator!.computeTerrain(undefined, widthFactor, undefined, this.rangeBuffer);
   }
@@ -405,6 +471,10 @@ class Renderer {
 
   toggleNodeLayer() {
     this.nodeToggle = !this.nodeToggle;
+  }
+
+  toggleEdgeLayer() {
+    this.edgeToggle = !this.edgeToggle;
   }
 
   async onSave() {

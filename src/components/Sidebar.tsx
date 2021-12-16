@@ -4,21 +4,24 @@ import Collapsible from 'react-collapsible';
 
 type SidebarProps = {
   setNodeData: (nodeData : Array<number>) => void,
+  setEdgeData: (edgeData : Array<number>) => void,
   setWidthFactor: (widthFactor : number) => void,
   setPeakValue: (value : number) => void,
   setValleyValue: (value : number) => void,
   setGlobalRange: () => void,
   toggleNodeLayer: () => void,
   toggleTerrainLayer: () => void,
+  toggleEdgeLayer: () => void,
   onSave: () => void,
 }
 type SidebarState = {
-  nodeData: Array<number>
+  nodeData: Array<number>,
+  edgeData: Array<number>
 }
 class Sidebar extends React.Component<SidebarProps, SidebarState> {
     constructor(props) {
       super(props);
-      this.state = {nodeData: []};
+      this.state = {nodeData: [], edgeData: []};
   
       this.handleSubmit = this.handleSubmit.bind(this);
       this.readFiles = this.readFiles.bind(this);
@@ -27,24 +30,31 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     handleSubmit(event) {
       event.preventDefault();
       this.props.setNodeData(this.state.nodeData);
+      this.props.setEdgeData(this.state.edgeData);
     }
 
     readFiles(event : React.ChangeEvent<HTMLInputElement>) {
         const files : FileList = event.target.files!;
         console.log(files);
         var nodeIDToValue = {};
+        var nodeIDToPos = {};
         var nodeData : Array<number> = [];
+        var edgeData : Array<number> = [];
         const edgeReader = new FileReader();
         edgeReader.onload = (event) => {
-        //   var edgeData = (edgeReader.result as string).split("\n");
-        //   for (var element of edgeData) {
-        //     var parts = element.split("\t");
-        //     if (nodeIDToValue[parts[0]] && nodeIDToValue[parts[1]]) {
-        //       nodeElements.push({ data: { source: parts[0], target: parts[1], weight: parseFloat(parts[2]) } });
-        //     }
-        //   }
-        //   await render(nodeData, index);
-            console.log("not yet implemented edges");
+          var edgeRaw = (edgeReader.result as string).split("\n");
+          for (var element of edgeRaw) {
+            var parts = element.split("\t");
+            if (nodeIDToValue[parts[0]] && nodeIDToValue[parts[1]]) {
+              edgeData.push(
+                nodeIDToPos[parts[0]][0], 
+                nodeIDToPos[parts[0]][1], 
+                nodeIDToPos[parts[1]][0],
+                nodeIDToPos[parts[1]][1]  
+              );
+            }
+          }
+          this.setState({edgeData: edgeData});
         };
         const layoutReader = new FileReader();
         layoutReader.onload = (event) => {
@@ -55,10 +65,11 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
               // Pushes values to node data in order of struct for WebGPU:
               // nodeValue, nodeX, nodeY, nodeSize
               nodeData.push(parseFloat(nodeIDToValue[parts[0]]), parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
+              nodeIDToPos[parts[0]] = [parseFloat(parts[1]) * 2.0 - 1, parseFloat(parts[2]) * 2.0 - 1];
             }
           }
           this.setState({nodeData: nodeData});
-          edgeReader.readAsText(files[1]);
+          edgeReader.readAsText(files[2]);
         };
         const nodeReader = new FileReader();
         nodeReader.onload = (event) => {
@@ -100,6 +111,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           <Collapsible trigger="Layers"> 
             <Form.Check defaultChecked={false} onClick={(e) => this.props.toggleTerrainLayer()} type="checkbox" label="Terrain Layer"/>
             <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleNodeLayer()} type="checkbox" label="Node Layer"/>
+            <Form.Check defaultChecked={false} onClick={(e) => this.props.toggleEdgeLayer()} type="checkbox" label="Edge Layer"/>
           </Collapsible>
           <Button onClick={(e) => this.props.onSave()}>
             Save Terrain
