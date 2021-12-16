@@ -18,7 +18,7 @@ class Renderer {
   public rangeBuffer : GPUBuffer | null = null;
   public nodeToggle : boolean = true;
   public terrainToggle : boolean = false;
-  public edgeToggle : boolean = true;
+  public edgeToggle : boolean = false;
   public colormapImage : HTMLImageElement;
   public outCanvasRef : React.RefObject<HTMLCanvasElement>;
   public canvasSize : [number, number] | null = null;
@@ -319,9 +319,7 @@ class Renderer {
         if (render.terrainToggle) {
           terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);
         }
-        if (render.nodeToggle) {
-          device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
-        }
+        device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
       } else {
         newTranslation = translation;
       }
@@ -329,6 +327,17 @@ class Renderer {
     controller.registerForCanvas(canvasRef.current);
     var viewBoxBindGroup = device.createBindGroup({
       layout: this.nodePipeline.getBindGroupLayout(0),
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: viewBoxBuffer,
+          },
+        },
+      ],
+    });
+    var edgeViewBoxBindGroup = device.createBindGroup({
+      layout: this.edgePipeline.getBindGroupLayout(0),
       entries: [
         {
           binding: 0,
@@ -366,16 +375,17 @@ class Renderer {
         };
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-        if (render.edgeToggle) {
-          passEncoder.setPipeline(render.edgePipeline!);
-          passEncoder.setVertexBuffer(0, render.edgeDataBuffer!);
-          passEncoder.draw(render.edgeVertexCount);
-        }
         if (render.terrainToggle) {
           passEncoder.setPipeline(pipeline);
           passEncoder.setVertexBuffer(0, dataBuf2D);
           passEncoder.setBindGroup(0, render.bindGroup2D!);
           passEncoder.draw(6, 1, 0, 0);
+        }
+        if (render.edgeToggle) {
+          passEncoder.setPipeline(render.edgePipeline!);
+          passEncoder.setVertexBuffer(0, render.edgeDataBuffer!);
+          passEncoder.setBindGroup(0, edgeViewBoxBindGroup);
+          passEncoder.draw(render.edgeVertexCount);
         }
         if (render.nodeToggle) {
           passEncoder.setPipeline(render.nodePipeline!);
