@@ -116,9 +116,6 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       var y_max = max(y);
       var x_min = min(x);
       var y_min = min(y);
-      console.log(x_min, x_max, y_min, y_max);
-      console.log(x);
-      console.log(y);
       for (var i = 0; i < nodeData.length / 4; i++) {
         nodeData[i * 4 + 1] = (x.get([i, 0]) - x_min) / (x_max - x_min);
         nodeData[i * 4 + 2] = (y.get([i, 0]) - y_min) / (y_max - y_min);
