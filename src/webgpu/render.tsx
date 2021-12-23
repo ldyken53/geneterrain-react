@@ -300,11 +300,9 @@ class Renderer {
         if (Math.abs(newTranslation[0] - translation[0]) > 0.03 * (translation[2] - translation[0]) || Math.abs(newTranslation[1] - translation[1]) > 0.03 * (translation[3] - translation[1])) {
           translation = newTranslation;
           if (render.terrainToggle) {
-            terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);
+            terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer, render.nodeLength);
           }
-          if (render.nodeToggle) {
-            device.queue.writeBuffer(render.viewBoxBuffer!, 0, new Float32Array(translation), 0, 4);
-          }
+          device.queue.writeBuffer(render.viewBoxBuffer!, 0, new Float32Array(translation), 0, 4);
         }
       }
     };
@@ -314,7 +312,7 @@ class Renderer {
       if (newTranslation[2] - newTranslation[0] > 0.01 && newTranslation[3] - newTranslation[1] > 0.01) {
         translation = newTranslation;
         if (render.terrainToggle) {
-          terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);
+          terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer, render.nodeLength);
         }
         device.queue.writeBuffer(render.viewBoxBuffer!, 0, new Float32Array(translation), 0, 4);
       } else {
@@ -388,7 +386,7 @@ class Renderer {
           passEncoder.setPipeline(render.edgePipeline!);
           passEncoder.setVertexBuffer(0, render.edgeDataBuffer!);
           passEncoder.setBindGroup(0, edgeViewBoxBindGroup);
-          passEncoder.draw(render.edgeVertexCount);
+          passEncoder.draw(render.edgeVertexCount, 1, 0, 0);
         }
         if (render.nodeToggle) {
           console.log(render.nodeLength);
@@ -408,7 +406,6 @@ class Renderer {
   }
 
   setNodeData(nodeData : Array<number>) {
-    this.terrainGenerator!.computeTerrain(nodeData, undefined, undefined, this.rangeBuffer);
     this.nodeDataBuffer = this.device.createBuffer({
       size: nodeData.length * 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
@@ -434,28 +431,7 @@ class Renderer {
       ]
     });
     this.nodeLength = nodeData.length / 4;
-    // var nodePositions : Array<number> = [];
-    // var radius : number = 0.01;
-    // for (var i = 0; i < nodeData.length; i+=4) {
-    //   var x = nodeData[i+1] * 2 - 1;
-    //   var y = nodeData[i+2] * 2 - 1;
-    //   nodePositions.push(
-    //     x + radius, y - radius,
-    //     x - radius, y - radius,
-    //     x - radius, y + radius,
-    //     x + radius, y - radius,
-    //     x - radius, y + radius,
-    //     x + radius, y + radius
-    //   );
-    // }
-    // this.nodePositionBuffer = this.device.createBuffer({
-    //   size: nodePositions.length * 4,
-    //   usage: GPUBufferUsage.VERTEX,
-    //   mappedAtCreation: true
-    // });
-    // new Float32Array(this.nodePositionBuffer.getMappedRange()).set(nodePositions);
-    // this.nodePositionBuffer.unmap();
-    // this.nodeLength = nodeData.length / 4;
+    this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
   }
 
   setEdgeData(edgeData : Array<number>) {
@@ -470,7 +446,7 @@ class Renderer {
   }
 
   setWidthFactor(widthFactor : number) {
-    this.terrainGenerator!.computeTerrain(undefined, widthFactor, undefined, this.rangeBuffer);
+    this.terrainGenerator!.computeTerrain(undefined, widthFactor, undefined, this.rangeBuffer, this.nodeLength);
   }
 
   setPeakValue(value : number) {
