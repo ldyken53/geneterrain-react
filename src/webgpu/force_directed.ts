@@ -15,9 +15,6 @@ class ForceDirected {
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
 
-        var storage : GPUBufferBindingType = "storage";
-        var uniform : GPUBufferBindingType = "uniform";
-
         this.computeForcesPipeline = device.createComputePipeline({
             compute: {
                 module: device.createShaderModule({

@@ -345,12 +345,6 @@ class Renderer {
           resource: {
             buffer: this.nodeDataBuffer,
           }
-        },
-        {
-          binding: 2,
-          resource: {
-            buffer: this.edgeDataBuffer,
-          }
         }
       ],
     });
@@ -484,12 +478,6 @@ class Renderer {
           binding: 1,
           resource: {
             buffer: this.nodeDataBuffer!,
-          }
-        },
-        {
-          binding: 2,
-          resource: {
-            buffer: this.edgeDataBuffer!,
           }
         }
       ],
