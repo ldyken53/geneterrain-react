@@ -15,13 +15,18 @@ struct VertexOutput {
 struct Uniforms {
   view_box : vec4<f32>;
 };
+struct Edges {
+    edges : array<u32>;
+};
 
 [[group(0), binding(0)]] var<uniform> uniforms : Uniforms;
 [[group(0), binding(1)]] var<storage, read> nodes : Nodes;
+[[group(0), binding(2)]] var<storage, read> edges : Edges;
 
 [[stage(vertex)]]
 fn main([[builtin(instance_index)]] index : u32, [[location(0)]] position : vec2<f32>)
      -> VertexOutput {
+    var test : u32 = edges.edges[0];
     var node_center : vec2<f32> = 2.0 * vec2<f32>(nodes.nodes[index].x, nodes.nodes[index].y) - vec2<f32>(1.0);
     var translation : vec2<f32> = position * 0.01;
     var out_position : vec2<f32> = node_center + translation;

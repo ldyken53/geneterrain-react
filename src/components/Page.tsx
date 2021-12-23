@@ -34,12 +34,8 @@ class Page extends React.Component<{}, PageState> {
         });
     }
 
-    setNodeData(nodeData : Array<number>) {
-        this.state.renderer!.setNodeData(nodeData);
-    }
-
-    setEdgeData(edgeData : Array<number>) {
-        this.state.renderer!.setEdgeData(edgeData);
+    setNodeEdgeData(nodeData : Array<number>, edgeData : Array<number>) {
+        this.state.renderer!.setNodeEdgeData(nodeData, edgeData);
     }
 
     setWidthFactor(widthFactor : number) {
@@ -82,8 +78,7 @@ class Page extends React.Component<{}, PageState> {
                 setValleyValue={this.setValleyValue.bind(this)} 
                 setPeakValue={this.setPeakValue.bind(this)} 
                 setWidthFactor={this.setWidthFactor.bind(this)} 
-                setNodeData={this.setNodeData.bind(this)} 
-                setEdgeData={this.setEdgeData.bind(this)} 
+                setNodeEdgeData={this.setNodeEdgeData.bind(this)} 
                 setGlobalRange={this.setGlobalRange.bind(this)}
                 toggleNodeLayer={this.toggleNodeLayer.bind(this)}
                 toggleTerrainLayer={this.toggleTerrainLayer.bind(this)}

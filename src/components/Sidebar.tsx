@@ -4,8 +4,7 @@ import Collapsible from 'react-collapsible';
 import { Matrix, matrix, subtract, eigs, column, min, max, index, sparse } from 'mathjs';
 
 type SidebarProps = {
-  setNodeData: (nodeData : Array<number>) => void,
-  setEdgeData: (edgeData : Array<number>) => void,
+  setNodeEdgeData: (nodeData : Array<number>, edgeData : Array<number>) => void,
   setWidthFactor: (widthFactor : number) => void,
   setPeakValue: (value : number) => void,
   setValleyValue: (value : number) => void,
@@ -33,8 +32,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
   
     handleSubmit(event) {
       event.preventDefault();
-      this.props.setNodeData(this.state.nodeData);
-      this.props.setEdgeData(this.state.edgeData);
+      this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
     }
 
     readFiles(event : React.ChangeEvent<HTMLInputElement>) {
@@ -54,10 +52,8 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             var parts = element.split("\t");
             if (nodeIDToValue[parts[0]] && nodeIDToValue[parts[1]]) {
               edgeData.push(
-                nodeIDToPos[parts[0]][0], 
-                nodeIDToPos[parts[0]][1], 
-                nodeIDToPos[parts[1]][0],
-                nodeIDToPos[parts[1]][1]  
+                nodeIDToIndex[parts[0]], 
+                nodeIDToIndex[parts[1]],
               );
               degreeMatrix[nodeIDToIndex[parts[0]]][nodeIDToIndex[parts[0]]] += 1;
               degreeMatrix[nodeIDToIndex[parts[1]]][nodeIDToIndex[parts[1]]] += 1;
@@ -121,23 +117,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         nodeData[i * 4 + 2] = (y.get([i, 0]) - y_min) / (y_max - y_min);
       }
       this.setState({nodeData: nodeData});
-      this.props.setNodeData(nodeData);
-      var edgeData : Array<number> = [];
-      const adj = this.state.adjacencyMatrix;
-      for (var i = 0; i < adj.length; i++) {
-        for (var j = 0; j < adj[i].length; j++) {
-          if (adj[i][j] == 1) {
-            edgeData.push(
-              nodeData[i * 4 + 1] * 2 - 1,
-              nodeData[i * 4 + 2] * 2 - 1,
-              nodeData[j * 4 + 1] * 2 - 1,
-              nodeData[j * 4 + 2] * 2 - 1
-            )
-          }
-        }
-      } 
-      this.setState({edgeData: edgeData});
-      this.props.setEdgeData(edgeData);
+      this.props.setNodeEdgeData(nodeData, this.state.edgeData);
     }
   
     render() {

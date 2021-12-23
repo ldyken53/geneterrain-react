@@ -9,13 +9,14 @@ class Renderer {
   public device : GPUDevice;
   public bindGroup2D : GPUBindGroup | null = null;
   public nodeBindGroup : GPUBindGroup | null = null;
+  public edgeBindGroup : GPUBindGroup | null = null;
   public nodeDataBuffer : GPUBuffer | null = null;
   public edgeDataBuffer : GPUBuffer | null = null;
   public viewBoxBuffer : GPUBuffer | null = null;
   public nodePipeline : GPURenderPipeline | null = null;
   public edgePipeline : GPURenderPipeline | null = null;
   public nodeLength : number = 1;
-  public edgeVertexCount : number = 2;
+  public edgeLength : number = 1;
   public rangeBuffer : GPUBuffer | null = null;
   public nodeToggle : boolean = true;
   public terrainToggle : boolean = false;
@@ -56,7 +57,7 @@ class Renderer {
 
     this.edgeDataBuffer = device.createBuffer({
       size: 4 * 4,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       mappedAtCreation: true
     });
 
@@ -120,6 +121,16 @@ class Renderer {
       1, 1,
     ]);
     nodePositionBuffer.unmap();
+    var edgePositionBuffer = device.createBuffer({
+      size: 2 * 2 * 4,
+      usage: GPUBufferUsage.VERTEX,
+      mappedAtCreation: true
+    });
+    new Float32Array(edgePositionBuffer.getMappedRange()).set([
+      0, 0,
+      1, 1,
+    ]);
+    edgePositionBuffer.unmap();
 
     this.nodeDataBuffer = device.createBuffer({
       size: 4 * 4,
@@ -332,12 +343,18 @@ class Renderer {
         {
           binding: 1,
           resource: {
-            buffer: this.nodeDataBuffer
+            buffer: this.nodeDataBuffer,
+          }
+        },
+        {
+          binding: 2,
+          resource: {
+            buffer: this.edgeDataBuffer,
           }
         }
       ],
     });
-    var edgeViewBoxBindGroup = device.createBindGroup({
+    this.edgeBindGroup = device.createBindGroup({
       layout: this.edgePipeline.getBindGroupLayout(0),
       entries: [
         {
@@ -346,6 +363,18 @@ class Renderer {
             buffer: this.viewBoxBuffer,
           },
         },
+        {
+          binding: 1,
+          resource: {
+            buffer: this.nodeDataBuffer,
+          }
+        },
+        {
+          binding: 2,
+          resource: {
+            buffer: this.edgeDataBuffer,
+          }
+        }
       ],
     });
 
@@ -384,12 +413,11 @@ class Renderer {
         }
         if (render.edgeToggle) {
           passEncoder.setPipeline(render.edgePipeline!);
-          passEncoder.setVertexBuffer(0, render.edgeDataBuffer!);
-          passEncoder.setBindGroup(0, edgeViewBoxBindGroup);
-          passEncoder.draw(render.edgeVertexCount, 1, 0, 0);
+          passEncoder.setVertexBuffer(0, edgePositionBuffer);
+          passEncoder.setBindGroup(0, render.edgeBindGroup!);
+          passEncoder.draw(2, render.edgeLength, 0, 0);
         }
         if (render.nodeToggle) {
-          console.log(render.nodeLength);
           passEncoder.setPipeline(render.nodePipeline!);
           passEncoder.setVertexBuffer(0, nodePositionBuffer);
           passEncoder.setBindGroup(0, render.nodeBindGroup!);
@@ -405,7 +433,7 @@ class Renderer {
 
   }
 
-  setNodeData(nodeData : Array<number>) {
+  setNodeEdgeData(nodeData : Array<number>, edgeData : Array<number>) {
     this.nodeDataBuffer = this.device.createBuffer({
       size: nodeData.length * 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
@@ -413,36 +441,63 @@ class Renderer {
     });
     new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
     this.nodeDataBuffer.unmap();
-    this.nodeBindGroup = this.device.createBindGroup({
-      layout: this.nodePipeline!.getBindGroupLayout(0),
+    this.edgeDataBuffer = this.device.createBuffer({
+      size: edgeData.length * 4,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
+      mappedAtCreation: true
+    });
+    new Uint32Array(this.edgeDataBuffer.getMappedRange()).set(edgeData);
+    this.edgeDataBuffer.unmap();
+    this.edgeBindGroup = this.device.createBindGroup({
+      layout: this.edgePipeline!.getBindGroupLayout(0),
       entries: [
         {
           binding: 0,
           resource: {
-            buffer: this.viewBoxBuffer!
-          }
+            buffer: this.viewBoxBuffer!,
+          },
         },
         {
           binding: 1,
           resource: {
             buffer: this.nodeDataBuffer!,
           }
+        },
+        {
+          binding: 2,
+          resource: {
+            buffer: this.edgeDataBuffer!,
+          }
         }
-      ]
+      ],
     });
+    this.nodeBindGroup = this.device.createBindGroup({
+      layout: this.nodePipeline!.getBindGroupLayout(0),
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: this.viewBoxBuffer!,
+          },
+        },
+        {
+          binding: 1,
+          resource: {
+            buffer: this.nodeDataBuffer!,
+          }
+        },
+        {
+          binding: 2,
+          resource: {
+            buffer: this.edgeDataBuffer!,
+          }
+        }
+      ],
+    });
+    this.edgeLength = edgeData.length;
+    console.log(this.edgeLength);
     this.nodeLength = nodeData.length / 4;
     this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
-  }
-
-  setEdgeData(edgeData : Array<number>) {
-    this.edgeDataBuffer = this.device.createBuffer({
-      size: edgeData.length * 4,
-      usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.VERTEX,
-      mappedAtCreation: true
-    });
-    new Float32Array(this.edgeDataBuffer.getMappedRange()).set(edgeData);
-    this.edgeDataBuffer.unmap();
-    this.edgeVertexCount = edgeData.length / 2;
   }
 
   setWidthFactor(widthFactor : number) {
