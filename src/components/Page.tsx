@@ -50,6 +50,14 @@ class Page extends React.Component<{}, PageState> {
         this.state.renderer!.setValleyValue(value);
     }
 
+    setIdealLength(value : number) {
+        this.state.renderer!.setIdealLength(value);
+    }
+
+    setCoolingFactor(value : number) {
+        this.state.renderer!.setCoolingFactor(value);
+    }
+
     setGlobalRange() {
         this.state.renderer!.setGlobalRange();
     }
@@ -66,6 +74,9 @@ class Page extends React.Component<{}, PageState> {
         this.state.renderer!.toggleEdgeLayer();
     }
 
+    runForceDirected() {
+        this.state.renderer!.runForceDirected();
+    }
 
     onSave() {
         this.state.renderer!.onSave();
@@ -80,9 +91,12 @@ class Page extends React.Component<{}, PageState> {
                 setWidthFactor={this.setWidthFactor.bind(this)} 
                 setNodeEdgeData={this.setNodeEdgeData.bind(this)} 
                 setGlobalRange={this.setGlobalRange.bind(this)}
+                setIdealLength={this.setIdealLength.bind(this)}
+                setCoolingFactor={this.setCoolingFactor.bind(this)}
                 toggleNodeLayer={this.toggleNodeLayer.bind(this)}
                 toggleTerrainLayer={this.toggleTerrainLayer.bind(this)}
                 toggleEdgeLayer={this.toggleEdgeLayer.bind(this)}
+                runForceDirected={this.runForceDirected.bind(this)}
                 onSave={this.onSave.bind(this)}
             />
             <div className="canvasContainer">

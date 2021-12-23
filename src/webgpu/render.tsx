@@ -2,10 +2,12 @@ import { Controller } from './ez_canvas_controller';
 import TerrainGenerator from './terrain_generator';
 import { display_2d_vert, display_2d_frag, node_vert, node_frag, edge_vert, edge_frag } from './wgsl';
 import { saveAs } from 'file-saver'; 
+import ForceDirected from './force_directed';
 
 class Renderer {
   public uniform2DBuffer : GPUBuffer | null = null;
   public terrainGenerator : TerrainGenerator | null = null;
+  public forceDirected : ForceDirected | null = null;
   public device : GPUDevice;
   public bindGroup2D : GPUBindGroup | null = null;
   public nodeBindGroup : GPUBindGroup | null = null;
@@ -24,6 +26,8 @@ class Renderer {
   public colormapImage : HTMLImageElement;
   public outCanvasRef : React.RefObject<HTMLCanvasElement>;
   public canvasSize : [number, number] | null = null;
+  public idealLength : number = 0.1;
+  public coolingFactor : number = 0.99;
 
   constructor(
     adapter : GPUAdapter, device : GPUDevice, 
@@ -266,6 +270,7 @@ class Renderer {
     );
 
     this.terrainGenerator = new TerrainGenerator(device, this.canvasSize![0], this.canvasSize![1]);
+    this.forceDirected = new ForceDirected(device);
 
     this.bindGroup2D = device.createBindGroup({
       layout: pipeline.getBindGroupLayout(0),
@@ -500,6 +505,14 @@ class Renderer {
     this.device.queue.writeBuffer(this.uniform2DBuffer!, 4, new Float32Array([value]), 0, 1);
   }
 
+  setCoolingFactor(value : number) {
+    this.coolingFactor = value;
+  }
+
+  setIdealLength(value : number) {
+    this.idealLength = value;
+  }
+
   setGlobalRange() {
     if (this.rangeBuffer) {
       this.rangeBuffer = null;
@@ -509,6 +522,10 @@ class Renderer {
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
       });    
     }
+  }
+
+  async runForceDirected() {
+    this.forceDirected!.runForces(this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength);
   }
 
   toggleTerrainLayer() {

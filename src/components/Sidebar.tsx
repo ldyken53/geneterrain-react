@@ -8,10 +8,13 @@ type SidebarProps = {
   setWidthFactor: (widthFactor : number) => void,
   setPeakValue: (value : number) => void,
   setValleyValue: (value : number) => void,
+  setCoolingFactor: (value : number) => void,
+  setIdealLength: (value : number) => void,
   setGlobalRange: () => void,
   toggleNodeLayer: () => void,
   toggleTerrainLayer: () => void,
   toggleEdgeLayer: () => void,
+  runForceDirected: () => void,
   onSave: () => void,
 }
 type SidebarState = {
@@ -150,11 +153,19 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleNodeLayer()} type="checkbox" label="Node Layer"/>
             <Form.Check defaultChecked={false} onClick={(e) => this.props.toggleEdgeLayer()} type="checkbox" label="Edge Layer"/>
           </Collapsible>
+          <Collapsible trigger="Force Directed Options">
+            <Form.Label> Ideal Length and Cooling Factor </Form.Label>
+            <input type="range" defaultValue={0.1} min={0.01} max={0.5} step={0.01} onChange={(e) => this.props.setIdealLength(parseFloat(e.target.value))} />
+            <input type="range" defaultValue={0.99} min={0.75} max={0.999} step={0.001} onChange={(e) => this.props.setCoolingFactor(parseFloat(e.target.value))} />
+          </Collapsible>
           <Button onClick={(e) => this.props.onSave()}>
             Save Terrain
           </Button>
           <Button onClick={(e) => this.applySpectral()}>
             Apply Spectral Layout
+          </Button>
+          <Button onClick={(e) => this.props.runForceDirected()}>
+            Run Force Directed Layout Tick
           </Button>
         </Form>
         </ div>
