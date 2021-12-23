@@ -1,14 +1,14 @@
 // normalize terrain wgsl
-[[block]] struct Uniforms {
+struct Uniforms {
   image_width : u32;
   image_height : u32;
   nodes_length : u32;
   width_factor : f32;
 };
-[[block]] struct Pixels {
+struct Pixels {
     pixels : array<f32>;
 };
-[[block]] struct Range {
+struct Range {
     x : i32;
     y : i32;
 };

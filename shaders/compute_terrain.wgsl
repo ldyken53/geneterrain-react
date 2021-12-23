@@ -5,20 +5,20 @@ struct Node {
     y : f32;
     size : f32;
 };
-[[block]] struct Nodes {
+struct Nodes {
     nodes : array<Node>;
 };
-[[block]] struct Uniforms {
+struct Uniforms {
   image_width : u32;
   image_height : u32;
   nodes_length : u32;
   width_factor : f32;
   view_box : vec4<f32>;
 };
-[[block]] struct Pixels {
+struct Pixels {
     pixels : array<f32>;
 };
-[[block]] struct Range {
+struct Range {
     x : atomic<i32>;
     y : atomic<i32>;
 };
@@ -42,7 +42,7 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
         value = value + nodes.nodes[i].value / (sqrDistance * uniforms.width_factor + 1.0);
     }
     value = value * 100.0;
-    ignore(atomicMin(&range.x, i32(floor(value))));
-    ignore(atomicMax(&range.y, i32(ceil(value))));
+    atomicMin(&range.x, i32(floor(value)));
+    atomicMax(&range.y, i32(ceil(value)));
     pixels.pixels[pixel_index] = value;
 }

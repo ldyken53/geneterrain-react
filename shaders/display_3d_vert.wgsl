@@ -4,7 +4,7 @@ struct VertexOutput {
   [[location(0)]] vray_dir: vec3<f32>;
   [[location(1), interpolate(flat)]] transformed_eye: vec3<f32>;
 };
-[[block]] struct Uniforms {
+struct Uniforms {
   proj_view : mat4x4<f32>;
   eye_pos : vec4<f32>;
 };

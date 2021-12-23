@@ -5,20 +5,20 @@ struct Node {
     y : f32;
     size : f32;
 };
-[[block]] struct Nodes {
+struct Nodes {
     nodes : array<Node>;
 };
-[[block]] struct Uniforms {
+struct Uniforms {
   image_width : u32;
   image_height : u32;
   nodes_length : u32;
   width_factor : f32;
   view_box : vec4<f32>;
 };
-[[block]] struct Pixels {
+struct Pixels {
     pixels : array<f32>;
 };
-[[block]] struct Range {
+struct Range {
     x : atomic<i32>;
     y : atomic<i32>;
 };
@@ -42,21 +42,21 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
         value = value + nodes.nodes[i].value / (sqrDistance * uniforms.width_factor + 1.0);
     }
     value = value * 100.0;
-    ignore(atomicMin(&range.x, i32(floor(value))));
-    ignore(atomicMax(&range.y, i32(ceil(value))));
+    atomicMin(&range.x, i32(floor(value)));
+    atomicMax(&range.y, i32(ceil(value)));
     pixels.pixels[pixel_index] = value;
 }`;
 export const  normalize_terrain = `// normalize terrain wgsl
-[[block]] struct Uniforms {
+struct Uniforms {
   image_width : u32;
   image_height : u32;
   nodes_length : u32;
   width_factor : f32;
 };
-[[block]] struct Pixels {
+struct Pixels {
     pixels : array<f32>;
 };
-[[block]] struct Range {
+struct Range {
     x : i32;
     y : i32;
 };
@@ -88,14 +88,14 @@ fn main([[location(0)]] position : vec4<f32>)
 
 `;
 export const  display_2d_frag = `// Fragment shader
-[[block]] struct Pixels {
+struct Pixels {
     pixels : array<f32>;
 };
-[[block]] struct Uniforms {
+struct Uniforms {
     peak_value : f32;
     valley_value : f32;
 };
-[[block]] struct Image {
+struct Image {
     width : u32;
     height : u32;
 };
@@ -143,7 +143,7 @@ struct VertexOutput {
   [[location(0)]] vray_dir: vec3<f32>;
   [[location(1), interpolate(flat)]] transformed_eye: vec3<f32>;
 };
-[[block]] struct Uniforms {
+struct Uniforms {
   proj_view : mat4x4<f32>;
   eye_pos : vec4<f32>;
 };
@@ -160,10 +160,10 @@ fn main([[location(0)]] position : vec3<f32>)
     return output;
 }`;
 export const  display_3d_frag = `// Fragment shader
-[[block]] struct Pixels {
+struct Pixels {
     pixels : array<f32>;
 };
-[[block]] struct Image {
+struct Image {
     width : u32;
     height : u32;
 };
@@ -254,31 +254,44 @@ fn main(
 }
 
 `;
-export const  node_vert = `// Vertex shader
+export const  node_vert = `struct Node {
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
+};
+struct Nodes {
+    nodes : array<Node>;
+};
 struct VertexOutput {
     [[builtin(position)]] Position : vec4<f32>;
     [[location(0)]] position: vec2<f32>;
     [[location(1), interpolate(flat)]] center : vec2<f32>;
 };
-[[block]] struct Uniforms {
+struct Uniforms {
   view_box : vec4<f32>;
 };
 
 [[group(0), binding(0)]] var<uniform> uniforms : Uniforms;
+[[group(0), binding(1)]] var<storage, read> nodes : Nodes;
+
 [[stage(vertex)]]
-fn main([[location(0)]] position : vec2<f32>)
+fn main([[builtin(instance_index)]] index : u32, [[location(0)]] position : vec2<f32>)
      -> VertexOutput {
+    var node_center : vec2<f32> = 2.0 * vec2<f32>(nodes.nodes[index].x, nodes.nodes[index].y) - vec2<f32>(1.0);
+    var translation : vec2<f32> = position * 0.01;
+    var out_position : vec2<f32> = node_center + translation;
     var output : VertexOutput;
     var inv_zoom : f32 = uniforms.view_box.z - uniforms.view_box.x;
     var expected_x : f32 = 0.5 * (1.0 - inv_zoom); 
     var expected_y : f32 = 0.5 * (1.0 - inv_zoom);
     // view_box expected to be between 0 and 1, panning need to be doubled as clip space is (-1, 1)
-    var x : f32 = (position.x - 2.0 * (uniforms.view_box.x - expected_x)) / inv_zoom;
-    var y : f32 = (position.y - 2.0 * (uniforms.view_box.y - expected_y)) / inv_zoom;
+    var x : f32 = (out_position.x - 2.0 * (uniforms.view_box.x - expected_x)) / inv_zoom;
+    var y : f32 = (out_position.y - 2.0 * (uniforms.view_box.y - expected_y)) / inv_zoom;
     output.Position = vec4<f32>(x, y, 0.0, 1.0);
-    output.position = position;
+    output.position = out_position;
     // flat interpolated position will give bottom right corner, so translate to center
-    output.center = output.position + vec2<f32>(-0.01, 0.01);
+    output.center = node_center;
     return output;
 }`;
 export const  node_frag = `fn sigmoid(x: f32) -> f32 {
@@ -298,7 +311,7 @@ export const  edge_vert = `//this builtin(position) clip_position tells that cli
 struct VertexOutput{
     [[builtin(position)]] clip_position: vec4<f32>;
 };
-[[block]] struct Uniforms {
+struct Uniforms {
   view_box : vec4<f32>;
 };
 

@@ -3,7 +3,7 @@
 struct VertexOutput{
     [[builtin(position)]] clip_position: vec4<f32>;
 };
-[[block]] struct Uniforms {
+struct Uniforms {
   view_box : vec4<f32>;
 };
 

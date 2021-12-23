@@ -9,8 +9,9 @@ class Renderer {
   public device : GPUDevice;
   public bindGroup2D : GPUBindGroup | null = null;
   public nodeBindGroup : GPUBindGroup | null = null;
-  public nodePositionBuffer : GPUBuffer | null = null;
+  public nodeDataBuffer : GPUBuffer | null = null;
   public edgeDataBuffer : GPUBuffer | null = null;
+  public viewBoxBuffer : GPUBuffer | null = null;
   public nodePipeline : GPURenderPipeline | null = null;
   public edgePipeline : GPURenderPipeline | null = null;
   public nodeLength : number = 1;
@@ -105,12 +106,12 @@ class Renderer {
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
     });
 
-    this.nodePositionBuffer = device.createBuffer({
+    var nodePositionBuffer = device.createBuffer({
       size: 6 * 2 * 4,
       usage: GPUBufferUsage.VERTEX,
       mappedAtCreation: true
     });
-    new Float32Array(this.nodePositionBuffer.getMappedRange()).set([
+    new Float32Array(nodePositionBuffer.getMappedRange()).set([
       1, -1,
       -1, -1,
       -1, 1,
@@ -118,7 +119,18 @@ class Renderer {
       -1, 1,
       1, 1,
     ]);
-    this.nodePositionBuffer.unmap();
+    nodePositionBuffer.unmap();
+
+    this.nodeDataBuffer = device.createBuffer({
+      size: 4 * 4,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      mappedAtCreation: true
+    });
+    new Float32Array(this.nodeDataBuffer.getMappedRange()).set([
+      0.5, 0.5,
+      0.5, 0.5,
+    ]);
+    this.nodeDataBuffer.unmap();
 
     this.nodePipeline = device.createRenderPipeline({
       vertex: {
@@ -229,10 +241,6 @@ class Renderer {
     });
     new Uint32Array(imageSizeBuffer.getMappedRange()).set(this.canvasSize!);
     imageSizeBuffer.unmap();
-    const nodeDataBuffer = device.createBuffer({
-      size: 16,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
 
     // Load colormap texture
     const colorTexture = device.createTexture({
@@ -275,22 +283,11 @@ class Renderer {
         }
       ],
     });
-    // this.nodeBindGroup = device.createBindGroup({
-    //   layout: pipeline.getBindGroupLayout(1),
-    //   entries: [
-    //     {
-    //       binding: 0,
-    //       resource: {
-    //         buffer: nodeDataBuffer,
-    //       }
-    //     }
-    //   ]
-    // });
-    var viewBoxBuffer = device.createBuffer({
+    this.viewBoxBuffer = device.createBuffer({
       size: 4 * 4,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array([0, 0, 1, 1]), 0, 4);
+    device.queue.writeBuffer(this.viewBoxBuffer, 0, new Float32Array([0, 0, 1, 1]), 0, 4);
     var translation = [0, 0, 1, 1];
     var newTranslation = [0, 0, 1, 1];
     var controller = new Controller();
@@ -306,7 +303,7 @@ class Renderer {
             terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);
           }
           if (render.nodeToggle) {
-            device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
+            device.queue.writeBuffer(render.viewBoxBuffer!, 0, new Float32Array(translation), 0, 4);
           }
         }
       }
@@ -319,21 +316,27 @@ class Renderer {
         if (render.terrainToggle) {
           terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer);
         }
-        device.queue.writeBuffer(viewBoxBuffer, 0, new Float32Array(translation), 0, 4);
+        device.queue.writeBuffer(render.viewBoxBuffer!, 0, new Float32Array(translation), 0, 4);
       } else {
         newTranslation = translation;
       }
     };
     controller.registerForCanvas(canvasRef.current);
-    var viewBoxBindGroup = device.createBindGroup({
+    this.nodeBindGroup = device.createBindGroup({
       layout: this.nodePipeline.getBindGroupLayout(0),
       entries: [
         {
           binding: 0,
           resource: {
-            buffer: viewBoxBuffer,
+            buffer: this.viewBoxBuffer,
           },
         },
+        {
+          binding: 1,
+          resource: {
+            buffer: this.nodeDataBuffer
+          }
+        }
       ],
     });
     var edgeViewBoxBindGroup = device.createBindGroup({
@@ -342,7 +345,7 @@ class Renderer {
         {
           binding: 0,
           resource: {
-            buffer: viewBoxBuffer,
+            buffer: this.viewBoxBuffer,
           },
         },
       ],
@@ -388,10 +391,11 @@ class Renderer {
           passEncoder.draw(render.edgeVertexCount);
         }
         if (render.nodeToggle) {
+          console.log(render.nodeLength);
           passEncoder.setPipeline(render.nodePipeline!);
-          passEncoder.setVertexBuffer(0, render.nodePositionBuffer!);
-          passEncoder.setBindGroup(0, viewBoxBindGroup);
-          passEncoder.draw(render.nodeLength * 6, 1, 0, 0);
+          passEncoder.setVertexBuffer(0, nodePositionBuffer);
+          passEncoder.setBindGroup(0, render.nodeBindGroup!);
+          passEncoder.draw(6, render.nodeLength, 0, 0);
         }
         passEncoder.endPass();
   
@@ -405,40 +409,53 @@ class Renderer {
 
   setNodeData(nodeData : Array<number>) {
     this.terrainGenerator!.computeTerrain(nodeData, undefined, undefined, this.rangeBuffer);
-    var nodePositions : Array<number> = [];
-    var radius : number = 0.01;
-    for (var i = 0; i < nodeData.length; i+=4) {
-      var x = nodeData[i+1] * 2 - 1;
-      var y = nodeData[i+2] * 2 - 1;
-      nodePositions.push(
-        x + radius, y - radius,
-        x - radius, y - radius,
-        x - radius, y + radius,
-        x + radius, y - radius,
-        x - radius, y + radius,
-        x + radius, y + radius
-      );
-    }
-    this.nodePositionBuffer = this.device.createBuffer({
-      size: nodePositions.length * 4,
-      usage: GPUBufferUsage.VERTEX,
-      mappedAtCreation: true
+    this.nodeDataBuffer = this.device.createBuffer({
+      size: nodeData.length * 4,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      mappedAtCreation: true,
     });
-    new Float32Array(this.nodePositionBuffer.getMappedRange()).set(nodePositions);
-    this.nodePositionBuffer.unmap();
+    new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
+    this.nodeDataBuffer.unmap();
+    this.nodeBindGroup = this.device.createBindGroup({
+      layout: this.nodePipeline!.getBindGroupLayout(0),
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: this.viewBoxBuffer!
+          }
+        },
+        {
+          binding: 1,
+          resource: {
+            buffer: this.nodeDataBuffer!,
+          }
+        }
+      ]
+    });
     this.nodeLength = nodeData.length / 4;
-
-    // this.nodeBindGroup = this.device.createBindGroup({
-    //   layout: this.nodePipeline!.getBindGroupLayout(1),
-    //   entries: [
-    //     {
-    //       binding: 0,
-    //       resource: {
-    //         buffer: this.terrainGenerator!.nodeDataBuffer,
-    //       }
-    //     }
-    //   ]
+    // var nodePositions : Array<number> = [];
+    // var radius : number = 0.01;
+    // for (var i = 0; i < nodeData.length; i+=4) {
+    //   var x = nodeData[i+1] * 2 - 1;
+    //   var y = nodeData[i+2] * 2 - 1;
+    //   nodePositions.push(
+    //     x + radius, y - radius,
+    //     x - radius, y - radius,
+    //     x - radius, y + radius,
+    //     x + radius, y - radius,
+    //     x - radius, y + radius,
+    //     x + radius, y + radius
+    //   );
+    // }
+    // this.nodePositionBuffer = this.device.createBuffer({
+    //   size: nodePositions.length * 4,
+    //   usage: GPUBufferUsage.VERTEX,
+    //   mappedAtCreation: true
     // });
+    // new Float32Array(this.nodePositionBuffer.getMappedRange()).set(nodePositions);
+    // this.nodePositionBuffer.unmap();
+    // this.nodeLength = nodeData.length / 4;
   }
 
   setEdgeData(edgeData : Array<number>) {

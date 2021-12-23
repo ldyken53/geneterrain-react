@@ -1,12 +1,12 @@
 // Fragment shader
-[[block]] struct Pixels {
+struct Pixels {
     pixels : array<f32>;
 };
-[[block]] struct Uniforms {
+struct Uniforms {
     peak_value : f32;
     valley_value : f32;
 };
-[[block]] struct Image {
+struct Image {
     width : u32;
     height : u32;
 };
