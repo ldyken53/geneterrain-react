@@ -323,7 +323,7 @@ class Renderer {
       }
     };
     controller.wheel = function (amt) {
-      var change = [amt / 10000, amt / 10000];
+      var change = [amt / 1000, amt / 1000];
       newTranslation = [newTranslation[0] + change[0], newTranslation[1] + change[1], newTranslation[2] - change[0], newTranslation[3] - change[1]];
       if (newTranslation[2] - newTranslation[0] > 0.01 && newTranslation[3] - newTranslation[1] > 0.01) {
         translation = newTranslation;
