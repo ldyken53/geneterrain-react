@@ -10,7 +10,7 @@ class Node:
 
 nodes = []
 for i in range(2):
-    nodes.append(Node(i, random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1), 1))
+    nodes.append(Node(i, random.uniform(0, 1), 0.4 + i * 0.1, 0.5, 1))
 f = open("e1.txt", "w")
 for node in nodes:
     out = f"{node.k}\t{node.v}\n"
@@ -21,7 +21,10 @@ for node in nodes:
     f.write(out)
 f = open("n1.txt", "w")
 for i in range(1):
-    out = f"{nodes[i].k}\t{nodes[i+1].k}\t1\n"
+    # x = random.randint(0, 9999)
+    # if i == x:
+    #     continue
+    out = f"{nodes[i].k}\t{nodes[i + 1].k}\t1\n"
     f.write(out)
 
 

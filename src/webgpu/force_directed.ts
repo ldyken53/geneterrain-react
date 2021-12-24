@@ -53,7 +53,7 @@ class ForceDirected {
         });
     }
 
-    async runForces(nodeDataBuffer = this.nodeDataBuffer, edgeDataBuffer = this.edgeDataBuffer, nodeLength : number = 0, edgeLength : number = 0, coolingFactor = this.coolingFactor, l = 0.1) {
+    async runForces(nodeDataBuffer = this.nodeDataBuffer, edgeDataBuffer = this.edgeDataBuffer, nodeLength : number = 0, edgeLength : number = 0, coolingFactor = this.coolingFactor, l = 0.05) {
         if (nodeLength == 0 || edgeLength == 0) {
             return;
         }
@@ -166,7 +166,7 @@ class ForceDirected {
         await gpuReadBuffer.mapAsync(GPUMapMode.READ);
         const arrayBuffer = gpuReadBuffer.getMappedRange();
         var output = new Float32Array(arrayBuffer);
-        // console.log(output);
+        console.log(output);
         this.coolingFactor = this.coolingFactor * coolingFactor;
         if (this.coolingFactor < 0.00001) {
             break;

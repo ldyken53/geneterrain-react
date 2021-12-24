@@ -26,7 +26,7 @@ class Renderer {
   public colormapImage : HTMLImageElement;
   public outCanvasRef : React.RefObject<HTMLCanvasElement>;
   public canvasSize : [number, number] | null = null;
-  public idealLength : number = 0.1;
+  public idealLength : number = 0.05;
   public coolingFactor : number = 0.99;
 
   constructor(
