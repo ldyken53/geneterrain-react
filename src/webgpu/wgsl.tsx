@@ -410,8 +410,14 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
         var dir : vec2<f32> = normalize(vec2<f32>(node2.x, node2.y) - vec2<f32>(node.x, node.y));
         a_force = a_force + ((dist * dist) / l) * dir;
     } 
-    var force : vec2<f32> = (a_force + r_force) * uniforms.cooling_factor;
-    force = clamp(force, vec2<f32>(-5.0, -5.0), vec2<f32>(5.0, 5.0));
+    var force : vec2<f32> = (a_force + r_force);
+    if(length(force)>0.000000001){
+        force = normalize(force)* min(uniforms.cooling_factor, length(force));
+    }
+    else{
+        force.x = 0.0;
+        force.y = 0.0;
+    }
     forces.forces[global_id.x * 2u] = force.x;
     forces.forces[global_id.x * 2u + 1u] = force.y;
 }
