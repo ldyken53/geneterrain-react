@@ -378,10 +378,16 @@ struct Uniforms {
     ideal_length : f32;
 };
 
+struct maxForceScalar{
+    maxforceScalar: atomic<i32>;
+};
+
 [[group(0), binding(0)]] var<storage, read> nodes : Nodes;
 [[group(0), binding(1)]] var<storage, read> edges : Edges;
 [[group(0), binding(2)]] var<storage, write> forces : Forces;
 [[group(0), binding(3)]] var<uniform> uniforms : Uniforms;
+[[group(0), binding(4)]] var<storage, read_write> maxforce: maxForceScalar; 
+
 [[stage(compute), workgroup_size(1, 1, 1)]]
 fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
     let l : f32 = uniforms.ideal_length;
@@ -416,7 +422,8 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
         }
     } 
     var force : vec2<f32> = (a_force + r_force);
-    if(length(force)>0.000000001){
+    var localForceMag: f32 = length(force); 
+    if(localForceMag>0.000000001){
         force = normalize(force)* min(uniforms.cooling_factor, length(force));
     }
     else{
@@ -425,6 +432,7 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
     }
     forces.forces[global_id.x * 2u] = force.x;
     forces.forces[global_id.x * 2u + 1u] = force.y;
+    atomicMax(&maxforce.maxforceScalar, i32(floor(localForceMag*1000.0)));
 }
 `;
 export const  apply_forces = `struct Node {

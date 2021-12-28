@@ -8,6 +8,7 @@ class ForceDirected {
     public nodeDataBuffer: GPUBuffer;
     public edgeDataBuffer: GPUBuffer;
     public forceDataBuffer: GPUBuffer;
+    public maxForceBuffer: GPUBuffer;
     public coolingFactor: number = 0.99;
     public device: GPUDevice;
     public computeForcesPipeline: GPUComputePipeline;
@@ -31,6 +32,15 @@ class ForceDirected {
             size: 16,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
+
+        this.maxForceBuffer = this.device.createBuffer({
+            size:4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+            mappedAtCreation: true
+        });
+
+        new Int32Array(this.maxForceBuffer.getMappedRange()).set([0]);
+        this.maxForceBuffer.unmap();
 
         this.computeForcesPipeline = device.createComputePipeline({
             compute: {
@@ -114,7 +124,14 @@ class ForceDirected {
                         resource: {
                             buffer: this.paramsBuffer,
                         },
+                    },
+                    {
+                        binding:4,
+                        resource: {
+                            buffer: this.maxForceBuffer
+                        }
                     }
+                    
                 ],
             });
 
@@ -123,6 +140,14 @@ class ForceDirected {
             pass.setBindGroup(0, bindGroup);
             pass.setPipeline(this.computeForcesPipeline);
             pass.dispatch(nodeLength, 1, 1);
+
+            let maxForceResultBuffer = this.device.createBuffer({
+                size: 4,
+                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+            });
+
+            commandEncoder.copyBufferToBuffer(this.maxForceBuffer, 0, maxForceResultBuffer, 0, 4);
+
             //commandEncoder.writeTimestamp();
             // await this.device.queue.onSubmittedWorkDone();
 
@@ -166,6 +191,11 @@ class ForceDirected {
             this.device.queue.submit([commandEncoder.finish()]);
             // await this.device.queue.onSubmittedWorkDone();
 
+           await maxForceResultBuffer.mapAsync(GPUMapMode.READ);
+           const maxForceArrayBuffer = maxForceResultBuffer.getMappedRange();
+           let maxForce = new Int32Array(maxForceArrayBuffer);
+           let maxForceMagnitude = maxForce[0];
+           console.log(maxForce);
             // Read buffer.
             await gpuReadBuffer.mapAsync(GPUMapMode.READ);
             const arrayBuffer = gpuReadBuffer.getMappedRange();
