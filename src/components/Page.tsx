@@ -3,11 +3,14 @@ import Sidebar from './Sidebar';
 import { createRef, MutableRefObject } from 'react';
 import Renderer from "../webgpu/render";
 import colormap from './rainbow.png';
+import { Form } from 'react-bootstrap';
 
 type PageState = {
     widthFactor: number,
     canvasRef: MutableRefObject<HTMLCanvasElement | null>,
     outCanvasRef: MutableRefObject<HTMLCanvasElement | null>,
+    fpsRef: MutableRefObject<HTMLLabelElement | null>,
+    iterRef: MutableRefObject<HTMLLabelElement | null>,
     renderer: Renderer | null,
 }
 class Page extends React.Component<{}, PageState> {
@@ -17,6 +20,8 @@ class Page extends React.Component<{}, PageState> {
             widthFactor: 1000, 
             canvasRef: createRef<HTMLCanvasElement | null>(), 
             outCanvasRef: createRef<HTMLCanvasElement | null>(), 
+            fpsRef: createRef<HTMLLabelElement | null>(),
+            iterRef: createRef<HTMLLabelElement | null>(),
             renderer: null
         };
     }
@@ -30,7 +35,7 @@ class Page extends React.Component<{}, PageState> {
         const imageBitmap = await createImageBitmap(colormapImage);
         this.setState({renderer: new Renderer(
             adapter, device, this.state.canvasRef, 
-            imageBitmap, colormapImage, this.state.outCanvasRef)
+            imageBitmap, colormapImage, this.state.outCanvasRef, this.state.fpsRef, this.state.iterRef)
         });
     }
 
@@ -100,6 +105,9 @@ class Page extends React.Component<{}, PageState> {
                 onSave={this.onSave.bind(this)}
             />
             <div className="canvasContainer">
+                <Form.Label className={"out"} ref={this.state.fpsRef} >FPS: n/a</Form.Label>
+                <br/>
+                <Form.Label className={"out"} ref={this.state.iterRef} ></Form.Label>
                 <canvas ref={this.state.canvasRef} width={800} height={800}></canvas>
                 <canvas hidden={true} ref={this.state.outCanvasRef} width={800} height={800}></canvas>
             </div>

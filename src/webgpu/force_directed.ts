@@ -86,7 +86,16 @@ class ForceDirected {
         });
     }
 
-    async runForces(nodeDataBuffer = this.nodeDataBuffer, edgeDataBuffer = this.edgeDataBuffer, nodeLength: number = 0, edgeLength: number = 0, coolingFactor = this.coolingFactor, l = 0.01, iterationCount = this.iterationCount, threshold = this.threshold) {
+    async runForces(
+        nodeDataBuffer = this.nodeDataBuffer, 
+        edgeDataBuffer = this.edgeDataBuffer, 
+        nodeLength: number = 0, edgeLength: number = 0, 
+        coolingFactor = this.coolingFactor, l = 0.01, 
+        iterationCount = this.iterationCount, 
+        threshold = this.threshold,
+        iterRef
+    ) {
+        console.log(edgeLength);
         if (nodeLength == 0 || edgeLength == 0) {
             return;
         }
@@ -95,7 +104,7 @@ class ForceDirected {
         this.nodeDataBuffer = nodeDataBuffer;
         this.edgeDataBuffer = edgeDataBuffer;
         this.threshold = threshold;
-        this.force = 1000;
+        this.force = 100000;
 
         this.forceDataBuffer = this.device.createBuffer({
             size: nodeLength * 2 * 4,
@@ -210,12 +219,12 @@ class ForceDirected {
             var end : number = performance.now();
             iterationTimes.push(end - start);
 
-            // await this.maxForceResultBuffer.mapAsync(GPUMapMode.READ);
-            // const maxForceArrayBuffer = this.maxForceResultBuffer.getMappedRange();
-            // let maxForce = new Int32Array(maxForceArrayBuffer);
-            // this.force = maxForce[0];           
-            // console.log(this.force);
-            // this.maxForceResultBuffer.unmap();
+            await this.maxForceResultBuffer.mapAsync(GPUMapMode.READ);
+            const maxForceArrayBuffer = this.maxForceResultBuffer.getMappedRange();
+            let maxForce = new Int32Array(maxForceArrayBuffer);
+            this.force = maxForce[0];           
+            console.log(this.force);
+            this.maxForceResultBuffer.unmap();
             // Read all of the forces applied.
             // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
             // const arrayBuffer = gpuReadBuffer.getMappedRange();
@@ -226,7 +235,7 @@ class ForceDirected {
         }
         var totalEnd = performance.now();
         var iterAvg : number = iterationTimes.reduce(function(a, b) {return a + b}) / iterationTimes.length;
-        console.log(`Completed in ${iterationTimes.length} iterations with total time ${totalEnd - totalStart} and average iteration time ${iterAvg}`)
+        iterRef.current!.innerText = `Completed in ${iterationTimes.length} iterations with total time ${totalEnd - totalStart} and average iteration time ${iterAvg}`;
     }
 }
 

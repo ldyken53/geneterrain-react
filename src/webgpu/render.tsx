@@ -28,13 +28,17 @@ class Renderer {
   public canvasSize : [number, number] | null = null;
   public idealLength : number = 0.01;
   public coolingFactor : number = 0.99;
+  public iterRef : React.RefObject<HTMLLabelElement>;
 
   constructor(
     adapter : GPUAdapter, device : GPUDevice, 
     canvasRef : React.RefObject<HTMLCanvasElement>, 
     colormap : ImageBitmap, colormapImage : HTMLImageElement,
     outCanvasRef : React.RefObject<HTMLCanvasElement>, 
+    fpsRef : React.RefObject<HTMLLabelElement>,
+    iterRef : React.RefObject<HTMLLabelElement>,
   ) {
+    this.iterRef = iterRef;
     this.colormapImage = colormapImage;
     this.outCanvasRef = outCanvasRef
     this.device = device;
@@ -386,7 +390,8 @@ class Renderer {
     const view = texture.createView();
 
     var render = this;
-    function frame() {
+    async function frame() {
+        var start = performance.now();
         // Sample is no longer the active page.
         if (!canvasRef.current) return;
 
@@ -425,6 +430,9 @@ class Renderer {
         passEncoder.endPass();
   
         device.queue.submit([commandEncoder.finish()]);
+        await device.queue.onSubmittedWorkDone();
+        var end = performance.now();
+        fpsRef.current!.innerText = `FPS: ${Math.trunc(1000 / (end - start))}`;
         requestAnimationFrame(frame);
     }
 
@@ -525,7 +533,7 @@ class Renderer {
   }
 
   async runForceDirected() {
-    this.forceDirected!.runForces(this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength);
+    this.forceDirected!.runForces(this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 1000, 100, this.iterRef);
   }
 
   toggleTerrainLayer() {
