@@ -86,7 +86,7 @@ class ForceDirected {
         });
     }
 
-    async runForces(nodeDataBuffer = this.nodeDataBuffer, edgeDataBuffer = this.edgeDataBuffer, nodeLength: number = 0, edgeLength: number = 0, coolingFactor = this.coolingFactor, l = 0.1, iterationCount = this.iterationCount, threshold = this.threshold) {
+    async runForces(nodeDataBuffer = this.nodeDataBuffer, edgeDataBuffer = this.edgeDataBuffer, nodeLength: number = 0, edgeLength: number = 0, coolingFactor = this.coolingFactor, l = 0.01, iterationCount = this.iterationCount, threshold = this.threshold) {
         if (nodeLength == 0 || edgeLength == 0) {
             return;
         }
