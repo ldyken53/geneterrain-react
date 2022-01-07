@@ -22,7 +22,7 @@ class Renderer {
   public rangeBuffer : GPUBuffer | null = null;
   public nodeToggle : boolean = true;
   public terrainToggle : boolean = false;
-  public edgeToggle : boolean = false;
+  public edgeToggle : boolean = true;
   public colormapImage : HTMLImageElement;
   public outCanvasRef : React.RefObject<HTMLCanvasElement>;
   public canvasSize : [number, number] | null = null;

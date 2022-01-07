@@ -151,7 +151,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           <Collapsible trigger="Layers"> 
             <Form.Check defaultChecked={false} onClick={(e) => this.props.toggleTerrainLayer()} type="checkbox" label="Terrain Layer"/>
             <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleNodeLayer()} type="checkbox" label="Node Layer"/>
-            <Form.Check defaultChecked={false} onClick={(e) => this.props.toggleEdgeLayer()} type="checkbox" label="Edge Layer"/>
+            <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleEdgeLayer()} type="checkbox" label="Edge Layer"/>
           </Collapsible>
           <Collapsible trigger="Force Directed Options">
             <Form.Label> Ideal Length and Cooling Factor </Form.Label>
@@ -166,7 +166,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             Apply Spectral Layout
           </Button>
           <Button onClick={(e) => this.props.runForceDirected()}>
-            Run Force Directed Layout Tick
+            Run Force Directed Layout
           </Button>
         </Form>
         </ div>

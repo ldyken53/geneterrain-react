@@ -102,6 +102,8 @@ class ForceDirected {
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
         });
 
+        var iterationTimes : Array<number> = [];
+        var totalStart = performance.now();
         while (iterationCount > 0 && this.coolingFactor > 0.000001 && this.force >= this.threshold) {
 
             iterationCount--;
@@ -164,10 +166,6 @@ class ForceDirected {
 
 
             //commandEncoder.writeTimestamp();
-            // await this.device.queue.onSubmittedWorkDone();
-
-            // Look into submitting normalization and compute in one pass to improve speed, remove synchronizations
-            // Use writetimestamp for more accurate kernel timing
 
             // Run apply forces pass
             var bindGroup = this.device.createBindGroup({
@@ -190,38 +188,45 @@ class ForceDirected {
             pass.setPipeline(this.applyForcesPipeline);
             pass.dispatch(nodeLength, 1, 1);
             pass.endPass();
-            const gpuReadBuffer = this.device.createBuffer({
-                size: nodeLength * 2 * 4,
-                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-            });
-            // Encode commands for copying buffer to buffer.
-            commandEncoder.copyBufferToBuffer(
-                this.forceDataBuffer /* source buffer */ ,
-                0 /* source offset */ ,
-                gpuReadBuffer /* destination buffer */ ,
-                0 /* destination offset */ ,
-                nodeLength * 2 * 4 /* size */
-            );
+            // const gpuReadBuffer = this.device.createBuffer({
+            //     size: nodeLength * 2 * 4,
+            //     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+            // });
+            // // Encode commands for copying buffer to buffer.
+            // commandEncoder.copyBufferToBuffer(
+            //     this.forceDataBuffer /* source buffer */ ,
+            //     0 /* source offset */ ,
+            //     gpuReadBuffer /* destination buffer */ ,
+            //     0 /* destination offset */ ,
+            //     nodeLength * 2 * 4 /* size */
+            // );
             
             commandEncoder.copyBufferToBuffer(this.maxForceBuffer, 0, this.maxForceResultBuffer, 0, 4);
             commandEncoder.copyBufferToBuffer(this.forceStageBuffer, 0, this.maxForceBuffer, 0, 4);
 
             this.device.queue.submit([commandEncoder.finish()]);
-            
-           await this.maxForceResultBuffer.mapAsync(GPUMapMode.READ);
-           const maxForceArrayBuffer = this.maxForceResultBuffer.getMappedRange();
-           let maxForce = new Int32Array(maxForceArrayBuffer);
-           this.force = maxForce[0];           
-           console.log(this.force);
-           this.maxForceResultBuffer.unmap();
-            // Read buffer.
-            await gpuReadBuffer.mapAsync(GPUMapMode.READ);
-            const arrayBuffer = gpuReadBuffer.getMappedRange();
-            var output = new Float32Array(arrayBuffer);
+            var start : number = performance.now();
+            await this.device.queue.onSubmittedWorkDone();
+            var end : number = performance.now();
+            iterationTimes.push(end - start);
+
+            // await this.maxForceResultBuffer.mapAsync(GPUMapMode.READ);
+            // const maxForceArrayBuffer = this.maxForceResultBuffer.getMappedRange();
+            // let maxForce = new Int32Array(maxForceArrayBuffer);
+            // this.force = maxForce[0];           
+            // console.log(this.force);
+            // this.maxForceResultBuffer.unmap();
+            // Read all of the forces applied.
+            // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
+            // const arrayBuffer = gpuReadBuffer.getMappedRange();
+            // var output = new Float32Array(arrayBuffer);
             // console.log(output);
             this.coolingFactor = this.coolingFactor * coolingFactor;
             
         }
+        var totalEnd = performance.now();
+        var iterAvg : number = iterationTimes.reduce(function(a, b) {return a + b}) / iterationTimes.length;
+        console.log(`Completed in ${iterationTimes.length} iterations with total time ${totalEnd - totalStart} and average iteration time ${iterAvg}`)
     }
 }
 
