@@ -14,6 +14,7 @@ class Renderer {
   public edgeBindGroup : GPUBindGroup | null = null;
   public nodeDataBuffer : GPUBuffer | null = null;
   public edgeDataBuffer : GPUBuffer | null = null;
+  public colorTexture : GPUTexture | null = null;
   public viewBoxBuffer : GPUBuffer | null = null;
   public nodePipeline : GPURenderPipeline | null = null;
   public edgePipeline : GPURenderPipeline | null = null;
@@ -262,14 +263,14 @@ class Renderer {
     imageSizeBuffer.unmap();
 
     // Load colormap texture
-    const colorTexture = device.createTexture({
+    this.colorTexture = device.createTexture({
       size: [colormap.width, colormap.height, 1],
       format: "rgba8unorm",
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
     device.queue.copyExternalImageToTexture(
       { source: colormap },
-      { texture: colorTexture },
+      { texture: this.colorTexture },
       [colormap.width, colormap.height, 1]
     );
 
@@ -281,7 +282,7 @@ class Renderer {
       entries: [
         {
           binding: 0,
-          resource: colorTexture.createView(),
+          resource: this.colorTexture.createView(),
         },
         {
           binding: 1,
@@ -533,7 +534,7 @@ class Renderer {
   }
 
   async runForceDirected() {
-    this.forceDirected!.runForces(this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 1000, 100, this.iterRef);
+    this.forceDirected!.runForces(this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 10000, 100, this.iterRef);
   }
 
   toggleTerrainLayer() {
@@ -546,6 +547,15 @@ class Renderer {
 
   toggleEdgeLayer() {
     this.edgeToggle = !this.edgeToggle;
+  }
+
+  setColormap(colormap, colormapImage) {
+    this.device.queue.copyExternalImageToTexture(
+      { source: colormap },
+      { texture: this.colorTexture! },
+      [colormap.width, colormap.height, 1]
+    );
+    this.colormapImage = colormapImage;
   }
 
   async onSave() {

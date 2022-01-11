@@ -10,6 +10,9 @@ type SidebarProps = {
   setValleyValue: (value : number) => void,
   setCoolingFactor: (value : number) => void,
   setIdealLength: (value : number) => void,
+  setColorValley: (value : number) => void,
+  setColorHill: (value : number) => void,
+  setColorMountain: (value : number) => void,
   setGlobalRange: () => void,
   toggleNodeLayer: () => void,
   toggleTerrainLayer: () => void,
@@ -147,6 +150,20 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             <Form.Group>
               <Form.Check defaultChecked={true} onClick={(e) => this.props.setGlobalRange()} type="checkbox" label="Use Global Min/Max"></Form.Check>
             </Form.Group>
+          </Collapsible>
+          <Collapsible trigger="Colormap Options"> 
+            <Form.Row>
+              <div>Valley</div>
+              <input type="range" defaultValue={45} min={1} max={60} step={1} onChange={(e) => this.props.setColorValley(parseFloat(e.target.value))} />
+            </Form.Row>
+            <Form.Row>
+              <div>Hill</div>
+              <input type="range" defaultValue={90} min={61} max={120} step={1} onChange={(e) => this.props.setColorHill(parseFloat(e.target.value))} />
+            </Form.Row>
+            <Form.Row>
+              <div>Mountain</div>
+              <input type="range" defaultValue={135} min={121} max={180} step={1} onChange={(e) => this.props.setColorMountain(parseFloat(e.target.value))} />
+            </Form.Row>
           </Collapsible>
           <Collapsible trigger="Layers"> 
             <Form.Check defaultChecked={false} onClick={(e) => this.props.toggleTerrainLayer()} type="checkbox" label="Terrain Layer"/>
