@@ -391,6 +391,8 @@ class Renderer {
     const view = texture.createView();
 
     var render = this;
+    var frameCount = 0;
+    var timeToSecond = 1000;
     async function frame() {
         var start = performance.now();
         // Sample is no longer the active page.
@@ -433,7 +435,14 @@ class Renderer {
         device.queue.submit([commandEncoder.finish()]);
         await device.queue.onSubmittedWorkDone();
         var end = performance.now();
-        fpsRef.current!.innerText = `FPS: ${Math.trunc(1000 / (end - start))}`;
+        if (timeToSecond - (end - start) < 0) {
+          fpsRef.current!.innerText = `FPS: ${frameCount}`;
+          timeToSecond = 1000 + (timeToSecond - (end - start));
+          frameCount = 0;
+        } else {
+          timeToSecond -= end - start;
+        }
+        frameCount += 1;
         requestAnimationFrame(frame);
     }
 
