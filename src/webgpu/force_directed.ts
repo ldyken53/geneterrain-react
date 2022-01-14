@@ -11,7 +11,7 @@ class ForceDirected {
     public maxForceBuffer: GPUBuffer;
     public maxForceResultBuffer: GPUBuffer;
     public forceStageBuffer: GPUBuffer;
-    public coolingFactor: number = 0.99;
+    public coolingFactor: number = 0.9;
     public device: GPUDevice;
     public computeForcesPipeline: GPUComputePipeline;
     public applyForcesPipeline: GPUComputePipeline;
@@ -90,7 +90,7 @@ class ForceDirected {
         nodeDataBuffer = this.nodeDataBuffer, 
         edgeDataBuffer = this.edgeDataBuffer, 
         nodeLength: number = 0, edgeLength: number = 0, 
-        coolingFactor = this.coolingFactor, l = 0.01, 
+        coolingFactor = this.coolingFactor, l = 0.05, 
         iterationCount = this.iterationCount, 
         threshold = this.threshold,
         iterRef
@@ -100,6 +100,7 @@ class ForceDirected {
             return;
         }
         console.log(l);
+        console.log(coolingFactor);
         this.coolingFactor = coolingFactor;
         this.nodeDataBuffer = nodeDataBuffer;
         this.edgeDataBuffer = edgeDataBuffer;

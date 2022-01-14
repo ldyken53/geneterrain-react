@@ -25,12 +25,24 @@ type SidebarState = {
   edgeData: Array<number>,
   laplacian: Matrix,
   adjacencyMatrix: Array<Array<number>>,
-  e: {}
+  e: {},
+  jsonFormat: boolean
+}
+type edge = {
+  source: number,
+  target: number
+}
+type node = {
+  name: string
+}
+type Graph = {
+  nodes: Array<node>,
+  edges: Array<edge>
 }
 class Sidebar extends React.Component<SidebarProps, SidebarState> {
     constructor(props) {
       super(props);
-      this.state = {nodeData: [], edgeData: [], laplacian: sparse([]), adjacencyMatrix: [], e: {}};
+      this.state = {nodeData: [], edgeData: [], laplacian: sparse([]), adjacencyMatrix: [], e: {}, jsonFormat: true};
   
       this.handleSubmit = this.handleSubmit.bind(this);
       this.readFiles = this.readFiles.bind(this);
@@ -45,7 +57,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         const files : FileList = event.target.files!;
         console.log(files);
         var nodeIDToValue = {};
-        var nodeIDToPos = {};
+        // var nodeIDToPos = {};
         var nodeIDToIndex = {};
         var nodeData : Array<number> = [];
         var edgeData : Array<number> = [];
@@ -82,7 +94,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
               // Pushes values to node data in order of struct for WebGPU:
               // nodeValue, nodeX, nodeY, nodeSize
               nodeData.push(parseFloat(nodeIDToValue[parts[0]]), parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
-              nodeIDToPos[parts[0]] = [parseFloat(parts[1]) * 2.0 - 1, parseFloat(parts[2]) * 2.0 - 1];
+              // nodeIDToPos[parts[0]] = [parseFloat(parts[1]) * 2.0 - 1, parseFloat(parts[2]) * 2.0 - 1];
             }
           }
           this.setState({nodeData: nodeData});
@@ -108,6 +120,25 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         nodeReader.readAsText(files[0]);
     }
 
+    readJson(event : React.ChangeEvent<HTMLInputElement>) {
+      const files : FileList = event.target.files!;
+      const jsonReader = new FileReader();
+      var nodeData : Array<number> = [];
+      var edgeData : Array<number> = [];
+      jsonReader.onload = (event) => {
+        var graph : Graph = JSON.parse(jsonReader.result as string);
+        console.log(graph);
+        for (var i = 0; i < graph.nodes.length; i++) {
+          nodeData.push(0.0, Math.random(), Math.random(), 1.0);
+        }
+        for (var i = 0; i < graph.edges.length; i++) {
+          edgeData.push(graph.edges[i].source, graph.edges[i].target);
+        }
+        this.setState({nodeData: nodeData, edgeData: edgeData});
+      };
+      jsonReader.readAsText(files[0]);
+    }
+
     applySpectral() {
       var e = eigs(this.state.laplacian);
       console.log(e);
@@ -131,8 +162,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         <div className="sidebar"> 
         <Form style={{color: 'white'}} onSubmit={this.handleSubmit}>
           <Form.Group controlId="formFile" className="mt-3 mb-3">
+            <Form.Check defaultChecked={true} onClick={() => this.setState({jsonFormat: !this.state.jsonFormat})} type="checkbox" label="Json Format"></Form.Check>
             <Form.Label>Select Example Files</Form.Label>
-            <Form.Control className="form-control" type="file" multiple onChange={this.readFiles}/>
+            <Form.Control className="form-control" type="file" multiple onChange={(e) => {if (this.state.jsonFormat) {this.readJson(e as React.ChangeEvent<HTMLInputElement>)} else {this.readFiles(e as React.ChangeEvent<HTMLInputElement>)}}}/>
             <Button className="mt-2" type="submit" variant="secondary" value="Submit">Submit</ Button>
           </Form.Group>
           <Collapsible trigger="Terrain Options">
@@ -173,8 +205,8 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           <Collapsible trigger="Force Directed Options">
             <Form.Label> Ideal Length and Cooling Factor </Form.Label>
             <br/>
-            <input type="range" defaultValue={0.01} min={0.001} max={0.1} step={0.001} onChange={(e) => this.props.setIdealLength(parseFloat(e.target.value))} />
-            <input type="range" defaultValue={0.99} min={0.75} max={0.999} step={0.001} onChange={(e) => this.props.setCoolingFactor(parseFloat(e.target.value))} />
+            <input type="range" defaultValue={0.05} min={0.001} max={0.1} step={0.001} onChange={(e) => this.props.setIdealLength(parseFloat(e.target.value))} />
+            <input type="range" defaultValue={0.9} min={0.75} max={0.999} step={0.001} onChange={(e) => this.props.setCoolingFactor(parseFloat(e.target.value))} />
           </Collapsible>
           <Button onClick={(e) => this.props.onSave()}>
             Save Terrain

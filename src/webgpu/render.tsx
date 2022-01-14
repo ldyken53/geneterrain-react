@@ -27,8 +27,8 @@ class Renderer {
   public colormapImage : HTMLImageElement;
   public outCanvasRef : React.RefObject<HTMLCanvasElement>;
   public canvasSize : [number, number] | null = null;
-  public idealLength : number = 0.01;
-  public coolingFactor : number = 0.99;
+  public idealLength : number = 0.05;
+  public coolingFactor : number = 0.9;
   public iterRef : React.RefObject<HTMLLabelElement>;
 
   constructor(
@@ -99,9 +99,15 @@ class Renderer {
           code: edge_frag
         }),
         entryPoint: "main",
-        targets:[{
-          format:presentationFormat
-        }]
+        targets: [
+          {
+            format: presentationFormat,
+            blend: {
+              color: {srcFactor: "one" as GPUBlendFactor, dstFactor: "one-minus-src-alpha" as GPUBlendFactor},
+              alpha: {srcFactor: "one" as GPUBlendFactor, dstFactor: "one-minus-src-alpha" as GPUBlendFactor}
+            },
+          },
+        ],
       },
       primitive: {
         topology: "line-list" //triangle-list is default   

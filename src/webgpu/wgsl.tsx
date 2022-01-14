@@ -354,7 +354,7 @@ fn main([[builtin(instance_index)]] index : u32, [[location(0)]] position: vec2<
 }`;
 export const  edge_frag = `[[stage(fragment)]]
 fn main()->[[location(0)]] vec4<f32>{
-    return vec4<f32>(0.6, 0.6, 0.6, 0.1);
+    return vec4<f32>(0.0, 0.0, 0.0, 0.02);
 }`;
 export const  compute_forces = `struct Node {
     value : f32;
@@ -454,8 +454,8 @@ struct Forces {
 fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
     nodes.nodes[global_id.x].x = nodes.nodes[global_id.x].x + forces.forces[global_id.x * 2u];
     nodes.nodes[global_id.x].y = nodes.nodes[global_id.x].y + forces.forces[global_id.x * 2u + 1u]; 
-    nodes.nodes[global_id.x].x = min(1.0, max(-1.0, nodes.nodes[global_id.x].x));
-    nodes.nodes[global_id.x].y = min(1.0, max(-1.0, nodes.nodes[global_id.x].y));
+    // nodes.nodes[global_id.x].x = min(1.0, max(-1.0, nodes.nodes[global_id.x].x));
+    // nodes.nodes[global_id.x].y = min(1.0, max(-1.0, nodes.nodes[global_id.x].y));
     // nodes.nodes[global_id.x].x = nodes.nodes[global_id.x].x + 0.01;
     // nodes.nodes[global_id.x].y = nodes.nodes[global_id.x].y + 0.01;
     // var test : f32 = forces.forces[0]; 
