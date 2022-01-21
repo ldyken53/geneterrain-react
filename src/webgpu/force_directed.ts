@@ -1,6 +1,8 @@
+import { buffer } from 'd3';
 import {
     compute_forces,
-    apply_forces
+    apply_forces,
+    compute_forces_a
 } from './wgsl';
 
 class ForceDirected {
@@ -14,6 +16,7 @@ class ForceDirected {
     public coolingFactor: number = 0.9;
     public device: GPUDevice;
     public computeForcesPipeline: GPUComputePipeline;
+    public computeAttractForcesPipeline: GPUComputePipeline;
     public applyForcesPipeline: GPUComputePipeline;
     public iterationCount: number = 10000;
     public threshold: number = 100;
@@ -68,6 +71,51 @@ class ForceDirected {
                 }),
                 entryPoint: "main",
             },
+        });
+
+        this.computeAttractForcesPipeline = device.createComputePipeline({
+            compute: {
+                module: device.createShaderModule({
+                    code: compute_forces_a,
+                }),
+                entryPoint: "main",
+            },
+            layout: device.createPipelineLayout({
+                bindGroupLayouts: [
+                    device.createBindGroupLayout({
+                        entries: [
+                            {
+                                binding: 0,
+                                visibility: GPUShaderStage.COMPUTE,
+                                buffer: {
+                                    type: "read-only-storage" as GPUBufferBindingType
+                                }
+                            },
+                            {
+                                binding: 1,
+                                visibility: GPUShaderStage.COMPUTE,
+                                buffer: {
+                                    type: "read-only-storage" as GPUBufferBindingType
+                                }
+                            },
+                            {
+                                binding: 2,
+                                visibility: GPUShaderStage.COMPUTE,
+                                buffer: {
+                                    type: "storage" as GPUBufferBindingType
+                                }
+                            },
+                            {
+                                binding: 3,
+                                visibility: GPUShaderStage.COMPUTE,
+                                buffer: {
+                                    type: "uniform" as GPUBufferBindingType
+                                }
+                            }, 
+                        ]
+                    })
+                ]
+            }),
         });
 
         this.applyForcesPipeline = device.createComputePipeline({
@@ -160,6 +208,35 @@ class ForceDirected {
                     {
                         binding: 1,
                         resource: {
+                            buffer: this.forceDataBuffer,
+                        }
+                    },
+                    {
+                        binding: 2,
+                        resource: {
+                            buffer: this.paramsBuffer,
+                        },
+                    },
+                    // {
+                    //     binding:4,
+                    //     resource: {
+                    //         buffer: this.maxForceBuffer
+                    //     }
+                    // }
+                    
+                ],
+            });
+            var attractBindGroup = this.device.createBindGroup({
+                layout: this.computeAttractForcesPipeline.getBindGroupLayout(0),
+                entries: [{
+                        binding: 0,
+                        resource: {
+                            buffer: this.nodeDataBuffer,
+                        },
+                    },
+                    {
+                        binding: 1,
+                        resource: {
                             buffer: this.edgeDataBuffer,
                         }
                     },
@@ -185,6 +262,19 @@ class ForceDirected {
                 ],
             });
 
+            // Run attract forces pass
+            var pass = commandEncoder.beginComputePass();
+            pass.setBindGroup(0, attractBindGroup);
+            pass.setPipeline(this.computeAttractForcesPipeline);
+            pass.dispatch(1, 1, 1);      
+            pass.endPass();
+            this.device.queue.submit([commandEncoder.finish()]);
+            var start : number = performance.now();
+            await this.device.queue.onSubmittedWorkDone();
+            var end : number = performance.now();
+            console.log(`attract force time: ${end - start}`)
+            var commandEncoder = this.device.createCommandEncoder();
+
             // Run compute forces pass
             var pass = commandEncoder.beginComputePass();
             pass.setBindGroup(0, bindGroup);
@@ -199,15 +289,7 @@ class ForceDirected {
             var end : number = performance.now();
             console.log(`compute force time: ${end - start}`)
             var commandEncoder = this.device.createCommandEncoder();
-            var pass = commandEncoder.beginComputePass();
 
-            //commandEncoder.writeTimestamp();
-
-            // Run apply forces pass
-            pass.setBindGroup(0, applyBindGroup);
-            pass.setPipeline(this.applyForcesPipeline);
-            pass.dispatch(nodeLength, 1, 1);
-            pass.endPass();
             // const gpuReadBuffer = this.device.createBuffer({
             //     size: nodeLength * 2 * 4,
             //     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
@@ -220,6 +302,17 @@ class ForceDirected {
             //     0 /* destination offset */ ,
             //     nodeLength * 2 * 4 /* size */
             // );
+            var pass = commandEncoder.beginComputePass();
+
+            //commandEncoder.writeTimestamp();
+
+
+            // Run apply forces pass
+            pass.setBindGroup(0, applyBindGroup);
+            pass.setPipeline(this.applyForcesPipeline);
+            pass.dispatch(nodeLength, 1, 1);
+            pass.endPass();
+
             
             // commandEncoder.copyBufferToBuffer(this.maxForceBuffer, 0, this.maxForceResultBuffer, 0, 4);
             // commandEncoder.copyBufferToBuffer(this.forceStageBuffer, 0, this.maxForceBuffer, 0, 4);
