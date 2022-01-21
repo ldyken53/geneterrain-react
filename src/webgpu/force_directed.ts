@@ -114,7 +114,24 @@ class ForceDirected {
 
         var iterationTimes : Array<number> = [];
         var totalStart = performance.now();
-        while (iterationCount > 0 && this.coolingFactor > 0.000001 && this.force >= this.threshold) {
+        var applyBindGroup = this.device.createBindGroup({
+            layout: this.applyForcesPipeline.getBindGroupLayout(0),
+            entries: [
+                {
+                    binding: 0,
+                    resource: {
+                        buffer: this.nodeDataBuffer,
+                    },
+                },
+                {
+                    binding: 1,
+                    resource: {
+                        buffer: this.forceDataBuffer,
+                    }
+                }
+            ],
+        });
+        while (iterationCount > 0 && this.coolingFactor > 0.000001 && this.force >= 0) {
 
             iterationCount--;
             // Set up params (node length, edge length)
@@ -158,12 +175,12 @@ class ForceDirected {
                             buffer: this.paramsBuffer,
                         },
                     },
-                    {
-                        binding:4,
-                        resource: {
-                            buffer: this.maxForceBuffer
-                        }
-                    }
+                    // {
+                    //     binding:4,
+                    //     resource: {
+                    //         buffer: this.maxForceBuffer
+                    //     }
+                    // }
                     
                 ],
             });
@@ -174,27 +191,20 @@ class ForceDirected {
             pass.setPipeline(this.computeForcesPipeline);
             pass.dispatch(nodeLength, 1, 1);
 
+            // Testing timing of both passes (comment out when not debugging)
+            pass.endPass();
+            this.device.queue.submit([commandEncoder.finish()]);
+            var start : number = performance.now();
+            await this.device.queue.onSubmittedWorkDone();
+            var end : number = performance.now();
+            console.log(`compute force time: ${end - start}`)
+            var commandEncoder = this.device.createCommandEncoder();
+            var pass = commandEncoder.beginComputePass();
 
             //commandEncoder.writeTimestamp();
 
             // Run apply forces pass
-            var bindGroup = this.device.createBindGroup({
-                layout: this.applyForcesPipeline.getBindGroupLayout(0),
-                entries: [{
-                        binding: 0,
-                        resource: {
-                            buffer: this.nodeDataBuffer,
-                        },
-                    },
-                    {
-                        binding: 1,
-                        resource: {
-                            buffer: this.forceDataBuffer,
-                        }
-                    }
-                ],
-            });
-            pass.setBindGroup(0, bindGroup);
+            pass.setBindGroup(0, applyBindGroup);
             pass.setPipeline(this.applyForcesPipeline);
             pass.dispatch(nodeLength, 1, 1);
             pass.endPass();
@@ -211,21 +221,22 @@ class ForceDirected {
             //     nodeLength * 2 * 4 /* size */
             // );
             
-            commandEncoder.copyBufferToBuffer(this.maxForceBuffer, 0, this.maxForceResultBuffer, 0, 4);
-            commandEncoder.copyBufferToBuffer(this.forceStageBuffer, 0, this.maxForceBuffer, 0, 4);
+            // commandEncoder.copyBufferToBuffer(this.maxForceBuffer, 0, this.maxForceResultBuffer, 0, 4);
+            // commandEncoder.copyBufferToBuffer(this.forceStageBuffer, 0, this.maxForceBuffer, 0, 4);
 
             this.device.queue.submit([commandEncoder.finish()]);
             var start : number = performance.now();
             await this.device.queue.onSubmittedWorkDone();
             var end : number = performance.now();
+            console.log(`apply time ${end - start}`)
             iterationTimes.push(end - start);
 
-            await this.maxForceResultBuffer.mapAsync(GPUMapMode.READ);
-            const maxForceArrayBuffer = this.maxForceResultBuffer.getMappedRange();
-            let maxForce = new Int32Array(maxForceArrayBuffer);
-            this.force = maxForce[0];           
-            console.log(this.force);
-            this.maxForceResultBuffer.unmap();
+            // await this.maxForceResultBuffer.mapAsync(GPUMapMode.READ);
+            // const maxForceArrayBuffer = this.maxForceResultBuffer.getMappedRange();
+            // let maxForce = new Int32Array(maxForceArrayBuffer);
+            // this.force = maxForce[0];           
+            // console.log(this.force);
+            // this.maxForceResultBuffer.unmap();
             // Read all of the forces applied.
             // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
             // const arrayBuffer = gpuReadBuffer.getMappedRange();

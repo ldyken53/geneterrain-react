@@ -378,15 +378,15 @@ struct Uniforms {
     ideal_length : f32;
 };
 
-struct maxForceScalar{
-    maxforceScalar: atomic<i32>;
-};
+// struct maxForceScalar{
+//     maxforceScalar: atomic<i32>;
+// };
 
 [[group(0), binding(0)]] var<storage, read> nodes : Nodes;
 [[group(0), binding(1)]] var<storage, read> edges : Edges;
 [[group(0), binding(2)]] var<storage, write> forces : Forces;
 [[group(0), binding(3)]] var<uniform> uniforms : Uniforms;
-[[group(0), binding(4)]] var<storage, read_write> maxforce: maxForceScalar; 
+// [[group(0), binding(4)]] var<storage, read_write> maxforce: maxForceScalar; 
 
 [[stage(compute), workgroup_size(1, 1, 1)]]
 fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
@@ -406,11 +406,11 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
 
     }
     var a_force : vec2<f32> = vec2<f32>(0.0, 0.0);
-    for (var i : u32 = 0u; i < uniforms.edges_length; i= i + 2u) {
+    for (var i : u32 = 0u; i < 1u; i= i + 2u) {
         var node2 : Node;
         if (edges.edges[i] == global_id.x) {
             node2 = nodes.nodes[edges.edges[i + 1u]];
-        } elseif (edges.edges[i + 1u] == global_id.x) {
+        } else if (edges.edges[i + 1u] == global_id.x) {
             node2 = nodes.nodes[edges.edges[i]];
         } else {
             continue;
@@ -432,7 +432,7 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
     }
     forces.forces[global_id.x * 2u] = force.x;
     forces.forces[global_id.x * 2u + 1u] = force.y;
-    atomicMax(&maxforce.maxforceScalar, i32(floor(localForceMag*1000.0)));
+    // atomicMax(&maxforce.maxforceScalar, i32(floor(localForceMag*1000.0)));
 }
 `;
 export const  apply_forces = `struct Node {
@@ -459,5 +459,6 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
     // nodes.nodes[global_id.x].x = nodes.nodes[global_id.x].x + 0.01;
     // nodes.nodes[global_id.x].y = nodes.nodes[global_id.x].y + 0.01;
     // var test : f32 = forces.forces[0]; 
+    // var test2 : f32 = nodes.nodes[0].x;
 }
 `;

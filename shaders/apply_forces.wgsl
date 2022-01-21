@@ -22,4 +22,5 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
     // nodes.nodes[global_id.x].x = nodes.nodes[global_id.x].x + 0.01;
     // nodes.nodes[global_id.x].y = nodes.nodes[global_id.x].y + 0.01;
     // var test : f32 = forces.forces[0]; 
+    // var test2 : f32 = nodes.nodes[0].x;
 }
