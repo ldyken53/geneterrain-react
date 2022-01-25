@@ -617,7 +617,6 @@ class Renderer {
     context!.putImageData(imgData, 0, 0);
     this.outCanvasRef.current!.toBlob(function (b) { saveAs(b!, `terrain.png`); }, "image/png");
   }
-
 }
 export default Renderer;
 

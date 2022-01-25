@@ -2,6 +2,7 @@ import React from 'react';
 import {Form, Button} from "react-bootstrap";
 import Collapsible from 'react-collapsible';
 import { Matrix, matrix, subtract, eigs, column, min, max, index, sparse } from 'mathjs';
+import XMLWriter from 'xml-writer';
 
 type SidebarProps = {
   setNodeEdgeData: (nodeData : Array<number>, edgeData : Array<number>) => void,
@@ -26,7 +27,7 @@ type SidebarState = {
   laplacian: Matrix,
   adjacencyMatrix: Array<Array<number>>,
   e: {},
-  jsonFormat: boolean
+  jsonFormat: boolean,
 }
 type edge = {
   source: number,
@@ -156,6 +157,38 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       this.setState({nodeData: nodeData});
       this.props.setNodeEdgeData(nodeData, this.state.edgeData);
     }
+
+    onSaveXML() {
+      var xw = new XMLWriter(true);
+      xw.startDocument();
+      xw.startElement('GeneTerrain');
+      xw.startElement('Nodes');
+      for (var i = 0; i < this.state.nodeData.length; i+=4) {
+        xw.startElement('Node');
+        xw.writeAttribute('NodeID', i / 4);
+        xw.writeAttribute('InputValue', this.state.nodeData[i]);
+        xw.writeAttribute('InputWeight', this.state.nodeData[i + 3]);
+        xw.writeAttribute('NodeBackendX', this.state.nodeData[i + 1]);
+        xw.writeAttribute('NodeBackendY', this.state.nodeData[i + 2]);
+        xw.endElement('Node');
+      }
+      xw.endElement('Nodes');
+      xw.startElement('Edges');
+      for (var i = 0; i < this.state.edgeData.length; i+=2) {
+        xw.startElement('Edge');
+        xw.writeAttribute('BeginID', this.state.edgeData[i]);
+        xw.writeAttribute('EndID', this.state.edgeData[i + 1]);
+        xw.endElement('Edge');
+      }
+      xw.endElement('Edges');
+      xw.endDocument();
+      const element = document.createElement("a");
+      const file = new Blob([xw.toString()], {type: 'application/xml'});
+      element.href = URL.createObjectURL(file);
+      element.download = "terrain.xml";
+      document.body.appendChild(element); // Required for this to work in FireFox
+      element.click();
+    }
   
     render() {
       return (
@@ -211,11 +244,17 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           <Button onClick={(e) => this.props.onSave()}>
             Save Terrain
           </Button>
+          <br/>
           <Button onClick={(e) => this.applySpectral()}>
             Apply Spectral Layout
           </Button>
+          <br/>
           <Button onClick={(e) => this.props.runForceDirected()}>
             Run Force Directed Layout
+          </Button>
+          <br/>
+          <Button onClick={(e) => this.onSaveXML()}>
+            Save Terrain to XML
           </Button>
         </Form>
         </ div>
