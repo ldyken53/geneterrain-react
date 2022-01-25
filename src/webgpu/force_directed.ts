@@ -269,10 +269,10 @@ class ForceDirected {
             pass.dispatch(1, 1, 1);      
             pass.endPass();
             this.device.queue.submit([commandEncoder.finish()]);
-            var start : number = performance.now();
-            await this.device.queue.onSubmittedWorkDone();
-            var end : number = performance.now();
-            console.log(`attract force time: ${end - start}`)
+            // var start : number = performance.now();
+            // await this.device.queue.onSubmittedWorkDone();
+            // var end : number = performance.now();
+            // console.log(`attract force time: ${end - start}`)
             var commandEncoder = this.device.createCommandEncoder();
 
             // Run compute forces pass
@@ -284,10 +284,10 @@ class ForceDirected {
             // Testing timing of both passes (comment out when not debugging)
             pass.endPass();
             this.device.queue.submit([commandEncoder.finish()]);
-            var start : number = performance.now();
-            await this.device.queue.onSubmittedWorkDone();
-            var end : number = performance.now();
-            console.log(`compute force time: ${end - start}`)
+            // var start : number = performance.now();
+            // await this.device.queue.onSubmittedWorkDone();
+            // var end : number = performance.now();
+            // console.log(`compute force time: ${end - start}`)
             var commandEncoder = this.device.createCommandEncoder();
 
             // const gpuReadBuffer = this.device.createBuffer({
@@ -321,7 +321,7 @@ class ForceDirected {
             var start : number = performance.now();
             await this.device.queue.onSubmittedWorkDone();
             var end : number = performance.now();
-            console.log(`apply time ${end - start}`)
+            console.log(`iteration time ${end - start}`)
             iterationTimes.push(end - start);
 
             // await this.maxForceResultBuffer.mapAsync(GPUMapMode.READ);
