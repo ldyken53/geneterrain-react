@@ -3,6 +3,7 @@ import TerrainGenerator from './terrain_generator';
 import { display_2d_vert, display_2d_frag, node_vert, node_frag, edge_vert, edge_frag } from './wgsl';
 import { saveAs } from 'file-saver'; 
 import ForceDirected from './force_directed';
+import * as d3 from "d3";
 
 class Renderer {
   public uniform2DBuffer : GPUBuffer | null = null;
@@ -14,6 +15,7 @@ class Renderer {
   public edgeBindGroup : GPUBindGroup | null = null;
   public nodeDataBuffer : GPUBuffer | null = null;
   public edgeDataBuffer : GPUBuffer | null = null;
+  public colorTexture : GPUTexture | null = null;
   public viewBoxBuffer : GPUBuffer | null = null;
   public nodePipeline : GPURenderPipeline | null = null;
   public edgePipeline : GPURenderPipeline | null = null;
@@ -22,19 +24,23 @@ class Renderer {
   public rangeBuffer : GPUBuffer | null = null;
   public nodeToggle : boolean = true;
   public terrainToggle : boolean = false;
-  public edgeToggle : boolean = false;
+  public edgeToggle : boolean = true;
   public colormapImage : HTMLImageElement;
   public outCanvasRef : React.RefObject<HTMLCanvasElement>;
   public canvasSize : [number, number] | null = null;
-  public idealLength : number = 0.1;
-  public coolingFactor : number = 0.99;
+  public idealLength : number = 0.05;
+  public coolingFactor : number = 0.9;
+  public iterRef : React.RefObject<HTMLLabelElement>;
 
   constructor(
     adapter : GPUAdapter, device : GPUDevice, 
     canvasRef : React.RefObject<HTMLCanvasElement>, 
     colormap : ImageBitmap, colormapImage : HTMLImageElement,
     outCanvasRef : React.RefObject<HTMLCanvasElement>, 
+    fpsRef : React.RefObject<HTMLLabelElement>,
+    iterRef : React.RefObject<HTMLLabelElement>,
   ) {
+    this.iterRef = iterRef;
     this.colormapImage = colormapImage;
     this.outCanvasRef = outCanvasRef
     this.device = device;
@@ -94,9 +100,15 @@ class Renderer {
           code: edge_frag
         }),
         entryPoint: "main",
-        targets:[{
-          format:presentationFormat
-        }]
+        targets: [
+          {
+            format: presentationFormat,
+            blend: {
+              color: {srcFactor: "one" as GPUBlendFactor, dstFactor: "one-minus-src-alpha" as GPUBlendFactor},
+              alpha: {srcFactor: "one" as GPUBlendFactor, dstFactor: "one-minus-src-alpha" as GPUBlendFactor}
+            },
+          },
+        ],
       },
       primitive: {
         topology: "line-list" //triangle-list is default   
@@ -258,14 +270,14 @@ class Renderer {
     imageSizeBuffer.unmap();
 
     // Load colormap texture
-    const colorTexture = device.createTexture({
+    this.colorTexture = device.createTexture({
       size: [colormap.width, colormap.height, 1],
       format: "rgba8unorm",
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
     device.queue.copyExternalImageToTexture(
       { source: colormap },
-      { texture: colorTexture },
+      { texture: this.colorTexture },
       [colormap.width, colormap.height, 1]
     );
 
@@ -277,7 +289,7 @@ class Renderer {
       entries: [
         {
           binding: 0,
-          resource: colorTexture.createView(),
+          resource: this.colorTexture.createView(),
         },
         {
           binding: 1,
@@ -386,7 +398,10 @@ class Renderer {
     const view = texture.createView();
 
     var render = this;
-    function frame() {
+    var frameCount = 0;
+    var timeToSecond = 1000;
+    async function frame() {
+        var start = performance.now();
         // Sample is no longer the active page.
         if (!canvasRef.current) return;
 
@@ -425,6 +440,16 @@ class Renderer {
         passEncoder.endPass();
   
         device.queue.submit([commandEncoder.finish()]);
+        await device.queue.onSubmittedWorkDone();
+        var end = performance.now();
+        if (timeToSecond - (end - start) < 0) {
+          fpsRef.current!.innerText = `FPS: ${frameCount}`;
+          timeToSecond = 1000 + (timeToSecond - (end - start));
+          frameCount = 0;
+        } else {
+          timeToSecond -= end - start;
+        }
+        frameCount += 1;
         requestAnimationFrame(frame);
     }
 
@@ -525,7 +550,7 @@ class Renderer {
   }
 
   async runForceDirected() {
-    this.forceDirected!.runForces(this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength);
+    this.forceDirected!.runForces(this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 10000, 100, this.iterRef);
   }
 
   toggleTerrainLayer() {
@@ -538,6 +563,15 @@ class Renderer {
 
   toggleEdgeLayer() {
     this.edgeToggle = !this.edgeToggle;
+  }
+
+  setColormap(colormap, colormapImage) {
+    this.device.queue.copyExternalImageToTexture(
+      { source: colormap },
+      { texture: this.colorTexture! },
+      [colormap.width, colormap.height, 1]
+    );
+    this.colormapImage = colormapImage;
   }
 
   async onSave() {
@@ -583,7 +617,6 @@ class Renderer {
     context!.putImageData(imgData, 0, 0);
     this.outCanvasRef.current!.toBlob(function (b) { saveAs(b!, `terrain.png`); }, "image/png");
   }
-
 }
 export default Renderer;
 

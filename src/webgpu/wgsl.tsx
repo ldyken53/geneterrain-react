@@ -354,7 +354,7 @@ fn main([[builtin(instance_index)]] index : u32, [[location(0)]] position: vec2<
 }`;
 export const  edge_frag = `[[stage(fragment)]]
 fn main()->[[location(0)]] vec4<f32>{
-    return vec4<f32>(0.6, 0.6, 0.6, 0.1);
+    return vec4<f32>(0.0, 0.0, 0.0, 0.02);
 }`;
 export const  compute_forces = `struct Node {
     value : f32;
@@ -378,15 +378,14 @@ struct Uniforms {
     ideal_length : f32;
 };
 
-struct maxForceScalar{
-    maxforceScalar: atomic<i32>;
-};
+// struct maxForceScalar{
+//     maxforceScalar: atomic<i32>;
+// };
 
 [[group(0), binding(0)]] var<storage, read> nodes : Nodes;
-[[group(0), binding(1)]] var<storage, read> edges : Edges;
-[[group(0), binding(2)]] var<storage, write> forces : Forces;
-[[group(0), binding(3)]] var<uniform> uniforms : Uniforms;
-[[group(0), binding(4)]] var<storage, read_write> maxforce: maxForceScalar; 
+[[group(0), binding(1)]] var<storage, read_write> forces : Forces;
+[[group(0), binding(2)]] var<uniform> uniforms : Uniforms;
+// [[group(0), binding(4)]] var<storage, read_write> maxforce: maxForceScalar; 
 
 [[stage(compute), workgroup_size(1, 1, 1)]]
 fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
@@ -405,22 +404,8 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
         }
 
     }
-    var a_force : vec2<f32> = vec2<f32>(0.0, 0.0);
-    for (var i : u32 = 0u; i < uniforms.edges_length; i= i + 2u) {
-        var node2 : Node;
-        if (edges.edges[i] == global_id.x) {
-            node2 = nodes.nodes[edges.edges[i + 1u]];
-        } elseif (edges.edges[i + 1u] == global_id.x) {
-            node2 = nodes.nodes[edges.edges[i]];
-        } else {
-            continue;
-        } 
-        var dist : f32 = distance(vec2<f32>(node.x, node.y), vec2<f32>(node2.x, node2.y));
-        if(dist>0.0){
-            var dir : vec2<f32> = normalize(vec2<f32>(node2.x, node2.y) - vec2<f32>(node.x, node.y));
-            a_force = a_force + ((dist * dist) / l) * dir;
-        }
-    } 
+    var a_force : vec2<f32> = vec2<f32>(forces.forces[global_id.x * 2u], forces.forces[global_id.x * 2u + 1u]);
+    // var a_force : vec2<f32> = vec2<f32>(0.0, 0.0);
     var force : vec2<f32> = (a_force + r_force);
     var localForceMag: f32 = length(force); 
     if(localForceMag>0.000000001){
@@ -432,7 +417,53 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
     }
     forces.forces[global_id.x * 2u] = force.x;
     forces.forces[global_id.x * 2u + 1u] = force.y;
-    atomicMax(&maxforce.maxforceScalar, i32(floor(localForceMag*1000.0)));
+    // atomicMax(&maxforce.maxforceScalar, i32(floor(localForceMag*1000.0)));
+}
+`;
+export const  compute_forces_a = `struct Node {
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
+};
+struct Nodes {
+    nodes : array<Node>;
+};
+struct Edges {
+    edges : array<u32>;
+};
+struct Forces {
+    forces : array<f32>;
+};
+struct Uniforms {
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
+};
+
+[[group(0), binding(0)]] var<storage, read> nodes : Nodes;
+[[group(0), binding(1)]] var<storage, read> edges : Edges;
+[[group(0), binding(2)]] var<storage, read_write> forces : Forces;
+[[group(0), binding(3)]] var<uniform> uniforms : Uniforms;
+
+[[stage(compute), workgroup_size(1, 1, 1)]]
+fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
+    let l : f32 = uniforms.ideal_length;
+    var a_force : vec2<f32> = vec2<f32>(0.0, 0.0);
+    for (var i : u32 = 0u; i < uniforms.edges_length; i = i + 2u) {
+        var node : Node = nodes.nodes[edges.edges[i]];
+        var node2 : Node = nodes.nodes[edges.edges[i + 1u]];
+        var dist : f32 = distance(vec2<f32>(node.x, node.y), vec2<f32>(node2.x, node2.y));
+        if(dist > 0.0) {
+            var dir : vec2<f32> = normalize(vec2<f32>(node2.x, node2.y) - vec2<f32>(node.x, node.y));
+            a_force = ((dist * dist) / l) * dir;
+            forces.forces[edges.edges[i] * 2u] = forces.forces[edges.edges[i] * 2u] + a_force.x;
+            forces.forces[edges.edges[i] * 2u + 1u] = forces.forces[edges.edges[i] * 2u + 1u] + a_force.y;
+            forces.forces[edges.edges[i + 1u] * 2u] = forces.forces[edges.edges[i + 1u] * 2u] - a_force.x;
+            forces.forces[edges.edges[i + 1u] * 2u + 1u] = forces.forces[edges.edges[i + 1u] * 2u + 1u] - a_force.y;
+        }
+    } 
 }
 `;
 export const  apply_forces = `struct Node {
@@ -449,15 +480,18 @@ struct Forces {
 };
 
 [[group(0), binding(0)]] var<storage, read_write> nodes : Nodes;
-[[group(0), binding(1)]] var<storage, read> forces : Forces;
+[[group(0), binding(1)]] var<storage, read_write> forces : Forces;
 [[stage(compute), workgroup_size(1, 1, 1)]]
 fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
     nodes.nodes[global_id.x].x = nodes.nodes[global_id.x].x + forces.forces[global_id.x * 2u];
     nodes.nodes[global_id.x].y = nodes.nodes[global_id.x].y + forces.forces[global_id.x * 2u + 1u]; 
-    nodes.nodes[global_id.x].x = min(1.0, max(-1.0, nodes.nodes[global_id.x].x));
-    nodes.nodes[global_id.x].y = min(1.0, max(-1.0, nodes.nodes[global_id.x].y));
+    forces.forces[global_id.x * 2u] = 0.0;
+    forces.forces[global_id.x * 2u + 1u] = 0.0;
+    // nodes.nodes[global_id.x].x = min(1.0, max(-1.0, nodes.nodes[global_id.x].x));
+    // nodes.nodes[global_id.x].y = min(1.0, max(-1.0, nodes.nodes[global_id.x].y));
     // nodes.nodes[global_id.x].x = nodes.nodes[global_id.x].x + 0.01;
     // nodes.nodes[global_id.x].y = nodes.nodes[global_id.x].y + 0.01;
     // var test : f32 = forces.forces[0]; 
+    // var test2 : f32 = nodes.nodes[0].x;
 }
 `;
