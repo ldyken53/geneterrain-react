@@ -135,7 +135,7 @@ class Renderer {
       1, 1,
     ]);
     edgePositionBuffer.unmap();
-
+    
     this.nodeDataBuffer = device.createBuffer({
       size: 4 * 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
@@ -433,6 +433,7 @@ class Renderer {
   }
 
   setNodeEdgeData(nodeData : Array<number>, edgeData : Array<number>) {
+    console.log(nodeData)
     this.nodeDataBuffer = this.device.createBuffer({
       size: nodeData.length * 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
