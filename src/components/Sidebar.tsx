@@ -2,6 +2,7 @@ import React from 'react';
 import {Form, Button} from "react-bootstrap";
 import Collapsible from 'react-collapsible';
 import { Matrix, matrix, subtract, eigs, column, min, max, index, sparse } from 'mathjs';
+import XMLWriter from 'xml-writer';
 
 type SidebarProps = {
   setNodeEdgeData: (nodeData : Array<number>, edgeData : Array<number>) => void,
@@ -10,6 +11,9 @@ type SidebarProps = {
   setValleyValue: (value : number) => void,
   setCoolingFactor: (value : number) => void,
   setIdealLength: (value : number) => void,
+  setColorValley: (value : number) => void,
+  setColorHill: (value : number) => void,
+  setColorMountain: (value : number) => void,
   setGlobalRange: () => void,
   toggleNodeLayer: () => void,
   toggleTerrainLayer: () => void,
@@ -22,12 +26,24 @@ type SidebarState = {
   edgeData: Array<number>,
   laplacian: Matrix,
   adjacencyMatrix: Array<Array<number>>,
-  e: {}
+  e: {},
+  jsonFormat: boolean,
+}
+type edge = {
+  source: number,
+  target: number
+}
+type node = {
+  name: string
+}
+type Graph = {
+  nodes: Array<node>,
+  edges: Array<edge>
 }
 class Sidebar extends React.Component<SidebarProps, SidebarState> {
     constructor(props) {
       super(props);
-      this.state = {nodeData: [], edgeData: [], laplacian: sparse([]), adjacencyMatrix: [], e: {}};
+      this.state = {nodeData: [], edgeData: [], laplacian: sparse([]), adjacencyMatrix: [], e: {}, jsonFormat: true};
   
       this.handleSubmit = this.handleSubmit.bind(this);
       this.readFiles = this.readFiles.bind(this);
@@ -42,7 +58,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         const files : FileList = event.target.files!;
         console.log(files);
         var nodeIDToValue = {};
-        var nodeIDToPos = {};
+        // var nodeIDToPos = {};
         var nodeIDToIndex = {};
         var nodeData : Array<number> = [];
         var edgeData : Array<number> = [];
@@ -79,7 +95,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
               // Pushes values to node data in order of struct for WebGPU:
               // nodeValue, nodeX, nodeY, nodeSize
               nodeData.push(parseFloat(nodeIDToValue[parts[0]]), parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
-              nodeIDToPos[parts[0]] = [parseFloat(parts[1]) * 2.0 - 1, parseFloat(parts[2]) * 2.0 - 1];
+              // nodeIDToPos[parts[0]] = [parseFloat(parts[1]) * 2.0 - 1, parseFloat(parts[2]) * 2.0 - 1];
             }
           }
           this.setState({nodeData: nodeData});
@@ -105,6 +121,25 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         nodeReader.readAsText(files[0]);
     }
 
+    readJson(event : React.ChangeEvent<HTMLInputElement>) {
+      const files : FileList = event.target.files!;
+      const jsonReader = new FileReader();
+      var nodeData : Array<number> = [];
+      var edgeData : Array<number> = [];
+      jsonReader.onload = (event) => {
+        var graph : Graph = JSON.parse(jsonReader.result as string);
+        console.log(graph);
+        for (var i = 0; i < graph.nodes.length; i++) {
+          nodeData.push(0.0, Math.random(), Math.random(), 1.0);
+        }
+        for (var i = 0; i < graph.edges.length; i++) {
+          edgeData.push(graph.edges[i].source, graph.edges[i].target);
+        }
+        this.setState({nodeData: nodeData, edgeData: edgeData});
+      };
+      jsonReader.readAsText(files[0]);
+    }
+
     applySpectral() {
       var e = eigs(this.state.laplacian);
       console.log(e);
@@ -122,14 +157,47 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       this.setState({nodeData: nodeData});
       this.props.setNodeEdgeData(nodeData, this.state.edgeData);
     }
+
+    onSaveXML() {
+      var xw = new XMLWriter(true);
+      xw.startDocument();
+      xw.startElement('GeneTerrain');
+      xw.startElement('Nodes');
+      for (var i = 0; i < this.state.nodeData.length; i+=4) {
+        xw.startElement('Node');
+        xw.writeAttribute('NodeID', i / 4);
+        xw.writeAttribute('InputValue', this.state.nodeData[i]);
+        xw.writeAttribute('InputWeight', this.state.nodeData[i + 3]);
+        xw.writeAttribute('NodeBackendX', this.state.nodeData[i + 1]);
+        xw.writeAttribute('NodeBackendY', this.state.nodeData[i + 2]);
+        xw.endElement('Node');
+      }
+      xw.endElement('Nodes');
+      xw.startElement('Edges');
+      for (var i = 0; i < this.state.edgeData.length; i+=2) {
+        xw.startElement('Edge');
+        xw.writeAttribute('BeginID', this.state.edgeData[i]);
+        xw.writeAttribute('EndID', this.state.edgeData[i + 1]);
+        xw.endElement('Edge');
+      }
+      xw.endElement('Edges');
+      xw.endDocument();
+      const element = document.createElement("a");
+      const file = new Blob([xw.toString()], {type: 'application/xml'});
+      element.href = URL.createObjectURL(file);
+      element.download = "terrain.xml";
+      document.body.appendChild(element); // Required for this to work in FireFox
+      element.click();
+    }
   
     render() {
       return (
         <div className="sidebar"> 
         <Form style={{color: 'white'}} onSubmit={this.handleSubmit}>
           <Form.Group controlId="formFile" className="mt-3 mb-3">
+            <Form.Check defaultChecked={true} onClick={() => this.setState({jsonFormat: !this.state.jsonFormat})} type="checkbox" label="Json Format"></Form.Check>
             <Form.Label>Select Example Files</Form.Label>
-            <Form.Control className="form-control" type="file" multiple onChange={this.readFiles}/>
+            <Form.Control className="form-control" type="file" multiple onChange={(e) => {if (this.state.jsonFormat) {this.readJson(e as React.ChangeEvent<HTMLInputElement>)} else {this.readFiles(e as React.ChangeEvent<HTMLInputElement>)}}}/>
             <Button className="mt-2" type="submit" variant="secondary" value="Submit">Submit</ Button>
           </Form.Group>
           <Collapsible trigger="Terrain Options">
@@ -148,24 +216,45 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
               <Form.Check defaultChecked={true} onClick={(e) => this.props.setGlobalRange()} type="checkbox" label="Use Global Min/Max"></Form.Check>
             </Form.Group>
           </Collapsible>
+          <Collapsible trigger="Colormap Options"> 
+            <Form.Row>
+              <div>Valley</div>
+              <input type="range" defaultValue={45} min={1} max={60} step={1} onChange={(e) => this.props.setColorValley(parseFloat(e.target.value))} />
+            </Form.Row>
+            <Form.Row>
+              <div>Hill</div>
+              <input type="range" defaultValue={90} min={61} max={120} step={1} onChange={(e) => this.props.setColorHill(parseFloat(e.target.value))} />
+            </Form.Row>
+            <Form.Row>
+              <div>Mountain</div>
+              <input type="range" defaultValue={135} min={121} max={180} step={1} onChange={(e) => this.props.setColorMountain(parseFloat(e.target.value))} />
+            </Form.Row>
+          </Collapsible>
           <Collapsible trigger="Layers"> 
             <Form.Check defaultChecked={false} onClick={(e) => this.props.toggleTerrainLayer()} type="checkbox" label="Terrain Layer"/>
             <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleNodeLayer()} type="checkbox" label="Node Layer"/>
-            <Form.Check defaultChecked={false} onClick={(e) => this.props.toggleEdgeLayer()} type="checkbox" label="Edge Layer"/>
+            <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleEdgeLayer()} type="checkbox" label="Edge Layer"/>
           </Collapsible>
           <Collapsible trigger="Force Directed Options">
             <Form.Label> Ideal Length and Cooling Factor </Form.Label>
-            <input type="range" defaultValue={0.1} min={0.01} max={0.5} step={0.01} onChange={(e) => this.props.setIdealLength(parseFloat(e.target.value))} />
-            <input type="range" defaultValue={0.99} min={0.75} max={0.999} step={0.001} onChange={(e) => this.props.setCoolingFactor(parseFloat(e.target.value))} />
+            <br/>
+            <input type="range" defaultValue={0.05} min={0.001} max={0.1} step={0.001} onChange={(e) => this.props.setIdealLength(parseFloat(e.target.value))} />
+            <input type="range" defaultValue={0.9} min={0.75} max={0.999} step={0.001} onChange={(e) => this.props.setCoolingFactor(parseFloat(e.target.value))} />
           </Collapsible>
           <Button onClick={(e) => this.props.onSave()}>
             Save Terrain
           </Button>
+          <br/>
           <Button onClick={(e) => this.applySpectral()}>
             Apply Spectral Layout
           </Button>
+          <br/>
           <Button onClick={(e) => this.props.runForceDirected()}>
-            Run Force Directed Layout Tick
+            Run Force Directed Layout
+          </Button>
+          <br/>
+          <Button onClick={(e) => this.onSaveXML()}>
+            Save Terrain to XML
           </Button>
         </Form>
         </ div>
