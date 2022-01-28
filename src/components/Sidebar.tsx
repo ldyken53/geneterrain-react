@@ -133,7 +133,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           nodeData.push(0.0, Math.random(), Math.random(), 1.0);
         }
         for (var i = 0; i < graph.edges.length; i++) {
-          edgeData.push(graph.edges[i].source, graph.edges[i].target);
+          var source = graph.edges[i].source;
+          var target = graph.edges[i].target;
+          edgeData.push(source, target);
         }
         this.setState({nodeData: nodeData, edgeData: edgeData});
       };

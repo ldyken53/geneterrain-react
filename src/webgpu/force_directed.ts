@@ -2,19 +2,23 @@ import { buffer } from 'd3';
 import {
     compute_forces,
     apply_forces,
-    compute_forces_a
+    compute_forces_a,
+    create_adjacency_matrix,
+    compute_forces_combined
 } from './wgsl';
 
 class ForceDirected {
     public paramsBuffer: GPUBuffer;
     public nodeDataBuffer: GPUBuffer;
     public edgeDataBuffer: GPUBuffer;
+    public adjMatrixBuffer: GPUBuffer;
     public forceDataBuffer: GPUBuffer;
     public maxForceBuffer: GPUBuffer;
     public maxForceResultBuffer: GPUBuffer;
     public forceStageBuffer: GPUBuffer;
     public coolingFactor: number = 0.9;
     public device: GPUDevice;
+    public createAdjMatrixPipeline : GPUComputePipeline;
     public computeForcesPipeline: GPUComputePipeline;
     public computeAttractForcesPipeline: GPUComputePipeline;
     public applyForcesPipeline: GPUComputePipeline;
@@ -31,6 +35,11 @@ class ForceDirected {
         });
 
         this.edgeDataBuffer = this.device.createBuffer({
+            size: 16,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+
+        this.adjMatrixBuffer = this.device.createBuffer({
             size: 16,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
@@ -64,10 +73,19 @@ class ForceDirected {
         new Int32Array(this.forceStageBuffer.getMappedRange()).set([0]);
         this.forceStageBuffer.unmap();
 
+        this.createAdjMatrixPipeline = device.createComputePipeline({
+            compute: {
+                module: device.createShaderModule({
+                    code: create_adjacency_matrix
+                }),
+                entryPoint: "main",
+            },
+        });
+
         this.computeForcesPipeline = device.createComputePipeline({
             compute: {
                 module: device.createShaderModule({
-                    code: compute_forces,
+                    code: compute_forces_combined,
                 }),
                 entryPoint: "main",
             },
@@ -143,7 +161,6 @@ class ForceDirected {
         threshold = this.threshold,
         iterRef
     ) {
-        console.log(edgeLength);
         if (nodeLength == 0 || edgeLength == 0) {
             return;
         }
@@ -154,6 +171,77 @@ class ForceDirected {
         this.edgeDataBuffer = edgeDataBuffer;
         this.threshold = threshold;
         this.force = 100000;
+
+        // Set up params (node length, edge length) for creating adjacency matrix
+        var upload = this.device.createBuffer({
+            size: 4 * 4,
+            usage: GPUBufferUsage.COPY_SRC,
+            mappedAtCreation: true,
+        });
+        var mapping = upload.getMappedRange();
+        new Uint32Array(mapping).set([nodeLength, edgeLength]);
+        new Float32Array(mapping).set([this.coolingFactor, l], 2);
+        upload.unmap();
+        this.adjMatrixBuffer = this.device.createBuffer({
+            size: nodeLength * nodeLength * 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+        });
+        var commandEncoder = this.device.createCommandEncoder();
+        commandEncoder.copyBufferToBuffer(upload, 0, this.paramsBuffer, 0, 4 * 4);
+        var createBindGroup = this.device.createBindGroup({
+            layout: this.createAdjMatrixPipeline.getBindGroupLayout(0),
+            entries: [
+                {
+                    binding: 0,
+                    resource: {
+                        buffer: this.edgeDataBuffer,
+                    }
+                },
+                {
+                    binding: 1,
+                    resource: {
+                        buffer: this.adjMatrixBuffer,
+                    }
+                },
+                {
+                    binding: 2,
+                    resource: {
+                        buffer: this.paramsBuffer,
+                    },
+                },
+            ]
+        });
+        var pass = commandEncoder.beginComputePass();
+        pass.setBindGroup(0, createBindGroup);
+        pass.setPipeline(this.createAdjMatrixPipeline);
+        pass.dispatch(1, 1, 1);      
+        pass.endPass();
+        const gpuReadBuffer = this.device.createBuffer({
+            size: nodeLength * nodeLength * 4,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+        });
+        // Encode commands for copying buffer to buffer.
+        commandEncoder.copyBufferToBuffer(
+            this.adjMatrixBuffer /* source buffer */ ,
+            0 /* source offset */ ,
+            gpuReadBuffer /* destination buffer */ ,
+            0 /* destination offset */ ,
+            nodeLength * nodeLength * 4 /* size */
+        );
+        this.device.queue.submit([commandEncoder.finish()]);
+        
+
+        await gpuReadBuffer.mapAsync(GPUMapMode.READ);
+        const arrayBuffer = gpuReadBuffer.getMappedRange();
+        var output = new Uint32Array(arrayBuffer);
+        var count = 0;
+        for (var i = 0; i < output.length; i++) {
+            if (output[i] == 1) {
+                count++;
+            }
+        }
+        console.log(output);
+        console.log(count);
 
         this.forceDataBuffer = this.device.createBuffer({
             size: nodeLength * 2 * 4,
@@ -199,7 +287,8 @@ class ForceDirected {
             // Create bind group
             var bindGroup = this.device.createBindGroup({
                 layout: this.computeForcesPipeline.getBindGroupLayout(0),
-                entries: [{
+                entries: [
+                    {
                         binding: 0,
                         resource: {
                             buffer: this.nodeDataBuffer,
@@ -208,11 +297,17 @@ class ForceDirected {
                     {
                         binding: 1,
                         resource: {
+                            buffer: this.adjMatrixBuffer,
+                        },
+                    },
+                    {
+                        binding: 2,
+                        resource: {
                             buffer: this.forceDataBuffer,
                         }
                     },
                     {
-                        binding: 2,
+                        binding: 3,
                         resource: {
                             buffer: this.paramsBuffer,
                         },
@@ -263,32 +358,33 @@ class ForceDirected {
             });
 
             // Run attract forces pass
-            var pass = commandEncoder.beginComputePass();
-            pass.setBindGroup(0, attractBindGroup);
-            pass.setPipeline(this.computeAttractForcesPipeline);
-            pass.dispatch(1, 1, 1);      
-            pass.endPass();
-            this.device.queue.submit([commandEncoder.finish()]);
+            // var pass = commandEncoder.beginComputePass();
+            // pass.setBindGroup(0, attractBindGroup);
+            // pass.setPipeline(this.computeAttractForcesPipeline);
+            // pass.dispatch(1, 1, 1);      
+            // pass.endPass();
+            // this.device.queue.submit([commandEncoder.finish()]);
             // var start : number = performance.now();
             // await this.device.queue.onSubmittedWorkDone();
             // var end : number = performance.now();
             // console.log(`attract force time: ${end - start}`)
-            var commandEncoder = this.device.createCommandEncoder();
+            // var commandEncoder = this.device.createCommandEncoder();
 
             // Run compute forces pass
             var pass = commandEncoder.beginComputePass();
             pass.setBindGroup(0, bindGroup);
             pass.setPipeline(this.computeForcesPipeline);
             pass.dispatch(nodeLength, 1, 1);
+            pass.endPass();
 
             // Testing timing of both passes (comment out when not debugging)
-            pass.endPass();
-            this.device.queue.submit([commandEncoder.finish()]);
+            // pass.endPass();
+            // this.device.queue.submit([commandEncoder.finish()]);
             // var start : number = performance.now();
             // await this.device.queue.onSubmittedWorkDone();
             // var end : number = performance.now();
             // console.log(`compute force time: ${end - start}`)
-            var commandEncoder = this.device.createCommandEncoder();
+            // var commandEncoder = this.device.createCommandEncoder();
 
             // const gpuReadBuffer = this.device.createBuffer({
             //     size: nodeLength * 2 * 4,
