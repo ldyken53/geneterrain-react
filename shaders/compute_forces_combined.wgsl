@@ -22,7 +22,7 @@ struct Uniforms {
 
 [[group(0), binding(0)]] var<storage, read> nodes : Nodes;
 [[group(0), binding(1)]] var<storage, read> adjmat : Edges;
-[[group(0), binding(2)]] var<storage, read_write> forces : Forces;
+[[group(0), binding(2)]] var<storage, write> forces : Forces;
 [[group(0), binding(3)]] var<uniform> uniforms : Uniforms;
 
 [[stage(compute), workgroup_size(1, 1, 1)]]

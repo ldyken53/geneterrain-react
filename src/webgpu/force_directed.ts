@@ -13,9 +13,6 @@ class ForceDirected {
     public edgeDataBuffer: GPUBuffer;
     public adjMatrixBuffer: GPUBuffer;
     public forceDataBuffer: GPUBuffer;
-    public maxForceBuffer: GPUBuffer;
-    public maxForceResultBuffer: GPUBuffer;
-    public forceStageBuffer: GPUBuffer;
     public coolingFactor: number = 0.9;
     public device: GPUDevice;
     public createAdjMatrixPipeline : GPUComputePipeline;
@@ -48,30 +45,6 @@ class ForceDirected {
             size: 16,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
-
-        this.maxForceBuffer = this.device.createBuffer({
-            size:4,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
-            mappedAtCreation: true
-        });
-
-        new Int32Array(this.maxForceBuffer.getMappedRange()).set([0]);
-        this.maxForceBuffer.unmap();
-        
-        this.maxForceResultBuffer = this.device.createBuffer({
-                size: 4,
-                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-            });
-
-
-        this.forceStageBuffer = this.device.createBuffer({
-            size:4,
-            usage: GPUBufferUsage.MAP_WRITE | GPUBufferUsage.COPY_SRC,
-            mappedAtCreation:true
-        })
-
-        new Int32Array(this.forceStageBuffer.getMappedRange()).set([0]);
-        this.forceStageBuffer.unmap();
 
         this.createAdjMatrixPipeline = device.createComputePipeline({
             compute: {
@@ -216,32 +189,33 @@ class ForceDirected {
         pass.setPipeline(this.createAdjMatrixPipeline);
         pass.dispatch(1, 1, 1);      
         pass.endPass();
-        const gpuReadBuffer = this.device.createBuffer({
-            size: nodeLength * nodeLength * 4,
-            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-        });
-        // Encode commands for copying buffer to buffer.
-        commandEncoder.copyBufferToBuffer(
-            this.adjMatrixBuffer /* source buffer */ ,
-            0 /* source offset */ ,
-            gpuReadBuffer /* destination buffer */ ,
-            0 /* destination offset */ ,
-            nodeLength * nodeLength * 4 /* size */
-        );
+        // Log adjacency matrix
+        // const gpuReadBuffer = this.device.createBuffer({
+        //     size: nodeLength * nodeLength * 4,
+        //     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+        // });
+        // // Encode commands for copying buffer to buffer.
+        // commandEncoder.copyBufferToBuffer(
+        //     this.adjMatrixBuffer /* source buffer */ ,
+        //     0 /* source offset */ ,
+        //     gpuReadBuffer /* destination buffer */ ,
+        //     0 /* destination offset */ ,
+        //     nodeLength * nodeLength * 4 /* size */
+        // );
         this.device.queue.submit([commandEncoder.finish()]);
         
-
-        await gpuReadBuffer.mapAsync(GPUMapMode.READ);
-        const arrayBuffer = gpuReadBuffer.getMappedRange();
-        var output = new Uint32Array(arrayBuffer);
-        var count = 0;
-        for (var i = 0; i < output.length; i++) {
-            if (output[i] == 1) {
-                count++;
-            }
-        }
-        console.log(output);
-        console.log(count);
+        // Log adjacency matrix (count should be equal to the number of nonduplicate edges)
+        // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
+        // const arrayBuffer = gpuReadBuffer.getMappedRange();
+        // var output = new Uint32Array(arrayBuffer);
+        // var count = 0;
+        // for (var i = 0; i < output.length; i++) {
+        //     if (output[i] == 1) {
+        //         count++;
+        //     }
+        // }
+        // console.log(output);
+        // console.log(count);
 
         this.forceDataBuffer = this.device.createBuffer({
             size: nodeLength * 2 * 4,
@@ -311,13 +285,7 @@ class ForceDirected {
                         resource: {
                             buffer: this.paramsBuffer,
                         },
-                    },
-                    // {
-                    //     binding:4,
-                    //     resource: {
-                    //         buffer: this.maxForceBuffer
-                    //     }
-                    // }
+                    }
                     
                 ],
             });
@@ -409,10 +377,6 @@ class ForceDirected {
             pass.dispatch(nodeLength, 1, 1);
             pass.endPass();
 
-            
-            // commandEncoder.copyBufferToBuffer(this.maxForceBuffer, 0, this.maxForceResultBuffer, 0, 4);
-            // commandEncoder.copyBufferToBuffer(this.forceStageBuffer, 0, this.maxForceBuffer, 0, 4);
-
             this.device.queue.submit([commandEncoder.finish()]);
             var start : number = performance.now();
             await this.device.queue.onSubmittedWorkDone();
@@ -420,11 +384,6 @@ class ForceDirected {
             console.log(`iteration time ${end - start}`)
             iterationTimes.push(end - start);
 
-            // await this.maxForceResultBuffer.mapAsync(GPUMapMode.READ);
-            // const maxForceArrayBuffer = this.maxForceResultBuffer.getMappedRange();
-            // let maxForce = new Int32Array(maxForceArrayBuffer);
-            // this.force = maxForce[0];           
-            // console.log(this.force);
             // this.maxForceResultBuffer.unmap();
             // Read all of the forces applied.
             // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
