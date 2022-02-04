@@ -459,10 +459,14 @@ struct Uniforms {
     cooling_factor : f32;
     ideal_length : f32;
 };
+struct IntArray {
+    matrix : array<i32>;
+};
 
 @group(0) @binding(0) var<storage, read> edges : Edges;
 @group(0) @binding(1) var<storage, read_write> adjmat : BoolArray;
 @group(0) @binding(2) var<uniform> uniforms : Uniforms;
+@group(0) @binding(3) var<storage, read_write> laplacian : IntArray;
 
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
@@ -471,37 +475,11 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
         var target : u32 = edges.edges[i + 1u];
         adjmat.matrix[source * uniforms.nodes_length + target] = 1u;
         adjmat.matrix[target * uniforms.nodes_length + source] = 1u;
-    } 
-}
-`;
-export const  create_laplacian_matrix = `struct Edges {
-    edges : array<u32>;
-};
-struct BoolArray {
-    matrix : array<u32>;
-};
-struct IntArray {
-    matrix : array<i32>;
-};
-struct Uniforms {
-    nodes_length : u32;
-    edges_length : u32;
-    cooling_factor : f32;
-    ideal_length : f32;
-};
-
-@group(0) @binding(0) var<storage, read> adjmat : BoolArray;
-@group(0) @binding(1) var<storage, read_write> laplacian : IntArray;
-@group(0) @binding(2) var<uniform> uniforms : Uniforms;
-
-@stage(compute) @workgroup_size(1, 1, 1)
-fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
-    for (var i : u32 = 0u; i < uniforms.nodes_length; i = i + 1u) {
-        for (var j : u32 = 0u; j < uniforms.nodes_length; j = j + 1u) {
-            if (adjmat.matrix[i * uniforms.nodes_length + j] == 1u && i != j) {
-                laplacian[i * uniforms.nodes_length + i] = laplacian[i * uniforms.nodes_length + i] + 1;
-                laplacian[i * uniforms.nodes_length + j] = -1;
-            }
+        if (laplacian.matrix[source * uniforms.nodes_length + target] != -1 && source != target) {
+            laplacian.matrix[source * uniforms.nodes_length + target] = -1;
+            laplacian.matrix[target * uniforms.nodes_length + source] = -1;
+            laplacian.matrix[source * uniforms.nodes_length + source] = laplacian.matrix[source * uniforms.nodes_length + source] + 1;
+            laplacian.matrix[target * uniforms.nodes_length + target] = laplacian.matrix[target * uniforms.nodes_length + target] + 1;
         }
     } 
 }

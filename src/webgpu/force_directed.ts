@@ -10,10 +10,11 @@ class ForceDirected {
     public nodeDataBuffer: GPUBuffer;
     public edgeDataBuffer: GPUBuffer;
     public adjMatrixBuffer: GPUBuffer;
+    public laplacianBuffer: GPUBuffer;
     public forceDataBuffer: GPUBuffer;
     public coolingFactor: number = 0.9;
     public device: GPUDevice;
-    public createAdjMatrixPipeline : GPUComputePipeline;
+    public createMatrixPipeline : GPUComputePipeline;
     public computeForcesPipeline: GPUComputePipeline;
     public applyForcesPipeline: GPUComputePipeline;
     public iterationCount: number = 10000;
@@ -38,12 +39,17 @@ class ForceDirected {
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
 
+        this.laplacianBuffer = this.device.createBuffer({
+            size: 16,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+
         this.forceDataBuffer = this.device.createBuffer({
             size: 16,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
 
-        this.createAdjMatrixPipeline = device.createComputePipeline({
+        this.createMatrixPipeline = device.createComputePipeline({
             compute: {
                 module: device.createShaderModule({
                     code: create_adjacency_matrix
@@ -111,10 +117,14 @@ class ForceDirected {
             size: nodeLength * nodeLength * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
+        this.laplacianBuffer = this.device.createBuffer({
+            size: nodeLength * nodeLength * 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+        });
         var commandEncoder = this.device.createCommandEncoder();
         commandEncoder.copyBufferToBuffer(upload, 0, this.paramsBuffer, 0, 4 * 4);
         var createBindGroup = this.device.createBindGroup({
-            layout: this.createAdjMatrixPipeline.getBindGroupLayout(0),
+            layout: this.createMatrixPipeline.getBindGroupLayout(0),
             entries: [
                 {
                     binding: 0,
@@ -134,40 +144,46 @@ class ForceDirected {
                         buffer: this.paramsBuffer,
                     },
                 },
+                {
+                    binding: 3,
+                    resource: {
+                        buffer: this.laplacianBuffer
+                    }
+                }
             ]
         });
+
         var pass = commandEncoder.beginComputePass();
         pass.setBindGroup(0, createBindGroup);
-        pass.setPipeline(this.createAdjMatrixPipeline);
+        pass.setPipeline(this.createMatrixPipeline);
         pass.dispatch(1, 1, 1);      
         pass.endPass();
         // Log adjacency matrix
-        // const gpuReadBuffer = this.device.createBuffer({
-        //     size: nodeLength * nodeLength * 4,
-        //     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-        // });
-        // // Encode commands for copying buffer to buffer.
-        // commandEncoder.copyBufferToBuffer(
-        //     this.adjMatrixBuffer /* source buffer */ ,
-        //     0 /* source offset */ ,
-        //     gpuReadBuffer /* destination buffer */ ,
-        //     0 /* destination offset */ ,
-        //     nodeLength * nodeLength * 4 /* size */
-        // );
+        const gpuReadBuffer = this.device.createBuffer({
+            size: nodeLength * nodeLength * 4,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+        });
+        // Encode commands for copying buffer to buffer.
+        commandEncoder.copyBufferToBuffer(
+            this.laplacianBuffer /* source buffer */ ,
+            0 /* source offset */ ,
+            gpuReadBuffer /* destination buffer */ ,
+            0 /* destination offset */ ,
+            nodeLength * nodeLength * 4 /* size */
+        );
         this.device.queue.submit([commandEncoder.finish()]);
         
         // Log adjacency matrix (count should be equal to the number of nonduplicate edges)
-        // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
-        // const arrayBuffer = gpuReadBuffer.getMappedRange();
-        // var output = new Uint32Array(arrayBuffer);
-        // var count = 0;
-        // for (var i = 0; i < output.length; i++) {
-        //     if (output[i] == 1) {
-        //         count++;
-        //     }
-        // }
-        // console.log(output);
-        // console.log(count);
+        await gpuReadBuffer.mapAsync(GPUMapMode.READ);
+        const arrayBuffer = gpuReadBuffer.getMappedRange();
+        var output = new Int32Array(arrayBuffer);
+        var count = 0;
+        for (var i = 0; i < output.length; i++) {
+            count+=output[i];
+        }
+        console.log(output);
+        console.log(count);
+        console.log(output.length);
 
         this.forceDataBuffer = this.device.createBuffer({
             size: nodeLength * 2 * 4,
