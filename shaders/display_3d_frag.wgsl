@@ -7,9 +7,9 @@ struct Image {
     height : u32;
 };
 
-[[group(0), binding(1)]] var colormap: texture_2d<f32>;
-[[group(0), binding(2)]] var<storage, read> pixels : Pixels;
-[[group(0), binding(3)]] var<uniform> image_size : Image;
+@group(0) @binding(1) var colormap: texture_2d<f32>;
+@group(0) @binding(2) var<storage, read> pixels : Pixels;
+@group(0) @binding(3) var<uniform> image_size : Image;
 
 fn intersect_box(orig : vec3<f32>, dir : vec3<f32>, box_min : vec3<f32>, box_max : vec3<f32>) -> vec2<f32> {
     let inv_dir : vec3<f32> = 1.0 / dir;
@@ -26,11 +26,11 @@ fn outside_grid(p : vec3<f32>, volumeDims : vec3<f32>) -> bool {
     return any(p < vec3<f32>(0.0)) || any(p >= volumeDims);
 }
 
-[[stage(fragment)]]
+@stage(fragment)
 fn main(
-  [[location(0)]] vray_dir: vec3<f32>, 
-  [[location(1), interpolate(flat)]] transformed_eye : vec3<f32>
-)-> [[location(0)]] vec4<f32> {
+  @location(0) vray_dir: vec3<f32>, 
+  @location(1) @interpolate(flat) transformed_eye : vec3<f32>
+)-> @location(0) vec4<f32> {
     var ray_dir : vec3<f32> = normalize(vray_dir);
     var longest_axis : f32 = f32(max(image_size.width, image_size.height));
     let volume_dims : vec3<f32> = vec3<f32>(f32(image_size.width), f32(image_size.height), f32(longest_axis));

@@ -23,13 +23,13 @@ struct Range {
     y : atomic<i32>;
 };
 
-[[group(0), binding(0)]] var<storage, read> nodes : Nodes;
-[[group(0), binding(1)]] var<uniform> uniforms : Uniforms;
-[[group(0), binding(2)]] var<storage, write> pixels : Pixels;
-[[group(0), binding(3)]] var<storage, read_write> range : Range;
+@group(0) @binding(0) var<storage, read> nodes : Nodes;
+@group(0) @binding(1) var<uniform> uniforms : Uniforms;
+@group(0) @binding(2) var<storage, write> pixels : Pixels;
+@group(0) @binding(3) var<storage, read_write> range : Range;
 
-[[stage(compute), workgroup_size(1, 1, 1)]]
-fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
+@stage(compute) @workgroup_size(1, 1, 1)
+fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     var pixel_index : u32 = global_id.x + global_id.y * uniforms.image_width;
     var x : f32 = f32(global_id.x) / f32(uniforms.image_width);
     var y : f32 = f32(global_id.y) / f32(uniforms.image_height);
@@ -61,23 +61,23 @@ struct Range {
     y : i32;
 };
 
-[[group(0), binding(0)]] var<storage, write> pixels : Pixels;
-[[group(0), binding(1)]] var<uniform> uniforms : Uniforms;
-[[group(0), binding(2)]] var<storage, read_write> range : Range;
+@group(0) @binding(0) var<storage, write> pixels : Pixels;
+@group(0) @binding(1) var<uniform> uniforms : Uniforms;
+@group(0) @binding(2) var<storage, read_write> range : Range;
 
-[[stage(compute), workgroup_size(1, 1, 1)]]
-fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
+@stage(compute) @workgroup_size(1, 1, 1)
+fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     var pixel_index : u32 = global_id.x + global_id.y * uniforms.image_width;
     pixels.pixels[pixel_index] = (pixels.pixels[pixel_index] - f32(range.x)) / f32(range.y - range.x);
 }`;
 export const  display_2d_vert = `// Vertex shader
 struct VertexOutput {
-  [[builtin(position)]] Position : vec4<f32>;
-  [[location(0)]] fragPosition: vec4<f32>;
+  @builtin(position) Position : vec4<f32>;
+  @location(0) fragPosition: vec4<f32>;
 };
 
-[[stage(vertex)]]
-fn main([[location(0)]] position : vec4<f32>)
+@stage(vertex)
+fn main(@location(0) position : vec4<f32>)
      -> VertexOutput {
     var output : VertexOutput;
     output.Position = position;
@@ -100,17 +100,17 @@ struct Image {
     height : u32;
 };
 
-[[group(0), binding(0)]] var myTexture: texture_2d<f32>;
-[[group(0), binding(1)]] var<storage, read> pixels : Pixels;
-[[group(0), binding(2)]] var<uniform> uniforms : Uniforms;
-[[group(0), binding(3)]] var<uniform> image_size : Image;
+@group(0) @binding(0) var myTexture: texture_2d<f32>;
+@group(0) @binding(1) var<storage, read> pixels : Pixels;
+@group(0) @binding(2) var<uniform> uniforms : Uniforms;
+@group(0) @binding(3) var<uniform> image_size : Image;
 
 fn outside_grid(p : vec2<u32>) -> bool {
     return any(p == vec2<u32>(u32(0))) || p.x == image_size.width || p.y == image_size.height;
 }
 
-[[stage(fragment)]]
-fn main([[location(0)]] fragPosition: vec4<f32>) -> [[location(0)]] vec4<f32> {
+@stage(fragment)
+fn main(@location(0) fragPosition: vec4<f32>) -> @location(0) vec4<f32> {
     var ufragPos : vec4<u32> = vec4<u32>(fragPosition * f32(image_size.width));
     var pixelIndex : u32 = ufragPos.x + ufragPos.y * image_size.width;
     var value : f32 = pixels.pixels[pixelIndex];
@@ -139,18 +139,18 @@ fn main([[location(0)]] fragPosition: vec4<f32>) -> [[location(0)]] vec4<f32> {
 }`;
 export const  display_3d_vert = `// Vertex shader
 struct VertexOutput {
-  [[builtin(position)]] Position : vec4<f32>;
-  [[location(0)]] vray_dir: vec3<f32>;
-  [[location(1), interpolate(flat)]] transformed_eye: vec3<f32>;
+  @builtin(position) Position : vec4<f32>;
+  @location(0) vray_dir: vec3<f32>;
+  @location(1) @interpolate(flat) transformed_eye: vec3<f32>;
 };
 struct Uniforms {
   proj_view : mat4x4<f32>;
   eye_pos : vec4<f32>;
 };
-[[group(0), binding(0)]] var<uniform> uniforms : Uniforms;
+@group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
 [[stage(vertex)]]
-fn main([[location(0)]] position : vec3<f32>)
+fn main(@location(0) position : vec3<f32>)
      -> VertexOutput {
     var output : VertexOutput;
     var volume_translation : vec3<f32> = vec3<f32>(-0.5, -0.5, -0.5);
@@ -168,9 +168,9 @@ struct Image {
     height : u32;
 };
 
-[[group(0), binding(1)]] var colormap: texture_2d<f32>;
-[[group(0), binding(2)]] var<storage, read> pixels : Pixels;
-[[group(0), binding(3)]] var<uniform> image_size : Image;
+@group(0) @binding(1) var colormap: texture_2d<f32>;
+@group(0) @binding(2) var<storage, read> pixels : Pixels;
+@group(0) @binding(3) var<uniform> image_size : Image;
 
 fn intersect_box(orig : vec3<f32>, dir : vec3<f32>, box_min : vec3<f32>, box_max : vec3<f32>) -> vec2<f32> {
     let inv_dir : vec3<f32> = 1.0 / dir;
@@ -187,11 +187,11 @@ fn outside_grid(p : vec3<f32>, volumeDims : vec3<f32>) -> bool {
     return any(p < vec3<f32>(0.0)) || any(p >= volumeDims);
 }
 
-[[stage(fragment)]]
+@stage(fragment)
 fn main(
-  [[location(0)]] vray_dir: vec3<f32>, 
-  [[location(1), interpolate(flat)]] transformed_eye : vec3<f32>
-)-> [[location(0)]] vec4<f32> {
+  @location(0) vray_dir: vec3<f32>, 
+  @location(1) @interpolate(flat) transformed_eye : vec3<f32>
+)-> @location(0) vec4<f32> {
     var ray_dir : vec3<f32> = normalize(vray_dir);
     var longest_axis : f32 = f32(max(image_size.width, image_size.height));
     let volume_dims : vec3<f32> = vec3<f32>(f32(image_size.width), f32(image_size.height), f32(longest_axis));
@@ -264,9 +264,9 @@ struct Nodes {
     nodes : array<Node>;
 };
 struct VertexOutput {
-    [[builtin(position)]] Position : vec4<f32>;
-    [[location(0)]] position: vec2<f32>;
-    [[location(1), interpolate(flat)]] center : vec2<f32>;
+    @builtin(position) Position : vec4<f32>;
+    @location(0) position: vec2<f32>;
+    @location(1) @interpolate(flat) center : vec2<f32>;
 };
 struct Uniforms {
   view_box : vec4<f32>;
@@ -275,11 +275,11 @@ struct Edges {
     edges : array<u32>;
 };
 
-[[group(0), binding(0)]] var<uniform> uniforms : Uniforms;
-[[group(0), binding(1)]] var<storage, read> nodes : Nodes;
+@group(0) @binding(0) var<uniform> uniforms : Uniforms;
+@group(0) @binding(1) var<storage, read> nodes : Nodes;
 
-[[stage(vertex)]]
-fn main([[builtin(instance_index)]] index : u32, [[location(0)]] position : vec2<f32>)
+@stage(vertex)
+fn main(@builtin(instance_index) index : u32, @location(0) position : vec2<f32>)
      -> VertexOutput {
     var node_center : vec2<f32> = 2.0 * vec2<f32>(nodes.nodes[index].x, nodes.nodes[index].y) - vec2<f32>(1.0);
     var translation : vec2<f32> = position * 0.01;
@@ -301,8 +301,8 @@ export const  node_frag = `fn sigmoid(x: f32) -> f32 {
     return 1.0 / (1.0 + exp(-1.0 * x));
 }
 
-[[stage(fragment)]]
-fn main([[location(0)]] position: vec2<f32>, [[location(1), interpolate(flat)]] center: vec2<f32>) -> [[location(0)]] vec4<f32> {
+@stage(fragment)
+fn main(@location(0) position: vec2<f32>, @location(1) @interpolate(flat) center: vec2<f32>) -> @location(0) vec4<f32> {
     if (distance(position, center) > 0.005) {
         discard;
     }
@@ -312,7 +312,7 @@ fn main([[location(0)]] position: vec2<f32>, [[location(1), interpolate(flat)]] 
 export const  edge_vert = `//this builtin(position) clip_position tells that clip_position is the value we want to use for our vertex position or clip position
 //it's not needed to create a struct, we could just do [[builtin(position)]] clipPosition
 struct VertexOutput{
-    [[builtin(position)]] clip_position: vec4<f32>;
+    @builtin(position) clip_position: vec4<f32>;
 };
 struct Uniforms {
   view_box : vec4<f32>;
@@ -336,11 +336,11 @@ struct Edges {
     edges : array<u32>;
 };
 
-[[group(0), binding(0)]] var<uniform> uniforms : Uniforms;
-[[group(0), binding(1)]] var<storage, read> nodes : Nodes;
-[[group(0), binding(2)]] var<storage, read> edges : Edges;
-[[stage(vertex)]]
-fn main([[builtin(instance_index)]] index : u32, [[location(0)]] position: vec2<f32>)-> VertexOutput {
+@group(0) @binding(0) var<uniform> uniforms : Uniforms;
+@group(0) @binding(1) var<storage, read> nodes : Nodes;
+@group(0) @binding(2) var<storage, read> edges : Edges;
+@stage(vertex)
+fn main(@builtin(instance_index) index : u32, @location(0) position: vec2<f32>)-> VertexOutput {
     var out : VertexOutput;
     var node : Node = nodes.nodes[edges.edges[index + u32(position.x)]];
     var inv_zoom : f32 = uniforms.view_box.z - uniforms.view_box.x;
@@ -352,8 +352,8 @@ fn main([[builtin(instance_index)]] index : u32, [[location(0)]] position: vec2<
     out.clip_position = vec4<f32>(x, y, 0.0, 1.0);
     return out;
 }`;
-export const  edge_frag = `[[stage(fragment)]]
-fn main()->[[location(0)]] vec4<f32>{
+export const  edge_frag = `@stage(fragment)
+fn main()->@location(0) vec4<f32>{
     return vec4<f32>(0.0, 0.0, 0.0, 0.02);
 }`;
 export const  compute_forces = `struct Node {
@@ -378,38 +378,37 @@ struct Uniforms {
     ideal_length : f32;
 };
 
-// struct maxForceScalar{
-//     maxforceScalar: atomic<i32>;
-// };
+@group(0) @binding(0) var<storage, read> nodes : Nodes;
+@group(0) @binding(1) var<storage, read> adjmat : Edges;
+@group(0) @binding(2) var<storage, write> forces : Forces;
+@group(0) @binding(3) var<uniform> uniforms : Uniforms;
 
-[[group(0), binding(0)]] var<storage, read> nodes : Nodes;
-[[group(0), binding(1)]] var<storage, read_write> forces : Forces;
-[[group(0), binding(2)]] var<uniform> uniforms : Uniforms;
-// [[group(0), binding(4)]] var<storage, read_write> maxforce: maxForceScalar; 
-
-[[stage(compute), workgroup_size(1, 1, 1)]]
-fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
+@stage(compute) @workgroup_size(1, 1, 1)
+fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     let l : f32 = uniforms.ideal_length;
     let node : Node = nodes.nodes[global_id.x];
     var r_force : vec2<f32> = vec2<f32>(0.0, 0.0);
+    var a_force : vec2<f32> = vec2<f32>(0.0, 0.0);
     for (var i : u32 = 0u; i < uniforms.nodes_length; i = i + 1u) {
         if (i == global_id.x) {
             continue;
         }
         var node2 : Node = nodes.nodes[i];
         var dist : f32 = distance(vec2<f32>(node.x, node.y), vec2<f32>(node2.x, node2.y));
-        if(dist>0.0){
-            var dir : vec2<f32> = normalize(vec2<f32>(node.x, node.y) - vec2<f32>(node2.x, node2.y));
-            r_force = r_force + ((l * l) / dist) * dir;
+        if (dist > 0.0){
+            if (adjmat.edges[i * uniforms.nodes_length + global_id.x] == 1u) {
+                var dir : vec2<f32> = normalize(vec2<f32>(node2.x, node2.y) - vec2<f32>(node.x, node.y));
+                a_force = a_force + ((dist * dist) / l) * dir;
+            } else {
+                var dir : vec2<f32> = normalize(vec2<f32>(node.x, node.y) - vec2<f32>(node2.x, node2.y));
+                r_force = r_force + ((l * l) / dist) * dir;
+            }
         }
-
     }
-    var a_force : vec2<f32> = vec2<f32>(forces.forces[global_id.x * 2u], forces.forces[global_id.x * 2u + 1u]);
-    // var a_force : vec2<f32> = vec2<f32>(0.0, 0.0);
     var force : vec2<f32> = (a_force + r_force);
     var localForceMag: f32 = length(force); 
-    if(localForceMag>0.000000001){
-        force = normalize(force)* min(uniforms.cooling_factor, length(force));
+    if (localForceMag>0.000000001) {
+        force = normalize(force) * min(uniforms.cooling_factor, length(force));
     }
     else{
         force.x = 0.0;
@@ -417,53 +416,6 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
     }
     forces.forces[global_id.x * 2u] = force.x;
     forces.forces[global_id.x * 2u + 1u] = force.y;
-    // atomicMax(&maxforce.maxforceScalar, i32(floor(localForceMag*1000.0)));
-}
-`;
-export const  compute_forces_a = `struct Node {
-    value : f32;
-    x : f32;
-    y : f32;
-    size : f32;
-};
-struct Nodes {
-    nodes : array<Node>;
-};
-struct Edges {
-    edges : array<u32>;
-};
-struct Forces {
-    forces : array<f32>;
-};
-struct Uniforms {
-    nodes_length : u32;
-    edges_length : u32;
-    cooling_factor : f32;
-    ideal_length : f32;
-};
-
-[[group(0), binding(0)]] var<storage, read> nodes : Nodes;
-[[group(0), binding(1)]] var<storage, read> edges : Edges;
-[[group(0), binding(2)]] var<storage, read_write> forces : Forces;
-[[group(0), binding(3)]] var<uniform> uniforms : Uniforms;
-
-[[stage(compute), workgroup_size(1, 1, 1)]]
-fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
-    let l : f32 = uniforms.ideal_length;
-    var a_force : vec2<f32> = vec2<f32>(0.0, 0.0);
-    for (var i : u32 = 0u; i < uniforms.edges_length; i = i + 2u) {
-        var node : Node = nodes.nodes[edges.edges[i]];
-        var node2 : Node = nodes.nodes[edges.edges[i + 1u]];
-        var dist : f32 = distance(vec2<f32>(node.x, node.y), vec2<f32>(node2.x, node2.y));
-        if(dist > 0.0) {
-            var dir : vec2<f32> = normalize(vec2<f32>(node2.x, node2.y) - vec2<f32>(node.x, node.y));
-            a_force = ((dist * dist) / l) * dir;
-            forces.forces[edges.edges[i] * 2u] = forces.forces[edges.edges[i] * 2u] + a_force.x;
-            forces.forces[edges.edges[i] * 2u + 1u] = forces.forces[edges.edges[i] * 2u + 1u] + a_force.y;
-            forces.forces[edges.edges[i + 1u] * 2u] = forces.forces[edges.edges[i + 1u] * 2u] - a_force.x;
-            forces.forces[edges.edges[i + 1u] * 2u + 1u] = forces.forces[edges.edges[i + 1u] * 2u + 1u] - a_force.y;
-        }
-    } 
 }
 `;
 export const  apply_forces = `struct Node {
@@ -479,10 +431,10 @@ struct Forces {
     forces : array<f32>;
 };
 
-[[group(0), binding(0)]] var<storage, read_write> nodes : Nodes;
-[[group(0), binding(1)]] var<storage, read_write> forces : Forces;
-[[stage(compute), workgroup_size(1, 1, 1)]]
-fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
+@group(0) @binding(0) var<storage, read_write> nodes : Nodes;
+@group(0) @binding(1) var<storage, read_write> forces : Forces;
+@stage(compute) @workgroup_size(1, 1, 1)
+fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     nodes.nodes[global_id.x].x = nodes.nodes[global_id.x].x + forces.forces[global_id.x * 2u];
     nodes.nodes[global_id.x].y = nodes.nodes[global_id.x].y + forces.forces[global_id.x * 2u + 1u]; 
     forces.forces[global_id.x * 2u] = 0.0;
@@ -508,12 +460,12 @@ struct Uniforms {
     ideal_length : f32;
 };
 
-[[group(0), binding(0)]] var<storage, read> edges : Edges;
-[[group(0), binding(1)]] var<storage, read_write> adjmat : BoolArray;
-[[group(0), binding(2)]] var<uniform> uniforms : Uniforms;
+@group(0) @binding(0) var<storage, read> edges : Edges;
+@group(0) @binding(1) var<storage, read_write> adjmat : BoolArray;
+@group(0) @binding(2) var<uniform> uniforms : Uniforms;
 
-[[stage(compute), workgroup_size(1, 1, 1)]]
-fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
+@stage(compute) @workgroup_size(1, 1, 1)
+fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     for (var i : u32 = 0u; i < uniforms.edges_length; i = i + 2u) {
         var source : u32 = edges.edges[i];
         var target : u32 = edges.edges[i + 1u];
@@ -522,20 +474,14 @@ fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
     } 
 }
 `;
-export const  compute_forces_combined = `struct Node {
-    value : f32;
-    x : f32;
-    y : f32;
-    size : f32;
-};
-struct Nodes {
-    nodes : array<Node>;
-};
-struct Edges {
+export const  create_laplacian_matrix = `struct Edges {
     edges : array<u32>;
 };
-struct Forces {
-    forces : array<f32>;
+struct BoolArray {
+    matrix : array<u32>;
+};
+struct IntArray {
+    matrix : array<i32>;
 };
 struct Uniforms {
     nodes_length : u32;
@@ -544,44 +490,19 @@ struct Uniforms {
     ideal_length : f32;
 };
 
-[[group(0), binding(0)]] var<storage, read> nodes : Nodes;
-[[group(0), binding(1)]] var<storage, read> adjmat : Edges;
-[[group(0), binding(2)]] var<storage, read_write> forces : Forces;
-[[group(0), binding(3)]] var<uniform> uniforms : Uniforms;
+@group(0) @binding(0) var<storage, read> adjmat : BoolArray;
+@group(0) @binding(1) var<storage, read_write> laplacian : IntArray;
+@group(0) @binding(2) var<uniform> uniforms : Uniforms;
 
-[[stage(compute), workgroup_size(1, 1, 1)]]
-fn main([[builtin(global_invocation_id)]] global_id : vec3<u32>) {
-    let l : f32 = uniforms.ideal_length;
-    let node : Node = nodes.nodes[global_id.x];
-    var r_force : vec2<f32> = vec2<f32>(0.0, 0.0);
-    var a_force : vec2<f32> = vec2<f32>(0.0, 0.0);
+@stage(compute) @workgroup_size(1, 1, 1)
+fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     for (var i : u32 = 0u; i < uniforms.nodes_length; i = i + 1u) {
-        if (i == global_id.x) {
-            continue;
-        }
-        var node2 : Node = nodes.nodes[i];
-        var dist : f32 = distance(vec2<f32>(node.x, node.y), vec2<f32>(node2.x, node2.y));
-        if (dist > 0.0){
-            if (adjmat.edges[i * uniforms.nodes_length + global_id.x] == 1u) {
-                var dir : vec2<f32> = normalize(vec2<f32>(node2.x, node2.y) - vec2<f32>(node.x, node.y));
-                a_force = a_force + ((dist * dist) / l) * dir;
-            } else {
-                var dir : vec2<f32> = normalize(vec2<f32>(node.x, node.y) - vec2<f32>(node2.x, node2.y));
-                r_force = r_force + ((l * l) / dist) * dir;
+        for (var j : u32 = 0u; j < uniforms.nodes_length; j = j + 1u) {
+            if (adjmat.matrix[i * uniforms.nodes_length + j] == 1u && i != j) {
+                laplacian[i * uniforms.nodes_length + i] = laplacian[i * uniforms.nodes_length + i] + 1;
+                laplacian[i * uniforms.nodes_length + j] = -1;
             }
         }
-
-    }
-    var force : vec2<f32> = (a_force + r_force);
-    var localForceMag: f32 = length(force); 
-    if(localForceMag>0.000000001){
-        force = normalize(force)* min(uniforms.cooling_factor, length(force));
-    }
-    else{
-        force.x = 0.0;
-        force.y = 0.0;
-    }
-    forces.forces[global_id.x * 2u] = force.x;
-    forces.forces[global_id.x * 2u + 1u] = force.y;
+    } 
 }
 `;

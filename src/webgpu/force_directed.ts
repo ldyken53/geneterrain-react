@@ -1,10 +1,8 @@
 import { buffer } from 'd3';
 import {
-    compute_forces,
     apply_forces,
-    compute_forces_a,
     create_adjacency_matrix,
-    compute_forces_combined
+    compute_forces
 } from './wgsl';
 
 class ForceDirected {
@@ -17,7 +15,6 @@ class ForceDirected {
     public device: GPUDevice;
     public createAdjMatrixPipeline : GPUComputePipeline;
     public computeForcesPipeline: GPUComputePipeline;
-    public computeAttractForcesPipeline: GPUComputePipeline;
     public applyForcesPipeline: GPUComputePipeline;
     public iterationCount: number = 10000;
     public threshold: number = 100;
@@ -58,55 +55,10 @@ class ForceDirected {
         this.computeForcesPipeline = device.createComputePipeline({
             compute: {
                 module: device.createShaderModule({
-                    code: compute_forces_combined,
+                    code: compute_forces,
                 }),
                 entryPoint: "main",
             },
-        });
-
-        this.computeAttractForcesPipeline = device.createComputePipeline({
-            compute: {
-                module: device.createShaderModule({
-                    code: compute_forces_a,
-                }),
-                entryPoint: "main",
-            },
-            layout: device.createPipelineLayout({
-                bindGroupLayouts: [
-                    device.createBindGroupLayout({
-                        entries: [
-                            {
-                                binding: 0,
-                                visibility: GPUShaderStage.COMPUTE,
-                                buffer: {
-                                    type: "read-only-storage" as GPUBufferBindingType
-                                }
-                            },
-                            {
-                                binding: 1,
-                                visibility: GPUShaderStage.COMPUTE,
-                                buffer: {
-                                    type: "read-only-storage" as GPUBufferBindingType
-                                }
-                            },
-                            {
-                                binding: 2,
-                                visibility: GPUShaderStage.COMPUTE,
-                                buffer: {
-                                    type: "storage" as GPUBufferBindingType
-                                }
-                            },
-                            {
-                                binding: 3,
-                                visibility: GPUShaderStage.COMPUTE,
-                                buffer: {
-                                    type: "uniform" as GPUBufferBindingType
-                                }
-                            }, 
-                        ]
-                    })
-                ]
-            }),
         });
 
         this.applyForcesPipeline = device.createComputePipeline({
@@ -286,41 +238,6 @@ class ForceDirected {
                             buffer: this.paramsBuffer,
                         },
                     }
-                    
-                ],
-            });
-            var attractBindGroup = this.device.createBindGroup({
-                layout: this.computeAttractForcesPipeline.getBindGroupLayout(0),
-                entries: [{
-                        binding: 0,
-                        resource: {
-                            buffer: this.nodeDataBuffer,
-                        },
-                    },
-                    {
-                        binding: 1,
-                        resource: {
-                            buffer: this.edgeDataBuffer,
-                        }
-                    },
-                    {
-                        binding: 2,
-                        resource: {
-                            buffer: this.forceDataBuffer,
-                        }
-                    },
-                    {
-                        binding: 3,
-                        resource: {
-                            buffer: this.paramsBuffer,
-                        },
-                    },
-                    // {
-                    //     binding:4,
-                    //     resource: {
-                    //         buffer: this.maxForceBuffer
-                    //     }
-                    // }
                     
                 ],
             });

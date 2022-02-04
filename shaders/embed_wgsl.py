@@ -11,10 +11,9 @@ shaders = [
     "edge_vert.wgsl",
     "edge_frag.wgsl",
     "compute_forces.wgsl",
-    "compute_forces_a.wgsl",
     "apply_forces.wgsl",
     "create_adjacency_matrix.wgsl",
-    "compute_forces_combined.wgsl"
+    "create_laplacian_matrix.wgsl"
 ]
 compiled_shaders = ""
 
