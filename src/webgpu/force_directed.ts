@@ -2,7 +2,8 @@ import { buffer } from 'd3';
 import {
     apply_forces,
     create_adjacency_matrix,
-    compute_forces
+    compute_forces,
+    create_quadtree
 } from './wgsl';
 
 class ForceDirected {
@@ -15,6 +16,7 @@ class ForceDirected {
     public coolingFactor: number = 0.9;
     public device: GPUDevice;
     public createMatrixPipeline : GPUComputePipeline;
+    public createQuadTreePipeline : GPUComputePipeline;
     public computeForcesPipeline: GPUComputePipeline;
     public applyForcesPipeline: GPUComputePipeline;
     public iterationCount: number = 10000;
@@ -53,6 +55,15 @@ class ForceDirected {
             compute: {
                 module: device.createShaderModule({
                     code: create_adjacency_matrix
+                }),
+                entryPoint: "main",
+            },
+        });
+
+        this.createQuadTreePipeline = device.createComputePipeline({
+            compute: {
+                module: device.createShaderModule({
+                    code: create_quadtree
                 }),
                 entryPoint: "main",
             },
@@ -209,7 +220,7 @@ class ForceDirected {
                 }
             ],
         });
-        while (iterationCount > 0 && this.coolingFactor > 0.000001 && this.force >= 0) {
+        while (iterationCount > 0 && this.coolingFactor > 0.0001 && this.force >= 0) {
 
             iterationCount--;
             // Set up params (node length, edge length)

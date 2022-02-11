@@ -34,7 +34,9 @@ type edge = {
   target: number
 }
 type node = {
-  name: string
+  name: string,
+  x: number,
+  y: number
 }
 type Graph = {
   nodes: Array<node>,
@@ -130,7 +132,11 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         var graph : Graph = JSON.parse(jsonReader.result as string);
         console.log(graph);
         for (var i = 0; i < graph.nodes.length; i++) {
-          nodeData.push(0.0, Math.random(), Math.random(), 1.0);
+          if (graph.nodes[i].x) {
+            nodeData.push(0.0, graph.nodes[i].x, graph.nodes[i].y, 1.0);
+          } else {
+            nodeData.push(0.0, Math.random(), Math.random(), 1.0);
+          }
         }
         for (var i = 0; i < graph.edges.length; i++) {
           var source = graph.edges[i].source;
