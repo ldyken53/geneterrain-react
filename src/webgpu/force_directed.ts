@@ -124,8 +124,9 @@ class ForceDirected {
         new Uint32Array(mapping).set([nodeLength, edgeLength]);
         new Float32Array(mapping).set([this.coolingFactor, l], 2);
         upload.unmap();
+        let adjMatrixSize = Math.ceil((nodeLength * nodeLength * 4) / 32);
         this.adjMatrixBuffer = this.device.createBuffer({
-            size: nodeLength * nodeLength * 4,
+            size: adjMatrixSize,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
         this.laplacianBuffer = this.device.createBuffer({
@@ -176,11 +177,11 @@ class ForceDirected {
         });
         // Encode commands for copying buffer to buffer.
         commandEncoder.copyBufferToBuffer(
-            this.laplacianBuffer /* source buffer */ ,
+            this.adjMatrixBuffer /* source buffer */ ,
             0 /* source offset */ ,
             gpuReadBuffer /* destination buffer */ ,
             0 /* destination offset */ ,
-            nodeLength * nodeLength * 4 /* size */
+            adjMatrixSize /* size */
         );
         this.device.queue.submit([commandEncoder.finish()]);
         
@@ -189,9 +190,9 @@ class ForceDirected {
         const arrayBuffer = gpuReadBuffer.getMappedRange();
         var output = new Int32Array(arrayBuffer);
         var count = 0;
-        for (var i = 0; i < output.length; i++) {
-            count+=output[i];
-        }
+        // for (var i = 0; i < output.length; i++) {
+        //     count+=output[i];
+        // }
         console.log(output);
         console.log(count);
         console.log(output.length);

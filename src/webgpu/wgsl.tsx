@@ -383,6 +383,14 @@ struct Uniforms {
 @group(0) @binding(2) var<storage, write> forces : Forces;
 @group(0) @binding(3) var<uniform> uniforms : Uniforms;
 
+fn get_bit_selector(bit_index : u32) -> u32 {
+    return 1u << bit_index;
+}
+
+fn get_nth_bit(packed : u32, bit_index : u32) -> u32 {
+    return packed & get_bit_selector(bit_index);
+}
+
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     let l : f32 = uniforms.ideal_length;
@@ -396,7 +404,7 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
         var node2 : Node = nodes.nodes[i];
         var dist : f32 = distance(vec2<f32>(node.x, node.y), vec2<f32>(node2.x, node2.y));
         if (dist > 0.0){
-            if (adjmat.edges[i * uniforms.nodes_length + global_id.x] == 1u) {
+            if (get_nth_bit(adjmat.edges[(i * uniforms.nodes_length + global_id.x) / 32u], (i * uniforms.nodes_length + global_id.x) % 32u) != 0u) {
                 var dir : vec2<f32> = normalize(vec2<f32>(node2.x, node2.y) - vec2<f32>(node.x, node.y));
                 a_force = a_force + ((dist * dist) / l) * dir;
             } else {
@@ -468,13 +476,21 @@ struct IntArray {
 @group(0) @binding(2) var<uniform> uniforms : Uniforms;
 @group(0) @binding(3) var<storage, read_write> laplacian : IntArray;
 
+fn get_bit_selector(bit_index : u32) -> u32 {
+    return 1u << bit_index;
+}
+
+fn set_nth_bit(packed : u32, bit_index : u32) -> u32{
+    return packed | get_bit_selector(bit_index);
+}
+
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     for (var i : u32 = 0u; i < uniforms.edges_length; i = i + 2u) {
         var source : u32 = edges.edges[i];
         var target : u32 = edges.edges[i + 1u];
-        adjmat.matrix[source * uniforms.nodes_length + target] = 1u;
-        adjmat.matrix[target * uniforms.nodes_length + source] = 1u;
+        adjmat.matrix[(source * uniforms.nodes_length + target) / 32u] = set_nth_bit(adjmat.matrix[(source * uniforms.nodes_length + target) / 32u], (source * uniforms.nodes_length + target) % 32u);
+        adjmat.matrix[(target * uniforms.nodes_length + source) / 32u] = set_nth_bit(adjmat.matrix[(target * uniforms.nodes_length + source) / 32u], (target * uniforms.nodes_length + source) % 32u);
         if (laplacian.matrix[source * uniforms.nodes_length + target] != -1 && source != target) {
             laplacian.matrix[source * uniforms.nodes_length + target] = -1;
             laplacian.matrix[target * uniforms.nodes_length + source] = -1;
