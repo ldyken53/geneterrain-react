@@ -491,12 +491,12 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
         var target : u32 = edges.edges[i + 1u];
         adjmat.matrix[(source * uniforms.nodes_length + target) / 32u] = set_nth_bit(adjmat.matrix[(source * uniforms.nodes_length + target) / 32u], (source * uniforms.nodes_length + target) % 32u);
         adjmat.matrix[(target * uniforms.nodes_length + source) / 32u] = set_nth_bit(adjmat.matrix[(target * uniforms.nodes_length + source) / 32u], (target * uniforms.nodes_length + source) % 32u);
-        if (laplacian.matrix[source * uniforms.nodes_length + target] != -1 && source != target) {
-            laplacian.matrix[source * uniforms.nodes_length + target] = -1;
-            laplacian.matrix[target * uniforms.nodes_length + source] = -1;
-            laplacian.matrix[source * uniforms.nodes_length + source] = laplacian.matrix[source * uniforms.nodes_length + source] + 1;
-            laplacian.matrix[target * uniforms.nodes_length + target] = laplacian.matrix[target * uniforms.nodes_length + target] + 1;
-        }
+        // if (laplacian.matrix[source * uniforms.nodes_length + target] != -1 && source != target) {
+        //     laplacian.matrix[source * uniforms.nodes_length + target] = -1;
+        //     laplacian.matrix[target * uniforms.nodes_length + source] = -1;
+        //     laplacian.matrix[source * uniforms.nodes_length + source] = laplacian.matrix[source * uniforms.nodes_length + source] + 1;
+        //     laplacian.matrix[target * uniforms.nodes_length + target] = laplacian.matrix[target * uniforms.nodes_length + target] + 1;
+        // }
     } 
 }
 `;

@@ -125,14 +125,15 @@ class ForceDirected {
         new Float32Array(mapping).set([this.coolingFactor, l], 2);
         upload.unmap();
         let adjMatrixSize = Math.ceil((nodeLength * nodeLength * 4) / 32);
+        console.log(adjMatrixSize);
         this.adjMatrixBuffer = this.device.createBuffer({
             size: adjMatrixSize,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
-        this.laplacianBuffer = this.device.createBuffer({
-            size: nodeLength * nodeLength * 4,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
-        });
+        // this.laplacianBuffer = this.device.createBuffer({
+        //     size: nodeLength * nodeLength * 4,
+        //     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+        // });
         var commandEncoder = this.device.createCommandEncoder();
         commandEncoder.copyBufferToBuffer(upload, 0, this.paramsBuffer, 0, 4 * 4);
         var createBindGroup = this.device.createBindGroup({
@@ -156,12 +157,12 @@ class ForceDirected {
                         buffer: this.paramsBuffer,
                     },
                 },
-                {
-                    binding: 3,
-                    resource: {
-                        buffer: this.laplacianBuffer
-                    }
-                }
+                // {
+                //     binding: 3,
+                //     resource: {
+                //         buffer: this.laplacianBuffer
+                //     }
+                // }
             ]
         });
 
@@ -172,7 +173,7 @@ class ForceDirected {
         pass.endPass();
         // Log adjacency matrix
         const gpuReadBuffer = this.device.createBuffer({
-            size: nodeLength * nodeLength * 4,
+            size: adjMatrixSize,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
         });
         // Encode commands for copying buffer to buffer.
