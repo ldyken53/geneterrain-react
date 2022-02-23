@@ -246,7 +246,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           <Collapsible trigger="Force Directed Options">
             <Form.Label> Ideal Length and Cooling Factor </Form.Label>
             <br/>
-            <input type="range" defaultValue={0.05} min={0.001} max={0.1} step={0.001} onChange={(e) => this.props.setIdealLength(parseFloat(e.target.value))} />
+            <input type="range" defaultValue={0.03} min={0.001} max={0.1} step={0.001} onChange={(e) => this.props.setIdealLength(parseFloat(e.target.value))} />
             <input type="range" defaultValue={0.9} min={0.75} max={0.999} step={0.001} onChange={(e) => this.props.setCoolingFactor(parseFloat(e.target.value))} />
           </Collapsible>
           <Button onClick={(e) => this.props.onSave()}>
