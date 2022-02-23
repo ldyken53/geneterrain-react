@@ -381,7 +381,21 @@ class ForceDirected {
             await gpuReadBuffer.mapAsync(GPUMapMode.READ);
             const arrayBuffer = gpuReadBuffer.getMappedRange();
             var output = new Float32Array(arrayBuffer);
-            console.log(output);
+            var output2 = new Uint32Array(arrayBuffer);
+            // console.log(output);
+            // console.log(output2);
+            for (var m = 0; m < output.length; m += 12) {
+                var mass = output[m + 10];
+                if (mass > 1 && (
+                    output2[m + 4] == 0 ||
+                    output2[m + 5] == 0 ||
+                    output2[m + 6] == 0 ||
+                    output2[m + 7] == 0 
+                )) {
+                    console.log(m);
+                    break;
+                }
+            }
             this.coolingFactor = this.coolingFactor * coolingFactor;
             
         }

@@ -59,10 +59,18 @@ fn main() {
                 break;
             // Found a cell or body
             } else {
+                var test : bool = false;
                 let boundary : Rectangle = quads.quads[index].boundary;
                 // Found body, need to partition
                 if (quads.quads[index].mass < 2.0) {
+                    test = true;
+                    if (counter == 0u) {
+                        break;
+                    }
                     quads.quads[index].NW = counter;
+                    if (quads.quads[index].NW == 0u) {
+                        break;
+                    }          
                     quads.quads[counter] = QuadTree(
                         Rectangle(boundary.x, boundary.y + boundary.h / 2.0, boundary.w / 2.0, boundary.h / 2.0),
                         0u, 0u, 0u, 0u, 
@@ -70,7 +78,13 @@ fn main() {
                         0.0
                     );
                     counter = counter + 1u;
+                    if (counter == 0u) {
+                        break;
+                    }
                     quads.quads[index].NE = counter;
+                    if (quads.quads[index].NE == 0u) {
+                        break;
+                    }          
                     quads.quads[counter] = QuadTree(
                         Rectangle(boundary.x + boundary.w / 2.0, boundary.y + boundary.h / 2.0, boundary.w / 2.0, boundary.h / 2.0),
                         0u, 0u, 0u, 0u, 
@@ -78,7 +92,13 @@ fn main() {
                         0.0
                     );
                     counter = counter + 1u;
-                    quads.quads[index].SW = counter;                    
+                    if (counter == 0u) {
+                        break;
+                    }
+                    quads.quads[index].SW = counter; 
+                    if (quads.quads[index].SW == 0u) {
+                        break;
+                    }                             
                     quads.quads[counter] = QuadTree(
                         Rectangle(boundary.x, boundary.y, boundary.w / 2.0, boundary.h / 2.0),
                         0u, 0u, 0u, 0u, 
@@ -86,7 +106,13 @@ fn main() {
                         0.0
                     );
                     counter = counter + 1u;
-                    quads.quads[index].SE = counter;                    
+                    if (counter == 0u) {
+                        break;
+                    }
+                    quads.quads[index].SE = counter; 
+                    if (quads.quads[index].SE == 0u) {
+                        break;
+                    }                   
                     quads.quads[counter] = QuadTree(
                         Rectangle(boundary.x + boundary.w / 2.0, boundary.y, boundary.w / 2.0, boundary.h / 2.0),
                         0u, 0u, 0u, 0u, 
@@ -113,7 +139,10 @@ fn main() {
                             quads.quads[quads.quads[index].NE].CoM = vec2<f32>(x, y);     
                         }
                     }
-                }
+                    // if (quads.quads[index].SW == 0u || quads.quads[index].NE == 0u || quads.quads[index].SE == 0u || quads.quads[index].NW == 0u) {
+                    //     break;
+                    // }
+                } 
                 let node_x : f32 = nodes.nodes[i].x;
                 let node_y : f32 = nodes.nodes[i].y;
                 // We are inserting in this cell so change mass and CoM
@@ -121,6 +150,7 @@ fn main() {
                 quads.quads[index].CoM = (mass * quads.quads[index].CoM + vec2<f32>(node_x, node_y)) / (mass + 1.0);
                 quads.quads[index].mass = mass + 1.0;
                 // Find where to recurse to
+                var old_index : u32 = index;
                 if (node_x <= boundary.x + boundary.w / 2.0) {
                     if (node_y <= boundary.y + boundary.h / 2.0) {
                         index = quads.quads[index].SW;
@@ -133,9 +163,6 @@ fn main() {
                     } else {
                         index = quads.quads[index].NE;
                     }
-                }
-                if (index == 0u) {
-                    break;
                 }
             }
         }
