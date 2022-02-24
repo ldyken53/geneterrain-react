@@ -11,6 +11,8 @@ shaders = [
     "edge_vert.wgsl",
     "edge_frag.wgsl",
     "compute_forces.wgsl",
+    "compute_forcesBH.wgsl",
+    "compute_attract_forces.wgsl",
     "apply_forces.wgsl",
     "create_adjacency_matrix.wgsl",
     "create_quadtree.wgsl"

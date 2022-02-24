@@ -4,7 +4,7 @@ import numpy as np
 from scipy.sparse.linalg import eigs
 
 nodes = []
-N = 100
+N = 50000
 clusters = 2
 edges = []
 for i in range(clusters):
@@ -70,7 +70,7 @@ graph = {
     "nodes": nodes,
     "edges": edges
 }
-f = open("test_small.json", "w")
+f = open("test_nodes.json", "w")
 f.write(json.dumps(graph))
 
 

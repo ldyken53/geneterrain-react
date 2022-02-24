@@ -3,7 +3,9 @@ import {
     apply_forces,
     create_adjacency_matrix,
     compute_forces,
-    create_quadtree
+    create_quadtree,
+    compute_attract_forces,
+    compute_forcesBH
 } from './wgsl';
 
 class ForceDirected {
@@ -19,6 +21,8 @@ class ForceDirected {
     public createMatrixPipeline : GPUComputePipeline;
     public createQuadTreePipeline : GPUComputePipeline;
     public computeForcesPipeline: GPUComputePipeline;
+    public computeForcesBHPipeline: GPUComputePipeline;
+    public computeAttractForcesPipeline: GPUComputePipeline;
     public applyForcesPipeline: GPUComputePipeline;
     public iterationCount: number = 10000;
     public threshold: number = 100;
@@ -79,6 +83,24 @@ class ForceDirected {
             compute: {
                 module: device.createShaderModule({
                     code: compute_forces,
+                }),
+                entryPoint: "main",
+            },
+        });
+
+        this.computeForcesBHPipeline = device.createComputePipeline({
+            compute: {
+                module: device.createShaderModule({
+                    code: compute_forcesBH,
+                }),
+                entryPoint: "main",
+            },
+        });
+
+        this.computeAttractForcesPipeline = device.createComputePipeline({
+            compute: {
+                module: device.createShaderModule({
+                    code: compute_attract_forces,
                 }),
                 entryPoint: "main",
             },
@@ -210,6 +232,10 @@ class ForceDirected {
         });
 
         var quadTreeLength = nodeLength * 11 * 10 * 4;
+        this.quadTreeBuffer = this.device.createBuffer({
+            size: quadTreeLength,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+        });
 
         var iterationTimes : Array<number> = [];
         var totalStart = performance.now();
@@ -230,6 +256,7 @@ class ForceDirected {
                 }
             ],
         });
+        // iterationCount = 5;
         while (iterationCount > 0 && this.coolingFactor > 0.0001 && this.force >= 0) {
             iterationCount--;
             // Set up params (node length, edge length)
@@ -246,10 +273,6 @@ class ForceDirected {
             var commandEncoder = this.device.createCommandEncoder();
             //commandEncoder.writeTimestamp();
             commandEncoder.copyBufferToBuffer(upload, 0, this.paramsBuffer, 0, 4 * 4);
-            this.quadTreeBuffer = this.device.createBuffer({
-                size: quadTreeLength,
-                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
-            });
             var quadTreeBindGroup = this.device.createBindGroup({
                 layout: this.createQuadTreePipeline.getBindGroupLayout(0),
                 entries: [
@@ -285,9 +308,45 @@ class ForceDirected {
             // var end : number = performance.now();
             // console.log(`quad time: ${end - start}`);
             // var commandEncoder = this.device.createCommandEncoder();
-            // Create bind group
+            // Create nonBH bind group
+            // var bindGroup = this.device.createBindGroup({
+            //     layout: this.computeForcesBHPipeline.getBindGroupLayout(0),
+            //     entries: [
+            //         {
+            //             binding: 0,
+            //             resource: {
+            //                 buffer: this.nodeDataBuffer,
+            //             },
+            //         },
+            //         {
+            //             binding: 1,
+            //             resource: {
+            //                 buffer: this.adjMatrixBuffer,
+            //             },
+            //         },
+            //         {
+            //             binding: 2,
+            //             resource: {
+            //                 buffer: this.forceDataBuffer,
+            //             }
+            //         },
+            //         {
+            //             binding: 3,
+            //             resource: {
+            //                 buffer: this.paramsBuffer,
+            //             },
+            //         }
+                    
+            //     ],
+            // });
+
+            var stackBuffer = this.device.createBuffer({
+                size: nodeLength * 200 * 4,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+            });
+            // Create BH bindgroup
             var bindGroup = this.device.createBindGroup({
-                layout: this.computeForcesPipeline.getBindGroupLayout(0),
+                layout: this.computeForcesBHPipeline.getBindGroupLayout(0),
                 entries: [
                     {
                         binding: 0,
@@ -298,8 +357,43 @@ class ForceDirected {
                     {
                         binding: 1,
                         resource: {
-                            buffer: this.adjMatrixBuffer,
+                            buffer: this.forceDataBuffer,
+                        }
+                    },
+                    {
+                        binding: 2,
+                        resource: {
+                            buffer: this.paramsBuffer,
                         },
+                    },
+                    {
+                        binding: 3,
+                        resource: {
+                            buffer: this.quadTreeBuffer,
+                        },
+                    },
+                    {
+                        binding: 4,
+                        resource: {
+                            buffer: stackBuffer,
+                        },
+                    },
+                ],
+            });
+
+            var attractBindGroup = this.device.createBindGroup({
+                layout: this.computeAttractForcesPipeline.getBindGroupLayout(0),
+                entries: [{
+                        binding: 0,
+                        resource: {
+                            buffer: this.nodeDataBuffer,
+                        },
+                    },
+                    {
+                        binding: 1,
+                        resource: {
+                            buffer: this.edgeDataBuffer,
+                        }
                     },
                     {
                         binding: 2,
@@ -312,17 +406,16 @@ class ForceDirected {
                         resource: {
                             buffer: this.paramsBuffer,
                         },
-                    }
-                    
+                    },
                 ],
             });
 
             // Run attract forces pass
-            // var pass = commandEncoder.beginComputePass();
-            // pass.setBindGroup(0, attractBindGroup);
-            // pass.setPipeline(this.computeAttractForcesPipeline);
-            // pass.dispatch(1, 1, 1);      
-            // pass.endPass();
+            var pass = commandEncoder.beginComputePass();
+            pass.setBindGroup(0, attractBindGroup);
+            pass.setPipeline(this.computeAttractForcesPipeline);
+            pass.dispatch(1, 1, 1);      
+            pass.endPass();
             // this.device.queue.submit([commandEncoder.finish()]);
             // var start : number = performance.now();
             // await this.device.queue.onSubmittedWorkDone();
@@ -331,9 +424,16 @@ class ForceDirected {
             // var commandEncoder = this.device.createCommandEncoder();
 
             // Run compute forces pass
+            // var pass = commandEncoder.beginComputePass();
+            // pass.setBindGroup(0, bindGroup);
+            // pass.setPipeline(this.computeForcesPipeline);
+            // pass.dispatch(nodeLength, 1, 1);
+            // pass.endPass();
+
+            // Run compute forces BH pass
             var pass = commandEncoder.beginComputePass();
             pass.setBindGroup(0, bindGroup);
-            pass.setPipeline(this.computeForcesPipeline);
+            pass.setPipeline(this.computeForcesBHPipeline);
             pass.dispatch(nodeLength, 1, 1);
             pass.endPass();
 
@@ -350,6 +450,10 @@ class ForceDirected {
                 size: quadTreeLength,
                 usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
             });
+            // const gpuReadBuffer2 = this.device.createBuffer({
+            //     size: nodeLength * 200 * 4,
+            //     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+            // });
             // Encode commands for copying buffer to buffer.
             commandEncoder.copyBufferToBuffer(
                 this.quadTreeBuffer /* source buffer */ ,
@@ -358,6 +462,14 @@ class ForceDirected {
                 0 /* destination offset */ ,
                 quadTreeLength /* size */
             );
+            // Encode commands for copying buffer to buffer.
+            // commandEncoder.copyBufferToBuffer(
+            //     stackBuffer /* source buffer */ ,
+            //     0 /* source offset */ ,
+            //     gpuReadBuffer2 /* destination buffer */ ,
+            //     0 /* destination offset */ ,
+            //     nodeLength * 200 * 4 /* size */
+            // );
             var pass = commandEncoder.beginComputePass();
 
             //commandEncoder.writeTimestamp();
@@ -381,21 +493,23 @@ class ForceDirected {
             await gpuReadBuffer.mapAsync(GPUMapMode.READ);
             const arrayBuffer = gpuReadBuffer.getMappedRange();
             var output = new Float32Array(arrayBuffer);
-            var output2 = new Uint32Array(arrayBuffer);
-            // console.log(output);
+            console.log(output[11]);
+            // await gpuReadBuffer2.mapAsync(GPUMapMode.READ);
+            // const arrayBuffer2 = gpuReadBuffer2.getMappedRange();
+            // var output2 = new Uint32Array(arrayBuffer2);
             // console.log(output2);
-            for (var m = 0; m < output.length; m += 12) {
-                var mass = output[m + 10];
-                if (mass > 1 && (
-                    output2[m + 4] == 0 ||
-                    output2[m + 5] == 0 ||
-                    output2[m + 6] == 0 ||
-                    output2[m + 7] == 0 
-                )) {
-                    console.log(m);
-                    break;
-                }
-            }
+            // for (var m = 0; m < output.length; m += 12) {
+            //     var mass = output[m + 10];
+            //     if (
+            //         output2[m + 4] == 1000000 ||
+            //         output2[m + 5] == 1000000 ||
+            //         output2[m + 6] == 1000000 ||
+            //         output2[m + 7] == 1000000 
+            //     ) {
+            //         console.log(m);
+            //         break;
+            //     }
+            // }
             this.coolingFactor = this.coolingFactor * coolingFactor;
             
         }

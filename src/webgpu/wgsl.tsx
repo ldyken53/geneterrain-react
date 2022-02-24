@@ -426,6 +426,179 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     forces.forces[global_id.x * 2u + 1u] = force.y;
 }
 `;
+export const  compute_forcesBH = `struct Node {
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
+};
+struct Nodes {
+    nodes : array<Node>;
+};
+struct Edges {
+    edges : array<u32>;
+};
+struct Stack {
+    a : array<u32>;
+}
+struct Forces {
+    forces : array<f32>;
+};
+struct Uniforms {
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
+};
+struct Rectangle {
+    x : f32;
+    y : f32;
+    w : f32;
+    h : f32;
+};
+struct QuadTree {
+    boundary : Rectangle;
+    NW : u32;
+    NE : u32;
+    SW : u32;
+    SE : u32;
+    CoM : vec2<f32>;
+    mass : f32;
+    test : f32;
+};
+struct QuadTrees {
+    quads : array<QuadTree>;
+}
+
+@group(0) @binding(0) var<storage, read> nodes : Nodes;
+@group(0) @binding(1) var<storage, write> forces : Forces;
+@group(0) @binding(2) var<uniform> uniforms : Uniforms;
+@group(0) @binding(3) var<storage, read> quads : QuadTrees;
+@group(0) @binding(4) var<storage, write> stack : Stack;
+
+fn get_bit_selector(bit_index : u32) -> u32 {
+    return 1u << bit_index;
+}
+
+fn get_nth_bit(packed : u32, bit_index : u32) -> u32 {
+    return packed & get_bit_selector(bit_index);
+}
+
+@stage(compute) @workgroup_size(1, 1, 1)
+fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
+    let l : f32 = uniforms.ideal_length;
+    let node : Node = nodes.nodes[global_id.x];
+    var theta : f32 = 0.9;
+    var r_force : vec2<f32> = vec2<f32>(0.0, 0.0);
+    var a_force : vec2<f32> = vec2<f32>(forces.forces[global_id.x * 2u], forces.forces[global_id.x * 2u + 1u]);
+    var index : u32 = 0u;
+    var stack_index : u32 = global_id.x * 200u;
+    var counter : u32 = global_id.x * 200u;
+    var out : u32 = 0u;
+    loop {
+        out = out + 1u;
+        if (out == 200u) {
+            break;
+        }
+        var quad : QuadTree = quads.quads[index];
+        let dist : f32 = distance(vec2<f32>(node.x, node.y), quad.CoM);
+        let s : f32 = 2.0 * quad.boundary.w;
+        if (theta > s / dist) {
+            var dir : vec2<f32> = normalize(vec2<f32>(node.x, node.y) - quad.CoM);
+            r_force = r_force + quad.mass * ((l * l) / dist) * dir;
+        } else {
+            let children : array<u32, 4> = array<u32, 4>(
+                quads.quads[index].NW,
+                quads.quads[index].NE,
+                quads.quads[index].SW,
+                quads.quads[index].SE
+            );
+            for (var i : u32 = 0u; i < 4u; i = i + 1u) {
+                let child : u32 = children[i];
+                quad = quads.quads[child];
+                if (child == 0u || quad.mass < 1.0) {
+                    continue;
+                } else {
+                    if (quad.mass > 1.0) {
+                        stack.a[counter] = child;
+                        counter = counter + 1u;
+                    } else {
+                        let dist : f32 = distance(vec2<f32>(node.x, node.y), quad.CoM);
+                        if (dist > 0.0) {
+                            var dir : vec2<f32> = normalize(vec2<f32>(node.x, node.y) - quad.CoM);
+                            r_force = r_force + ((l * l) / dist) * dir;
+                        }
+                    }
+                }
+            }
+        }
+        index = stack.a[stack_index];
+        if (index == 0u) {
+            break;
+        } 
+        stack_index = stack_index + 1u;
+    }
+    var force : vec2<f32> = (a_force + r_force);
+    var localForceMag: f32 = length(force); 
+    if (localForceMag>0.000000001) {
+        force = normalize(force) * min(uniforms.cooling_factor, length(force));
+    }
+    else{
+        force.x = 0.0;
+        force.y = 0.0;
+    }
+    forces.forces[global_id.x * 2u] = force.x;
+    forces.forces[global_id.x * 2u + 1u] = force.y;
+    // forces.forces[global_id.x * 2u] = 1.0;
+    // forces.forces[global_id.x * 2u + 1u] = 1.0;
+}
+`;
+export const  compute_attract_forces = `struct Node {
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
+};
+struct Nodes {
+    nodes : array<Node>;
+};
+struct Edges {
+    edges : array<u32>;
+};
+struct Forces {
+    forces : array<f32>;
+};
+struct Uniforms {
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
+};
+
+@group(0) @binding(0) var<storage, read> nodes : Nodes;
+@group(0) @binding(1) var<storage, read> edges : Edges;
+@group(0) @binding(2) var<storage, read_write> forces : Forces;
+@group(0) @binding(3) var<uniform> uniforms : Uniforms;
+
+@stage(compute) @workgroup_size(1, 1, 1)
+fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
+    // let i : u32 = global_id.x;
+    let l : f32 = uniforms.ideal_length;
+    for (var i : u32 = 0u; i < uniforms.edges_length; i = i + 2u) {
+        var a_force : vec2<f32> = vec2<f32>(0.0, 0.0);
+        var node : Node = nodes.nodes[edges.edges[i]];
+        var node2 : Node = nodes.nodes[edges.edges[i + 1u]];
+        var dist : f32 = distance(vec2<f32>(node.x, node.y), vec2<f32>(node2.x, node2.y));
+        if(dist > 0.0) {
+            var dir : vec2<f32> = normalize(vec2<f32>(node2.x, node2.y) - vec2<f32>(node.x, node.y));
+            a_force = ((dist * dist) / l) * dir;
+            forces.forces[edges.edges[i] * 2u] = forces.forces[edges.edges[i] * 2u] + a_force.x;
+            forces.forces[edges.edges[i] * 2u + 1u] = forces.forces[edges.edges[i] * 2u + 1u] + a_force.y;
+            forces.forces[edges.edges[i + 1u] * 2u] = forces.forces[edges.edges[i + 1u] * 2u] - a_force.x;
+            forces.forces[edges.edges[i + 1u] * 2u + 1u] = forces.forces[edges.edges[i + 1u] * 2u + 1u] - a_force.y;
+        }
+    }
+}`;
 export const  apply_forces = `struct Node {
     value : f32;
     x : f32;
@@ -517,12 +690,13 @@ struct Rectangle {
 };
 struct QuadTree {
     boundary : Rectangle;
-    NE : u32;
     NW : u32;
-    SE : u32;
+    NE : u32;
     SW : u32;
+    SE : u32;
     CoM : vec2<f32>;
     mass : f32;
+    test : f32;
 };
 struct Uniforms {
     nodes_length : u32;
@@ -535,137 +709,104 @@ struct QuadTrees {
 }
 
 @group(0) @binding(0) var<storage, read> nodes : Nodes;
-@group(0) @binding(1) var<storage, write> quads : QuadTrees;
+@group(0) @binding(1) var<storage, read_write> quads : QuadTrees;
 @group(0) @binding(2) var<uniform> uniforms : Uniforms;
 
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main() {
-    var test = uniforms.nodes_length;
     quads.quads[0] = QuadTree(
         Rectangle(0.0, 0.0, 1.0, 1.0),
         // Can use 0 as null pointer for indexing because 0 is always root
         0u, 0u, 0u, 0u, 
         vec2<f32>(-1.0, -1.0),
-        0.0
+        0.0, 0.0
     ); 
     var counter : u32 = 1u;
-    for (var i : u32 = 0u; i < 1000u; i = i + 1u) {
+    for (var i : u32 = 0u; i < uniforms.nodes_length; i = i + 1u) {
         var index : u32 = 0u;
-        var out : i32 = 0;
         loop {
-            out = out + 1;
             // We have null cell so create body
             if (quads.quads[index].mass < 1.0) {
                 quads.quads[index].mass = 1.0;
                 quads.quads[index].CoM = vec2<f32>(nodes.nodes[i].x, nodes.nodes[i].y);
                 break;
+            }
             // Found a cell or body
-            } else {
-                var test : bool = false;
-                let boundary : Rectangle = quads.quads[index].boundary;
-                // Found body, need to partition
-                if (quads.quads[index].mass < 2.0) {
-                    test = true;
-                    if (counter == 0u) {
-                        break;
-                    }
-                    quads.quads[index].NW = counter;
-                    if (quads.quads[index].NW == 0u) {
-                        break;
-                    }          
-                    quads.quads[counter] = QuadTree(
-                        Rectangle(boundary.x, boundary.y + boundary.h / 2.0, boundary.w / 2.0, boundary.h / 2.0),
-                        0u, 0u, 0u, 0u, 
-                        vec2<f32>(-1.0, -1.0),
-                        0.0
-                    );
-                    counter = counter + 1u;
-                    if (counter == 0u) {
-                        break;
-                    }
-                    quads.quads[index].NE = counter;
-                    if (quads.quads[index].NE == 0u) {
-                        break;
-                    }          
-                    quads.quads[counter] = QuadTree(
-                        Rectangle(boundary.x + boundary.w / 2.0, boundary.y + boundary.h / 2.0, boundary.w / 2.0, boundary.h / 2.0),
-                        0u, 0u, 0u, 0u, 
-                        vec2<f32>(-1.0, -1.0),
-                        0.0
-                    );
-                    counter = counter + 1u;
-                    if (counter == 0u) {
-                        break;
-                    }
-                    quads.quads[index].SW = counter; 
-                    if (quads.quads[index].SW == 0u) {
-                        break;
-                    }                             
-                    quads.quads[counter] = QuadTree(
-                        Rectangle(boundary.x, boundary.y, boundary.w / 2.0, boundary.h / 2.0),
-                        0u, 0u, 0u, 0u, 
-                        vec2<f32>(-1.0, -1.0),
-                        0.0
-                    );
-                    counter = counter + 1u;
-                    if (counter == 0u) {
-                        break;
-                    }
-                    quads.quads[index].SE = counter; 
-                    if (quads.quads[index].SE == 0u) {
-                        break;
-                    }                   
-                    quads.quads[counter] = QuadTree(
-                        Rectangle(boundary.x + boundary.w / 2.0, boundary.y, boundary.w / 2.0, boundary.h / 2.0),
-                        0u, 0u, 0u, 0u, 
-                        vec2<f32>(-1.0, -1.0),
-                        0.0
-                    );
-                    counter = counter + 1u;
-                    let x : f32 = quads.quads[index].CoM.x;
-                    let y : f32 = quads.quads[index].CoM.y;
-                    if (x <= boundary.x + boundary.w / 2.0) {
-                        if (y <= boundary.y + boundary.h / 2.0) {
-                            quads.quads[quads.quads[index].SW].mass = 1.0;
-                            quads.quads[quads.quads[index].SW].CoM = vec2<f32>(x, y);
-                        } else {
-                            quads.quads[quads.quads[index].NW].mass = 1.0;
-                            quads.quads[quads.quads[index].NW].CoM = vec2<f32>(x, y);     
-                        }
+            let boundary : Rectangle = quads.quads[index].boundary;
+            // Found body, need to partition
+            if (quads.quads[index].mass < 2.0) {
+                quads.quads[index].NW = counter;                                   
+                quads.quads[counter] = QuadTree(
+                    Rectangle(boundary.x, boundary.y + boundary.h / 2.0, boundary.w / 2.0, boundary.h / 2.0),
+                    0u, 0u, 0u, 0u, 
+                    vec2<f32>(-1.0, -1.0),
+                    0.0, 0.0
+                );
+                quads.quads[index].NE = counter + 1u;      
+                quads.quads[counter + 1u] = QuadTree(
+                    Rectangle(boundary.x + boundary.w / 2.0, boundary.y + boundary.h / 2.0, boundary.w / 2.0, boundary.h / 2.0),
+                    0u, 0u, 0u, 0u, 
+                    vec2<f32>(-1.0, -1.0),
+                    0.0, 0.0
+                );
+                quads.quads[index].SW = counter + 2u;                                   
+                quads.quads[counter + 2u] = QuadTree(
+                    Rectangle(boundary.x, boundary.y, boundary.w / 2.0, boundary.h / 2.0),
+                    0u, 0u, 0u, 0u, 
+                    vec2<f32>(-1.0, -1.0),
+                    0.0, 0.0
+                );
+                quads.quads[index].SE = counter + 3u;               
+                quads.quads[counter + 3u] = QuadTree(
+                    Rectangle(boundary.x + boundary.w / 2.0, boundary.y, boundary.w / 2.0, boundary.h / 2.0),
+                    0u, 0u, 0u, 0u, 
+                    vec2<f32>(-1.0, -1.0),
+                    0.0, 0.0
+                );
+                counter = counter + 4u;
+                let x : f32 = quads.quads[index].CoM.x;
+                let y : f32 = quads.quads[index].CoM.y;
+                if (x <= boundary.x + boundary.w / 2.0) {
+                    if (y <= boundary.y + boundary.h / 2.0) {
+                        quads.quads[quads.quads[index].SW].mass = 1.0;
+                        quads.quads[quads.quads[index].SW].CoM = vec2<f32>(x, y);
                     } else {
-                        if (y <= boundary.y + boundary.h / 2.0) {
-                            quads.quads[quads.quads[index].SE].mass = 1.0;
-                            quads.quads[quads.quads[index].SE].CoM = vec2<f32>(x, y);
-                        } else {
-                            quads.quads[quads.quads[index].NE].mass = 1.0;
-                            quads.quads[quads.quads[index].NE].CoM = vec2<f32>(x, y);     
-                        }
-                    }
-                    // if (quads.quads[index].SW == 0u || quads.quads[index].NE == 0u || quads.quads[index].SE == 0u || quads.quads[index].NW == 0u) {
-                    //     break;
-                    // }
-                } 
-                let node_x : f32 = nodes.nodes[i].x;
-                let node_y : f32 = nodes.nodes[i].y;
-                // We are inserting in this cell so change mass and CoM
-                let mass : f32 = quads.quads[index].mass;
-                quads.quads[index].CoM = (mass * quads.quads[index].CoM + vec2<f32>(node_x, node_y)) / (mass + 1.0);
-                quads.quads[index].mass = mass + 1.0;
-                // Find where to recurse to
-                var old_index : u32 = index;
-                if (node_x <= boundary.x + boundary.w / 2.0) {
-                    if (node_y <= boundary.y + boundary.h / 2.0) {
-                        index = quads.quads[index].SW;
-                    } else {
-                        index = quads.quads[index].NW;  
+                        quads.quads[quads.quads[index].NW].mass = 1.0;
+                        quads.quads[quads.quads[index].NW].CoM = vec2<f32>(x, y);     
                     }
                 } else {
-                    if (node_y <= boundary.y + boundary.h / 2.0) {
-                        index = quads.quads[index].SE;
+                    if (y <= boundary.y + boundary.h / 2.0) {
+                        quads.quads[quads.quads[index].SE].mass = 1.0;
+                        quads.quads[quads.quads[index].SE].CoM = vec2<f32>(x, y);
                     } else {
-                        index = quads.quads[index].NE;
+                        quads.quads[quads.quads[index].NE].mass = 1.0;
+                        quads.quads[quads.quads[index].NE].CoM = vec2<f32>(x, y);     
                     }
+                }  
+            } 
+            let node_x : f32 = nodes.nodes[i].x;
+            let node_y : f32 = nodes.nodes[i].y;
+            // We are inserting in this cell so change mass and CoM
+            let mass : f32 = quads.quads[index].mass;
+            quads.quads[index].CoM = (mass * quads.quads[index].CoM + vec2<f32>(node_x, node_y)) / (mass + 1.0);
+            quads.quads[index].mass = mass + 1.0;
+            // Find where to recurse to
+            if (node_x <= boundary.x + boundary.w / 2.0) {
+                if (node_y <= boundary.y + boundary.h / 2.0) {
+                    index = quads.quads[index].SW;
+                } else {
+                    index = quads.quads[index].NW;  
                 }
+            } else {
+                if (node_y <= boundary.y + boundary.h / 2.0) {
+                    index = quads.quads[index].SE;
+                } else {
+                    index = quads.quads[index].NE;
+                }
+            }
+            if (index == 0u) {
+                quads.quads[0].test = quads.quads[0].test + 1.0;
+                break;
             }
         }
     }
