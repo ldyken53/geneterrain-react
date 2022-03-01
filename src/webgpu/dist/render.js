@@ -502,7 +502,7 @@ var Renderer = /** @class */ (function () {
                     resource: {
                         buffer: this.edgeDataBuffer
                     }
-                }
+                },
             ]
         });
         this.nodeBindGroup = this.device.createBindGroup({
@@ -519,12 +519,12 @@ var Renderer = /** @class */ (function () {
                     resource: {
                         buffer: this.nodeDataBuffer
                     }
-                }
+                },
             ]
         });
         this.edgeLength = edgeData.length;
         this.nodeLength = nodeData.length / 4;
-        this.terrainGenerator.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
+        // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
     };
     Renderer.prototype.setWidthFactor = function (widthFactor) {
         this.terrainGenerator.computeTerrain(undefined, widthFactor, undefined, this.rangeBuffer, this.nodeLength);

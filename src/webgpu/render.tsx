@@ -468,7 +468,7 @@ class Renderer {
     this.edgeDataBuffer = this.device.createBuffer({
       size: edgeData.length * 4,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
-      mappedAtCreation: true
+      mappedAtCreation: true,
     });
     new Uint32Array(this.edgeDataBuffer.getMappedRange()).set(edgeData);
     this.edgeDataBuffer.unmap();
@@ -485,14 +485,14 @@ class Renderer {
           binding: 1,
           resource: {
             buffer: this.nodeDataBuffer!,
-          }
+          },
         },
         {
           binding: 2,
           resource: {
             buffer: this.edgeDataBuffer!,
-          }
-        }
+          },
+        },
       ],
     });
     this.nodeBindGroup = this.device.createBindGroup({
@@ -508,13 +508,13 @@ class Renderer {
           binding: 1,
           resource: {
             buffer: this.nodeDataBuffer!,
-          }
-        }
+          },
+        },
       ],
     });
     this.edgeLength = edgeData.length;
     this.nodeLength = nodeData.length / 4;
-    this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
+    // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
   }
 
   setWidthFactor(widthFactor : number) {

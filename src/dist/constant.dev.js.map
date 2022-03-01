@@ -1,0 +1,1 @@
+{"version":3,"sources":["constant.js"],"names":["TIME_FOR_EACH_TEST","MAX_ITERATION"],"mappings":";;;;;;AAAO,IAAMA,kBAAkB,GAAG,IAA3B;;AACA,IAAMC,aAAa,GAAG,CAAtB","sourcesContent":["export const TIME_FOR_EACH_TEST = 5000;\r\nexport const MAX_ITERATION = 8;\r\n"],"file":"constant.dev.js"}

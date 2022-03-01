@@ -177,7 +177,7 @@ class Page extends React.Component<{}, PageState> {
   
     render() {
       return (
-        <div>
+        <div className="main_wrapper">
           <Sidebar
             setValleyValue={this.setValleyValue.bind(this)}
             setPeakValue={this.setPeakValue.bind(this)}
@@ -209,16 +209,17 @@ class Page extends React.Component<{}, PageState> {
             </Form.Label>
             <br />
             <Form.Label className={"out"} ref={this.state.iterRef}></Form.Label>
+            <div id="node_count"></div>
             <canvas
               ref={this.state.canvasRef}
-              width={500}
-              height={500}
+              width={800}
+              height={800}
             ></canvas>
             <canvas
               hidden={true}
               ref={this.state.outCanvasRef}
-              width={500}
-              height={500}
+              width={800}
+              height={800}
             ></canvas>
             <canvas
               hidden={true}

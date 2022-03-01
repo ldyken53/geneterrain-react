@@ -2,9 +2,16 @@ import React from 'react';
 import {Form, Button} from "react-bootstrap";
 import Collapsible from 'react-collapsible';
 import { Matrix, matrix, subtract, eigs, column, min, max, index, sparse } from 'mathjs';
-import Stats from "stats.js";
-
+import Stats from "../libs/stats.module";
+import * as Constant from "../constant";
+import { CSVLink } from "react-csv";
 import XMLWriter from "xml-writer";
+
+const headers = [
+  { label: "Node", key: "Node" },
+  { label: "Edge", key: "Edge" },
+  { label: "FPS", key: "FPS" },
+];
 
 type SidebarProps = {
   setNodeEdgeData: (nodeData: Array<number>, edgeData: Array<number>) => void;
@@ -29,7 +36,11 @@ type SidebarState = {
   laplacian: Matrix;
   adjacencyMatrix: Array<Array<number>>;
   e: {};
+  nodeCount: string;
+  edgeCount: string;
+  runBenchmark: boolean;
   jsonFormat: boolean;
+  FPSData: Array<Array<string>>;
 };
 type edge = {
   source: number;
@@ -50,10 +61,14 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     this.state = {
       nodeData: [],
       edgeData: [],
+      nodeCount: "",
+      edgeCount: "",
       laplacian: sparse([]),
       adjacencyMatrix: [],
       e: {},
       jsonFormat: true,
+      runBenchmark: false,
+      FPSData: [],
     };
 
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -66,11 +81,83 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     this.runBenchmark = this.runBenchmark.bind(this);
     this.testFunc = this.testFunc.bind(this);
     this.sleep = this.sleep.bind(this);
+    this.storeFPSResult = this.storeFPSResult.bind(this);
   }
 
   handleSubmit(event) {
     event.preventDefault();
     this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
+  }
+
+  sleep(time) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, time);
+    });
+  }
+
+  async runBenchmark(event: React.MouseEvent) {
+    event.preventDefault();
+    const nodeCounts = [1e2, 5e2, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 1e6];
+    const density = 20;
+    const edgeCounts = nodeCounts.map((n) => n * density);
+    let stats = Stats();
+    stats.showPanel(0);
+    stats.dom.setAttribute("class", "status");
+    document.body.appendChild(stats.dom);
+    this.setState({ runBenchmark: true });
+    let renderingCanvas = document.querySelectorAll("canvas")[0];
+    renderingCanvas.width = 500;
+    renderingCanvas.height = 500;
+    renderingCanvas.style.width = "500px";
+    renderingCanvas.style.height = "500px";
+    // const testCase = {
+    //   nodeCounts,
+    //   edgeCounts,
+    // };
+
+    for (let i = 0; i < 5; i++) {
+      // let stepCount = 0;
+      const nCount = nodeCounts[i].toString();
+      const eCount = edgeCounts[i].toString();
+
+      this.setState({ nodeCount: nCount });
+      this.setState({ edgeCount: eCount });
+
+      let data = this.generateRandomData(nodeCounts, edgeCounts, i);
+      this.setState({ nodeData: data.nodes });
+      this.setState({ edgeData: data.edges });
+      // this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
+      await this.testFunc(data, stats);
+    }
+
+    this.setState({ runBenchmark: false });
+    renderingCanvas.width = 800;
+    renderingCanvas.height = 800;
+    renderingCanvas.style.width = "800px";
+    renderingCanvas.style.height = "800px";
+  }
+
+  generatePair(min, max) {
+    function randRange(min, max) {
+      return min + Math.floor(Math.random() * (max - min));
+    }
+    const source = randRange(min, max);
+    let target = randRange(min, max);
+    while (source === target) {
+      target = randRange(min, max);
+    }
+    return {
+      source: source,
+      target: target,
+    };
+  }
+
+  generateRandomData(nodeCounts, edgeCounts, stepCount) {
+    let nodeCount = nodeCounts[stepCount];
+    let edgeCount = edgeCounts[stepCount];
+
+    let generatedData = this.generateRandomGraph(nodeCount, edgeCount);
+    return generatedData;
   }
 
   generateRandomGraph(nodeCount, edgeCount) {
@@ -106,89 +193,51 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     return data;
   }
 
-  generatePair(min, max) {
-    function randRange(min, max) {
-      return min + Math.floor(Math.random() * (max - min));
-    }
-    const source = randRange(min, max);
-    let target = randRange(min, max);
-    while (source === target) {
-      target = randRange(min, max);
-    }
-    return {
-      source: source,
-      target: target,
-    };
-  }
-
-  generateRandomData(nodeCounts, edgeCounts, stepCount) {
-    let nodeCount = nodeCounts[stepCount];
-    let edgeCount = edgeCounts[stepCount];
-
-    let generatedData = this.generateRandomGraph(nodeCount, edgeCount);
-    return generatedData;
-  }
-
-  sleep(time) {
-    return new Promise((resolve) => {
-      setTimeout(resolve, time);
-    });
-  }
-
-  async runBenchmark(event: React.MouseEvent) {
-    event.preventDefault();
-    const nodeCounts = [1e2, 5e2, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 1e6];
-    const density = 20;
-    const edgeCounts = nodeCounts.map((n) => n * density);
-    let stats = Stats();
-    stats.showPanel(0);
-    stats.dom.setAttribute("class", "status");
-    document.body.appendChild(stats.dom);
-
-    // const testCase = {
-    //   nodeCounts,
-    //   edgeCounts,
-    // };
-
-    for (let i = 0; i < 10; i++) {
-      let stepCount = 10;
-      let data = this.generateRandomData(nodeCounts, edgeCounts, stepCount);
-      this.setState({ nodeData: data.nodes });
-      this.setState({ edgeData: data.edges });
-      // this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
-      await this.testFunc(data, stats);
-    }
-  }
-
   refresh(length) {
     var nodes: Array<number> = [];
-    for (let i = 0; i < length; i = i + 2) {
-      nodes[i] = Math.random();
+    for (let i = 0; i < 4 * length; i = i + 4) {
       nodes[i + 1] = Math.random();
+      nodes[i + 2] = Math.random();
     }
     this.setState({ nodeData: nodes });
     this.props.setNodeEdgeData(nodes, this.state.edgeData);
   }
 
-  async runTest(nodeLength, stats) {
+  storeFPSResult(nodeLength, edgeLength, fps) {
+    nodeLength = nodeLength.toString();
+    edgeLength = edgeLength.toString();
+    fps = fps.toString();
+
+    this.setState({
+      FPSData: [...this.state.FPSData, [nodeLength, edgeLength, fps]],
+    });
+    console.log(this.state.FPSData);
+  }
+
+  async testFunc(data, stats) {
+    let nodeLength = data.nodes.length / 4;
+    let edgeLength = data.edges.length / 2;
+    await this.runTest(nodeLength, edgeLength, stats);
+  }
+
+  async runTest(nodeLength, edgeLength, stats) {
+    let requestId;
     const refreshing = () => {
       stats.begin();
       this.refresh(nodeLength);
       stats.end();
-      requestAnimationFrame(refreshing);
+      requestId = requestAnimationFrame(refreshing);
     };
     refreshing();
-    await this.sleep(5000);
+    await this.sleep(Constant.TIME_FOR_EACH_TEST);
+    let FPS_Array = stats.getFPSHistory();
+    console.log(FPS_Array);
+    let FPS = FPS_Array.pop();
+
+    this.storeFPSResult(nodeLength, edgeLength, FPS);
+    cancelAnimationFrame(requestId);
     return;
-    // const FPSHistory = stats.getFPSHistory();
-    // let FPS = FPSHistory.pop();
   }
-
-  async testFunc(data, stats) {
-    let nodeLength = data.nodes.length;
-    await this.runTest(nodeLength, stats);
-  }
-
   readFiles(event: React.ChangeEvent<HTMLInputElement>) {
     const files: FileList = event.target.files!;
     console.log(files);
@@ -343,11 +392,16 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
   render() {
     return (
       <div className="sidebar">
+        <hr />
         <Button className="benchmark_test" onClick={this.runBenchmark}>
-          {" "}
           Run Benchmark
         </Button>
-
+        <div style={{ margin: 10, color: "white" }}>
+          <p>Node count: {this.state.nodeCount}</p>
+          <p>Edge count: {this.state.edgeCount}</p>
+        </div>
+        <CSVLink data={this.state.FPSData}>Download FPS data</CSVLink>
+        <hr />
         <Form style={{ color: "white" }} onSubmit={this.handleSubmit}>
           <Form.Group controlId="formFile" className="mt-3 mb-3">
             <Form.Check

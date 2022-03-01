@@ -239,7 +239,7 @@ var Page = /** @class */ (function (_super) {
     };
     Page.prototype.render = function () {
         var _this = this;
-        return (react_1["default"].createElement("div", null,
+        return (react_1["default"].createElement("div", { className: "main_wrapper" },
             react_1["default"].createElement(Sidebar_1["default"], { setValleyValue: this.setValleyValue.bind(this), setPeakValue: this.setPeakValue.bind(this), setWidthFactor: this.setWidthFactor.bind(this), setNodeEdgeData: this.setNodeEdgeData.bind(this), setGlobalRange: this.setGlobalRange.bind(this), setIdealLength: this.setIdealLength.bind(this), setCoolingFactor: this.setCoolingFactor.bind(this), toggleNodeLayer: this.toggleNodeLayer.bind(this), toggleTerrainLayer: this.toggleTerrainLayer.bind(this), toggleEdgeLayer: this.toggleEdgeLayer.bind(this), runForceDirected: this.runForceDirected.bind(this), setColorHill: this.setColorHill.bind(this), setColorValley: this.setColorValley.bind(this), setColorMountain: this.setColorMountain.bind(this), onSave: this.onSave.bind(this) }),
             react_1["default"].createElement("div", { className: "canvasContainer" },
                 react_1["default"].createElement(react_select_1["default"], { className: "m-2", placeholder: "Choose colormap...", onChange: function (e) { return _this.changeColormap(e.value); }, options: colormap_list.map(function (cm) {
@@ -248,8 +248,9 @@ var Page = /** @class */ (function (_super) {
                 react_1["default"].createElement(react_bootstrap_1.Form.Label, { className: "out", ref: this.state.fpsRef }, "FPS: n/a"),
                 react_1["default"].createElement("br", null),
                 react_1["default"].createElement(react_bootstrap_1.Form.Label, { className: "out", ref: this.state.iterRef }),
-                react_1["default"].createElement("canvas", { ref: this.state.canvasRef, width: 500, height: 500 }),
-                react_1["default"].createElement("canvas", { hidden: true, ref: this.state.outCanvasRef, width: 500, height: 500 }),
+                react_1["default"].createElement("div", { id: "node_count" }),
+                react_1["default"].createElement("canvas", { ref: this.state.canvasRef, width: 800, height: 800 }),
+                react_1["default"].createElement("canvas", { hidden: true, ref: this.state.outCanvasRef, width: 800, height: 800 }),
                 react_1["default"].createElement("canvas", { hidden: true, ref: this.state.colorCanvasRef, width: 180, height: 1 }))));
     };
     return Page;
