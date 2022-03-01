@@ -51,6 +51,13 @@ type node = {
   x: number;
   y: number;
 };
+
+type nodeD3 = {
+  id: string;
+  x: number;
+  y: number;
+};
+
 type Graph = {
   nodes: Array<node>;
   edges: Array<edge>;
@@ -82,6 +89,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     this.testFunc = this.testFunc.bind(this);
     this.sleep = this.sleep.bind(this);
     this.storeFPSResult = this.storeFPSResult.bind(this);
+
+    // =========================================================
+    this.randomDataGen_Computation = this.randomDataGen_Computation.bind(this);
   }
 
   handleSubmit(event) {
@@ -93,6 +103,77 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     return new Promise((resolve) => {
       setTimeout(resolve, time);
     });
+  }
+
+  randomDataGen_Computation(nodeCount, edgeCount, width, height) {
+    var nodesWebGPU: Array<number> = [];
+    var edgesWebGPU: Array<number> = [];
+
+    var nodesD3: Array<nodeD3> = [];
+    var edgesD3: Array<edge> = [];
+
+    const dataWebGPU = {
+      nodes: nodesWebGPU,
+      edges: edgesWebGPU,
+    };
+
+    const dataD3 = {
+      nodes: nodesD3,
+      edges: edgesD3,
+    };
+
+    dataWebGPU.nodes = new Array(4 * nodeCount).fill(0);
+    dataWebGPU.edges = new Array(2 * edgeCount).fill(0);
+
+    for (let i = 0; i < nodeCount; i++) {
+      let x = Math.random();
+      let y = Math.random();
+      dataD3.nodes[i] = { id: i.toString(), x: x * width, y: y * height };
+      dataWebGPU.nodes[4 * i] = 0;
+      dataWebGPU.nodes[4 * i + 1] = x;
+      dataWebGPU.nodes[4 * i + 2] = y;
+      dataWebGPU.nodes[4 * i + 3] = 1;
+    }
+
+    const linkSet = new Set();
+
+    for (let i = 0; i < edgeCount; i++) {
+      let pair;
+      do {
+        pair = this.generatePair(0, nodeCount);
+      } while (linkSet.has(`${pair.x}_${pair.y}`));
+      linkSet.add(`${pair.x}_${pair.y}`);
+      linkSet.add(`${pair.y}_${pair.x}`);
+      dataD3.edges[i] = {
+        source: pair.x,
+        target: pair.y,
+      };
+      dataWebGPU[2 * i] = pair.x;
+      dataWebGPU[2 * i + 1] = pair.y;
+    }
+
+    let data = {
+      dataD3,
+      dataWebGPU,
+    };
+    return data;
+  }
+
+  async d3TimingStudy(event: React.MouseEvent) {
+    event.preventDefault();
+    let width = 800;
+    let height = 800;
+    let nodeCount = 100;
+    let density = 20;
+    let edgeCount = nodeCount * density;
+    let renderingCanvas = document.querySelectorAll("canvas")[0];
+    let data = this.randomDataGen_Computation(
+      nodeCount,
+      edgeCount,
+      width,
+      height
+    );
+    console.log(data);
   }
 
   async runBenchmark(event: React.MouseEvent) {
@@ -402,6 +483,11 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         </div>
         <CSVLink data={this.state.FPSData}>Download FPS data</CSVLink>
         <hr />
+
+        <Button className="d3Timing_test" onClick={this.d3TimingStudy}>
+          Run D3
+        </Button>
+
         <Form style={{ color: "white" }} onSubmit={this.handleSubmit}>
           <Form.Group controlId="formFile" className="mt-3 mb-3">
             <Form.Check

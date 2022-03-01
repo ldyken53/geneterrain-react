@@ -71,17 +71,14 @@ var Renderer = /** @class */ (function () {
         // Check that canvas is active
         if (canvasRef.current === null)
             return;
-        var context = canvasRef.current.getContext('webgpu');
+        var context = canvasRef.current.getContext("webgpu");
         var devicePixelRatio = window.devicePixelRatio || 1;
         var presentationSize = [
             canvasRef.current.clientWidth * devicePixelRatio,
             canvasRef.current.clientHeight * devicePixelRatio,
         ];
         var presentationFormat = context.getPreferredFormat(adapter);
-        this.canvasSize = [
-            canvasRef.current.width,
-            canvasRef.current.height
-        ];
+        this.canvasSize = [canvasRef.current.width, canvasRef.current.height];
         context.configure({
             device: device,
             format: presentationFormat,
@@ -105,13 +102,14 @@ var Renderer = /** @class */ (function () {
                 buffers: [
                     {
                         arrayStride: 2 * 4 * 1,
-                        attributes: [{
+                        attributes: [
+                            {
                                 format: "float32x2",
                                 offset: 0,
                                 shaderLocation: 0
-                            }
+                            },
                         ]
-                    }
+                    },
                 ]
             },
             fragment: {
@@ -123,14 +121,20 @@ var Renderer = /** @class */ (function () {
                     {
                         format: presentationFormat,
                         blend: {
-                            color: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
-                            alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" }
+                            color: {
+                                srcFactor: "one",
+                                dstFactor: "one-minus-src-alpha"
+                            },
+                            alpha: {
+                                srcFactor: "one",
+                                dstFactor: "one-minus-src-alpha"
+                            }
                         }
                     },
                 ]
             },
             primitive: {
-                topology: "line-list" //triangle-list is default   
+                topology: "line-list"
             },
             multisample: {
                 count: 4
@@ -146,12 +150,7 @@ var Renderer = /** @class */ (function () {
             mappedAtCreation: true
         });
         new Float32Array(nodePositionBuffer.getMappedRange()).set([
-            1, -1,
-            -1, -1,
-            -1, 1,
-            1, -1,
-            -1, 1,
-            1, 1,
+            1, -1, -1, -1, -1, 1, 1, -1, -1, 1, 1, 1,
         ]);
         nodePositionBuffer.unmap();
         var edgePositionBuffer = device.createBuffer({
@@ -159,10 +158,7 @@ var Renderer = /** @class */ (function () {
             usage: GPUBufferUsage.VERTEX,
             mappedAtCreation: true
         });
-        new Float32Array(edgePositionBuffer.getMappedRange()).set([
-            0, 0,
-            1, 1,
-        ]);
+        new Float32Array(edgePositionBuffer.getMappedRange()).set([0, 0, 1, 1]);
         edgePositionBuffer.unmap();
         this.nodeDataBuffer = device.createBuffer({
             size: 4 * 4,
@@ -170,8 +166,7 @@ var Renderer = /** @class */ (function () {
             mappedAtCreation: true
         });
         new Float32Array(this.nodeDataBuffer.getMappedRange()).set([
-            0.5, 0.5,
-            0.5, 0.5,
+            0.5, 0.5, 0.5, 0.5,
         ]);
         this.nodeDataBuffer.unmap();
         this.nodePipeline = device.createRenderPipeline({
@@ -179,7 +174,7 @@ var Renderer = /** @class */ (function () {
                 module: device.createShaderModule({
                     code: wgsl_1.node_vert
                 }),
-                entryPoint: 'main',
+                entryPoint: "main",
                 buffers: [
                     {
                         arrayStride: 2 * 4,
@@ -188,7 +183,7 @@ var Renderer = /** @class */ (function () {
                                 format: "float32x2",
                                 offset: 0,
                                 shaderLocation: 0
-                            }
+                            },
                         ]
                     },
                 ]
@@ -197,19 +192,25 @@ var Renderer = /** @class */ (function () {
                 module: device.createShaderModule({
                     code: wgsl_1.node_frag
                 }),
-                entryPoint: 'main',
+                entryPoint: "main",
                 targets: [
                     {
                         format: presentationFormat,
                         blend: {
-                            color: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
-                            alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" }
+                            color: {
+                                srcFactor: "one",
+                                dstFactor: "one-minus-src-alpha"
+                            },
+                            alpha: {
+                                srcFactor: "one",
+                                dstFactor: "one-minus-src-alpha"
+                            }
                         }
                     },
                 ]
             },
             primitive: {
-                topology: 'triangle-list'
+                topology: "triangle-list"
             },
             multisample: {
                 count: 4
@@ -220,7 +221,7 @@ var Renderer = /** @class */ (function () {
                 module: device.createShaderModule({
                     code: wgsl_1.display_2d_vert
                 }),
-                entryPoint: 'main',
+                entryPoint: "main",
                 buffers: [
                     {
                         arrayStride: 4 * 4,
@@ -229,7 +230,7 @@ var Renderer = /** @class */ (function () {
                                 format: "float32x4",
                                 offset: 0,
                                 shaderLocation: 0
-                            }
+                            },
                         ]
                     },
                 ]
@@ -238,7 +239,7 @@ var Renderer = /** @class */ (function () {
                 module: device.createShaderModule({
                     code: wgsl_1.display_2d_frag
                 }),
-                entryPoint: 'main',
+                entryPoint: "main",
                 targets: [
                     {
                         format: presentationFormat
@@ -246,7 +247,7 @@ var Renderer = /** @class */ (function () {
                 ]
             },
             primitive: {
-                topology: 'triangle-list'
+                topology: "triangle-list"
             },
             multisample: {
                 count: 4
@@ -259,12 +260,30 @@ var Renderer = /** @class */ (function () {
             mappedAtCreation: true
         });
         new Float32Array(dataBuf2D.getMappedRange()).set([
-            1, -1, 0, 1,
-            -1, -1, 0, 1,
-            -1, 1, 0, 1,
-            1, -1, 0, 1,
-            -1, 1, 0, 1,
-            1, 1, 0, 1,
+            1,
+            -1,
+            0,
+            1,
+            -1,
+            -1,
+            0,
+            1,
+            -1,
+            1,
+            0,
+            1,
+            1,
+            -1,
+            0,
+            1,
+            -1,
+            1,
+            0,
+            1,
+            1,
+            1,
+            0,
+            1,
         ]);
         dataBuf2D.unmap();
         // Set up uniform buffers for bind group
@@ -284,7 +303,9 @@ var Renderer = /** @class */ (function () {
         this.colorTexture = device.createTexture({
             size: [colormap.width, colormap.height, 1],
             format: "rgba8unorm",
-            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT
+            usage: GPUTextureUsage.TEXTURE_BINDING |
+                GPUTextureUsage.COPY_DST |
+                GPUTextureUsage.RENDER_ATTACHMENT
         });
         device.queue.copyExternalImageToTexture({ source: colormap }, { texture: this.colorTexture }, [colormap.width, colormap.height, 1]);
         this.terrainGenerator = new terrain_generator_1["default"](device, this.canvasSize[0], this.canvasSize[1]);
@@ -313,7 +334,7 @@ var Renderer = /** @class */ (function () {
                     resource: {
                         buffer: imageSizeBuffer
                     }
-                }
+                },
             ]
         });
         this.viewBoxBuffer = device.createBuffer({
@@ -328,9 +349,22 @@ var Renderer = /** @class */ (function () {
         var render = this;
         controller.mousemove = function (prev, cur, evt) {
             if (evt.buttons == 1) {
-                var change = [(cur[0] - prev[0]) * (translation[2] - translation[0]) / render.canvasSize[0], (prev[1] - cur[1]) * (translation[3] - translation[1]) / render.canvasSize[1]];
-                newTranslation = [newTranslation[0] - change[0], newTranslation[1] - change[1], newTranslation[2] - change[0], newTranslation[3] - change[1]];
-                if (Math.abs(newTranslation[0] - translation[0]) > 0.03 * (translation[2] - translation[0]) || Math.abs(newTranslation[1] - translation[1]) > 0.03 * (translation[3] - translation[1])) {
+                var change = [
+                    ((cur[0] - prev[0]) * (translation[2] - translation[0])) /
+                        render.canvasSize[0],
+                    ((prev[1] - cur[1]) * (translation[3] - translation[1])) /
+                        render.canvasSize[1],
+                ];
+                newTranslation = [
+                    newTranslation[0] - change[0],
+                    newTranslation[1] - change[1],
+                    newTranslation[2] - change[0],
+                    newTranslation[3] - change[1],
+                ];
+                if (Math.abs(newTranslation[0] - translation[0]) >
+                    0.03 * (translation[2] - translation[0]) ||
+                    Math.abs(newTranslation[1] - translation[1]) >
+                        0.03 * (translation[3] - translation[1])) {
                     translation = newTranslation;
                     if (render.terrainToggle) {
                         terrainGenerator.computeTerrain(undefined, undefined, translation, render.rangeBuffer, render.nodeLength);
@@ -341,8 +375,14 @@ var Renderer = /** @class */ (function () {
         };
         controller.wheel = function (amt) {
             var change = [amt / 1000, amt / 1000];
-            newTranslation = [newTranslation[0] + change[0], newTranslation[1] + change[1], newTranslation[2] - change[0], newTranslation[3] - change[1]];
-            if (newTranslation[2] - newTranslation[0] > 0.01 && newTranslation[3] - newTranslation[1] > 0.01) {
+            newTranslation = [
+                newTranslation[0] + change[0],
+                newTranslation[1] + change[1],
+                newTranslation[2] - change[0],
+                newTranslation[3] - change[1],
+            ];
+            if (newTranslation[2] - newTranslation[0] > 0.01 &&
+                newTranslation[3] - newTranslation[1] > 0.01) {
                 translation = newTranslation;
                 if (render.terrainToggle) {
                     terrainGenerator.computeTerrain(undefined, undefined, translation, render.rangeBuffer, render.nodeLength);
@@ -368,7 +408,7 @@ var Renderer = /** @class */ (function () {
                     resource: {
                         buffer: this.nodeDataBuffer
                     }
-                }
+                },
             ]
         });
         this.edgeBindGroup = device.createBindGroup({
@@ -391,7 +431,7 @@ var Renderer = /** @class */ (function () {
                     resource: {
                         buffer: this.edgeDataBuffer
                     }
-                }
+                },
             ]
         });
         var texture = device.createTexture({
@@ -598,7 +638,7 @@ var Renderer = /** @class */ (function () {
                         _a.sent();
                         arrayBuffer = gpuReadBuffer.getMappedRange();
                         output = new Float32Array(arrayBuffer);
-                        context = this.outCanvasRef.current.getContext('2d');
+                        context = this.outCanvasRef.current.getContext("2d");
                         context.drawImage(this.colormapImage, 0, 0);
                         colorData = context.getImageData(0, 0, 180, 1).data;
                         imgData = context.createImageData(width, height);
@@ -613,7 +653,9 @@ var Renderer = /** @class */ (function () {
                             }
                         }
                         context.putImageData(imgData, 0, 0);
-                        this.outCanvasRef.current.toBlob(function (b) { file_saver_1.saveAs(b, "terrain.png"); }, "image/png");
+                        this.outCanvasRef.current.toBlob(function (b) {
+                            file_saver_1.saveAs(b, "terrain.png");
+                        }, "image/png");
                         return [2 /*return*/];
                 }
             });

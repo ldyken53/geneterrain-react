@@ -96,6 +96,8 @@ var Sidebar = /** @class */ (function (_super) {
         _this.testFunc = _this.testFunc.bind(_this);
         _this.sleep = _this.sleep.bind(_this);
         _this.storeFPSResult = _this.storeFPSResult.bind(_this);
+        // =========================================================
+        _this.randomDataGen_Computation = _this.randomDataGen_Computation.bind(_this);
         return _this;
     }
     Sidebar.prototype.handleSubmit = function (event) {
@@ -105,6 +107,68 @@ var Sidebar = /** @class */ (function (_super) {
     Sidebar.prototype.sleep = function (time) {
         return new Promise(function (resolve) {
             setTimeout(resolve, time);
+        });
+    };
+    Sidebar.prototype.randomDataGen_Computation = function (nodeCount, edgeCount, width, height) {
+        var nodesWebGPU = [];
+        var edgesWebGPU = [];
+        var nodesD3 = [];
+        var edgesD3 = [];
+        var dataWebGPU = {
+            nodes: nodesWebGPU,
+            edges: edgesWebGPU
+        };
+        var dataD3 = {
+            nodes: nodesD3,
+            edges: edgesD3
+        };
+        dataWebGPU.nodes = new Array(4 * nodeCount).fill(0);
+        dataWebGPU.edges = new Array(2 * edgeCount).fill(0);
+        for (var i = 0; i < nodeCount; i++) {
+            var x = Math.random();
+            var y = Math.random();
+            dataD3.nodes[i] = { id: i.toString(), x: x * width, y: y * height };
+            dataWebGPU.nodes[4 * i] = 0;
+            dataWebGPU.nodes[4 * i + 1] = x;
+            dataWebGPU.nodes[4 * i + 2] = y;
+            dataWebGPU.nodes[4 * i + 3] = 1;
+        }
+        var linkSet = new Set();
+        for (var i = 0; i < edgeCount; i++) {
+            var pair = void 0;
+            do {
+                pair = this.generatePair(0, nodeCount);
+            } while (linkSet.has(pair.x + "_" + pair.y));
+            linkSet.add(pair.x + "_" + pair.y);
+            linkSet.add(pair.y + "_" + pair.x);
+            dataD3.edges[i] = {
+                source: pair.x,
+                target: pair.y
+            };
+            dataWebGPU[2 * i] = pair.x;
+            dataWebGPU[2 * i + 1] = pair.y;
+        }
+        var data = {
+            dataD3: dataD3,
+            dataWebGPU: dataWebGPU
+        };
+        return data;
+    };
+    Sidebar.prototype.d3TimingStudy = function (event) {
+        return __awaiter(this, void 0, void 0, function () {
+            var width, height, nodeCount, density, edgeCount, renderingCanvas, data;
+            return __generator(this, function (_a) {
+                event.preventDefault();
+                width = 800;
+                height = 800;
+                nodeCount = 100;
+                density = 20;
+                edgeCount = nodeCount * density;
+                renderingCanvas = document.querySelectorAll("canvas")[0];
+                data = this.randomDataGen_Computation(nodeCount, edgeCount, width, height);
+                console.log(data);
+                return [2 /*return*/];
+            });
         });
     };
     Sidebar.prototype.runBenchmark = function (event) {
@@ -422,6 +486,7 @@ var Sidebar = /** @class */ (function (_super) {
                     this.state.edgeCount)),
             react_1["default"].createElement(react_csv_1.CSVLink, { data: this.state.FPSData }, "Download FPS data"),
             react_1["default"].createElement("hr", null),
+            react_1["default"].createElement(react_bootstrap_1.Button, { className: "d3Timing_test", onClick: this.d3TimingStudy }, "Run D3"),
             react_1["default"].createElement(react_bootstrap_1.Form, { style: { color: "white" }, onSubmit: this.handleSubmit },
                 react_1["default"].createElement(react_bootstrap_1.Form.Group, { controlId: "formFile", className: "mt-3 mb-3" },
                     react_1["default"].createElement(react_bootstrap_1.Form.Check, { defaultChecked: true, onClick: function () {
