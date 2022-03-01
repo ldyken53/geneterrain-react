@@ -30,10 +30,10 @@ struct Rectangle {
 };
 struct QuadTree {
     boundary : Rectangle;
-    NW : u32;
-    NE : u32;
-    SW : u32;
-    SE : u32;
+    NW : f32;
+    NE : f32;
+    SW : f32;
+    SE : f32;
     CoM : vec2<f32>;
     mass : f32;
     test : f32;
@@ -64,12 +64,12 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     var r_force : vec2<f32> = vec2<f32>(0.0, 0.0);
     var a_force : vec2<f32> = vec2<f32>(forces.forces[global_id.x * 2u], forces.forces[global_id.x * 2u + 1u]);
     var index : u32 = 0u;
-    var stack_index : u32 = global_id.x * 200u;
-    var counter : u32 = global_id.x * 200u;
+    var stack_index : u32 = global_id.x * 1000u;
+    var counter : u32 = global_id.x * 1000u;
     var out : u32 = 0u;
     loop {
         out = out + 1u;
-        if (out == 200u) {
+        if (out == 1000u) {
             break;
         }
         var quad : QuadTree = quads.quads[index];
@@ -80,10 +80,10 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
             r_force = r_force + quad.mass * ((l * l) / dist) * dir;
         } else {
             let children : array<u32, 4> = array<u32, 4>(
-                quads.quads[index].NW,
-                quads.quads[index].NE,
-                quads.quads[index].SW,
-                quads.quads[index].SE
+                u32(quads.quads[index].NW),
+                u32(quads.quads[index].NE),
+                u32(quads.quads[index].SW),
+                u32(quads.quads[index].SE)
             );
             for (var i : u32 = 0u; i < 4u; i = i + 1u) {
                 let child : u32 = children[i];

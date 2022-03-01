@@ -5,10 +5,10 @@ from scipy.sparse.linalg import eigs
 
 nodes = []
 N = 50000
-clusters = 2
+clusters = 5
 edges = []
 for i in range(clusters):
-    for j in range(N * 2):
+    for j in range(N * 4):
         source = random.randint(i * (N // clusters), i * (N // clusters) + (N // clusters - 1))
         target = random.randint(i * (N // clusters), i * (N // clusters) + (N // clusters - 1))
         # if laplacian_matrix[source, target] == 0 and source != target:
@@ -17,26 +17,26 @@ for i in range(clusters):
         #     laplacian_matrix[source, source] += 1
         #     laplacian_matrix[target, target] += 1
         edges.append({"source": source, "target": target})
-clusters2 = 0
-for i in range(clusters2):
-    for j in range(N):
-        source = random.randint(i * (N // clusters2), i * (N // clusters2) + (N // clusters2 - 1))
-        target = random.randint(i * (N // clusters2), i * (N // clusters2) + (N // clusters2 - 1))
-        # if laplacian_matrix[source, target] == 0 and source != target:
-        #     laplacian_matrix[source, target] = -1
-        #     laplacian_matrix[target, source] = -1
-        #     laplacian_matrix[source, source] += 1
-        #     laplacian_matrix[target, target] += 1
-        edges.append({"source": source, "target": target})      
-for j in range(N // 10):
-    source = random.randint(0, N - 1)
-    target = random.randint(0, N - 1)
-    # if laplacian_matrix[source, target] == 0 and source != target:
-    #     laplacian_matrix[source, target] = -1
-    #     laplacian_matrix[target, source] = -1
-    #     laplacian_matrix[source, source] += 1
-    #     laplacian_matrix[target, target] += 1
-    edges.append({"source": source, "target": target})
+# clusters2 = 0
+# for i in range(clusters2):
+#     for j in range(N):
+#         source = random.randint(i * (N // clusters2), i * (N // clusters2) + (N // clusters2 - 1))
+#         target = random.randint(i * (N // clusters2), i * (N // clusters2) + (N // clusters2 - 1))
+#         # if laplacian_matrix[source, target] == 0 and source != target:
+#         #     laplacian_matrix[source, target] = -1
+#         #     laplacian_matrix[target, source] = -1
+#         #     laplacian_matrix[source, source] += 1
+#         #     laplacian_matrix[target, target] += 1
+#         edges.append({"source": source, "target": target})      
+# for j in range(N // 100):
+#     source = random.randint(0, N - 1)
+#     target = random.randint(0, N - 1)
+#     # if laplacian_matrix[source, target] == 0 and source != target:
+#     #     laplacian_matrix[source, target] = -1
+#     #     laplacian_matrix[target, source] = -1
+#     #     laplacian_matrix[source, source] += 1
+#     #     laplacian_matrix[target, target] += 1
+#     edges.append({"source": source, "target": target})
 # print(np.sum(laplacian_matrix))
 # start = time.time()
 # vals, vecs = eigs(laplacian_matrix, k=3, which="SM")

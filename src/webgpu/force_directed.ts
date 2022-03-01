@@ -5,7 +5,7 @@ import {
     compute_forces,
     create_quadtree,
     compute_attract_forces,
-    compute_forcesBH
+    compute_forcesBH,
 } from './wgsl';
 
 class ForceDirected {
@@ -154,51 +154,51 @@ class ForceDirected {
         upload.unmap();
         let adjMatrixSize = Math.ceil((nodeLength * nodeLength * 4) / 32);
         console.log(adjMatrixSize);
-        this.adjMatrixBuffer = this.device.createBuffer({
-            size: adjMatrixSize,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
-        });
+        // this.adjMatrixBuffer = this.device.createBuffer({
+        //     size: adjMatrixSize,
+        //     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+        // });
         // this.laplacianBuffer = this.device.createBuffer({
         //     size: nodeLength * nodeLength * 4,
         //     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         // });
         var commandEncoder = this.device.createCommandEncoder();
         commandEncoder.copyBufferToBuffer(upload, 0, this.paramsBuffer, 0, 4 * 4);
-        var createBindGroup = this.device.createBindGroup({
-            layout: this.createMatrixPipeline.getBindGroupLayout(0),
-            entries: [
-                {
-                    binding: 0,
-                    resource: {
-                        buffer: this.edgeDataBuffer,
-                    }
-                },
-                {
-                    binding: 1,
-                    resource: {
-                        buffer: this.adjMatrixBuffer,
-                    }
-                },
-                {
-                    binding: 2,
-                    resource: {
-                        buffer: this.paramsBuffer,
-                    },
-                },
-                // {
-                //     binding: 3,
-                //     resource: {
-                //         buffer: this.laplacianBuffer
-                //     }
-                // }
-            ]
-        });
+        // var createBindGroup = this.device.createBindGroup({
+        //     layout: this.createMatrixPipeline.getBindGroupLayout(0),
+        //     entries: [
+        //         {
+        //             binding: 0,
+        //             resource: {
+        //                 buffer: this.edgeDataBuffer,
+        //             }
+        //         },
+        //         {
+        //             binding: 1,
+        //             resource: {
+        //                 buffer: this.adjMatrixBuffer,
+        //             }
+        //         },
+        //         {
+        //             binding: 2,
+        //             resource: {
+        //                 buffer: this.paramsBuffer,
+        //             },
+        //         },
+        //         // {
+        //         //     binding: 3,
+        //         //     resource: {
+        //         //         buffer: this.laplacianBuffer
+        //         //     }
+        //         // }
+        //     ]
+        // });
 
-        var pass = commandEncoder.beginComputePass();
-        pass.setBindGroup(0, createBindGroup);
-        pass.setPipeline(this.createMatrixPipeline);
-        pass.dispatch(1, 1, 1);      
-        pass.endPass();
+        // var pass = commandEncoder.beginComputePass();
+        // pass.setBindGroup(0, createBindGroup);
+        // pass.setPipeline(this.createMatrixPipeline);
+        // pass.dispatch(1, 1, 1);      
+        // pass.endPass();
         // Log adjacency matrix
         // const gpuReadBuffer = this.device.createBuffer({
         //     size: adjMatrixSize,
@@ -231,11 +231,15 @@ class ForceDirected {
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
         });
 
-        var quadTreeLength = nodeLength * 11 * 10 * 4;
+        var quadTreeLength = nodeLength * 12 * 4 * 4;
         this.quadTreeBuffer = this.device.createBuffer({
             size: quadTreeLength,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
+        // var clearBuffer = this.device.createBuffer({
+        //     size: quadTreeLength,
+        //     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+        // });
 
         var iterationTimes : Array<number> = [];
         var totalStart = performance.now();
@@ -256,7 +260,30 @@ class ForceDirected {
                 }
             ],
         });
-        // iterationCount = 5;
+        var quadTreeBindGroup = this.device.createBindGroup({
+            layout: this.createQuadTreePipeline.getBindGroupLayout(0),
+            entries: [
+                {
+                    binding: 0,
+                    resource: {
+                        buffer: this.nodeDataBuffer,
+                    }
+                },
+                {
+                    binding: 1,
+                    resource: {
+                        buffer: this.quadTreeBuffer,
+                    }
+                },
+                {
+                    binding: 2,
+                    resource: {
+                        buffer: this.paramsBuffer,
+                    }
+                }
+            ]
+        });
+        // iterationCount = 2;
         while (iterationCount > 0 && this.coolingFactor > 0.0001 && this.force >= 0) {
             iterationCount--;
             // Set up params (node length, edge length)
@@ -273,29 +300,9 @@ class ForceDirected {
             var commandEncoder = this.device.createCommandEncoder();
             //commandEncoder.writeTimestamp();
             commandEncoder.copyBufferToBuffer(upload, 0, this.paramsBuffer, 0, 4 * 4);
-            var quadTreeBindGroup = this.device.createBindGroup({
-                layout: this.createQuadTreePipeline.getBindGroupLayout(0),
-                entries: [
-                    {
-                        binding: 0,
-                        resource: {
-                            buffer: this.nodeDataBuffer,
-                        }
-                    },
-                    {
-                        binding: 1,
-                        resource: {
-                            buffer: this.quadTreeBuffer,
-                        }
-                    },
-                    {
-                        binding: 2,
-                        resource: {
-                            buffer: this.paramsBuffer,
-                        }
-                    }
-                ]
-            });
+            // commandEncoder.copyBufferToBuffer(clearBuffer, 0, this.quadTreeBuffer, 0, quadTreeLength);
+            this.device.queue.submit([commandEncoder.finish()]);
+            var commandEncoder = this.device.createCommandEncoder();
             // Run create quadtree pass
             var pass = commandEncoder.beginComputePass();
             pass.setBindGroup(0, quadTreeBindGroup);
@@ -341,7 +348,7 @@ class ForceDirected {
             // });
 
             var stackBuffer = this.device.createBuffer({
-                size: nodeLength * 200 * 4,
+                size: nodeLength * 1000 * 4,
                 usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
             });
             // Create BH bindgroup
@@ -450,6 +457,10 @@ class ForceDirected {
                 size: quadTreeLength,
                 usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
             });
+            const gpuReadBuffer3 = this.device.createBuffer({
+                size: nodeLength * 4 * 4,
+                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+            });
             // const gpuReadBuffer2 = this.device.createBuffer({
             //     size: nodeLength * 200 * 4,
             //     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
@@ -480,6 +491,13 @@ class ForceDirected {
             pass.setPipeline(this.applyForcesPipeline);
             pass.dispatch(nodeLength, 1, 1);
             pass.endPass();
+            commandEncoder.copyBufferToBuffer(
+                this.nodeDataBuffer /* source buffer */ ,
+                0 /* source offset */ ,
+                gpuReadBuffer3 /* destination buffer */ ,
+                0 /* destination offset */ ,
+                nodeLength * 4 * 4 /* size */
+            );
 
             this.device.queue.submit([commandEncoder.finish()]);
             var start : number = performance.now();
@@ -493,7 +511,15 @@ class ForceDirected {
             await gpuReadBuffer.mapAsync(GPUMapMode.READ);
             const arrayBuffer = gpuReadBuffer.getMappedRange();
             var output = new Float32Array(arrayBuffer);
+            console.log(output);
+            console.log(output[10]);
             console.log(output[11]);
+            // console.log(output[23]);
+            console.log(output[35]);
+            await gpuReadBuffer3.mapAsync(GPUMapMode.READ);
+            const arrayBuffer3 = gpuReadBuffer3.getMappedRange();
+            var output3 = new Float32Array(arrayBuffer3);
+            console.log(output3);
             // await gpuReadBuffer2.mapAsync(GPUMapMode.READ);
             // const arrayBuffer2 = gpuReadBuffer2.getMappedRange();
             // var output2 = new Uint32Array(arrayBuffer2);

@@ -150,7 +150,7 @@ class Renderer {
 
     this.nodeDataBuffer = device.createBuffer({
       size: 4 * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
       mappedAtCreation: true
     });
     new Float32Array(this.nodeDataBuffer.getMappedRange()).set([
@@ -460,7 +460,7 @@ class Renderer {
   setNodeEdgeData(nodeData : Array<number>, edgeData : Array<number>) {
     this.nodeDataBuffer = this.device.createBuffer({
       size: nodeData.length * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
       mappedAtCreation: true,
     });
     new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
@@ -515,7 +515,7 @@ class Renderer {
     this.edgeLength = edgeData.length;
     console.log(this.edgeLength);
     this.nodeLength = nodeData.length / 4;
-    this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
+    // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
   }
 
   setWidthFactor(widthFactor : number) {
