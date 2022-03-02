@@ -91,6 +91,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     this.storeFPSResult = this.storeFPSResult.bind(this);
 
     // =========================================================
+    this.d3TimingStudy = this.d3TimingStudy.bind(this);
     this.randomDataGen_Computation = this.randomDataGen_Computation.bind(this);
   }
 
@@ -134,6 +135,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       dataWebGPU.nodes[4 * i + 2] = y;
       dataWebGPU.nodes[4 * i + 3] = 1;
     }
+    
 
     const linkSet = new Set();
 
@@ -141,22 +143,22 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       let pair;
       do {
         pair = this.generatePair(0, nodeCount);
-      } while (linkSet.has(`${pair.x}_${pair.y}`));
-      linkSet.add(`${pair.x}_${pair.y}`);
-      linkSet.add(`${pair.y}_${pair.x}`);
+      } while (linkSet.has(`${pair.source}_${pair.target}`));
+      linkSet.add(`${pair.source}_${pair.target}`);
+      linkSet.add(`${pair.target}_${pair.source}`);
+    
       dataD3.edges[i] = {
-        source: pair.x,
-        target: pair.y,
+        source: pair.source,
+        target: pair.target,
       };
-      dataWebGPU[2 * i] = pair.x;
-      dataWebGPU[2 * i + 1] = pair.y;
+      dataWebGPU.edges[2 * i] = pair.source;
+      dataWebGPU.edges[2 * i + 1] = pair.target;
     }
-
-    let data = {
+    let dataCombined = {
       dataD3,
       dataWebGPU,
     };
-    return data;
+    return dataCombined;
   }
 
   async d3TimingStudy(event: React.MouseEvent) {

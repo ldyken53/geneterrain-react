@@ -97,6 +97,7 @@ var Sidebar = /** @class */ (function (_super) {
         _this.sleep = _this.sleep.bind(_this);
         _this.storeFPSResult = _this.storeFPSResult.bind(_this);
         // =========================================================
+        _this.d3TimingStudy = _this.d3TimingStudy.bind(_this);
         _this.randomDataGen_Computation = _this.randomDataGen_Computation.bind(_this);
         return _this;
     }
@@ -138,21 +139,21 @@ var Sidebar = /** @class */ (function (_super) {
             var pair = void 0;
             do {
                 pair = this.generatePair(0, nodeCount);
-            } while (linkSet.has(pair.x + "_" + pair.y));
-            linkSet.add(pair.x + "_" + pair.y);
-            linkSet.add(pair.y + "_" + pair.x);
+            } while (linkSet.has(pair.source + "_" + pair.target));
+            linkSet.add(pair.source + "_" + pair.target);
+            linkSet.add(pair.target + "_" + pair.source);
             dataD3.edges[i] = {
-                source: pair.x,
-                target: pair.y
+                source: pair.source,
+                target: pair.target
             };
-            dataWebGPU[2 * i] = pair.x;
-            dataWebGPU[2 * i + 1] = pair.y;
+            dataWebGPU.edges[2 * i] = pair.source;
+            dataWebGPU.edges[2 * i + 1] = pair.target;
         }
-        var data = {
+        var dataCombined = {
             dataD3: dataD3,
             dataWebGPU: dataWebGPU
         };
-        return data;
+        return dataCombined;
     };
     Sidebar.prototype.d3TimingStudy = function (event) {
         return __awaiter(this, void 0, void 0, function () {
