@@ -6,6 +6,7 @@ import Stats from "../libs/stats.module";
 import * as Constant from "../constant";
 import { CSVLink } from "react-csv";
 import XMLWriter from "xml-writer";
+import * as d3 from "d3";
 
 const headers = [
   { label: "Node", key: "Node" },
@@ -43,6 +44,7 @@ type SidebarState = {
   FPSData: Array<Array<string>>;
 };
 type edge = {
+  id: string;
   source: number;
   target: number;
 };
@@ -135,7 +137,6 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       dataWebGPU.nodes[4 * i + 2] = y;
       dataWebGPU.nodes[4 * i + 3] = 1;
     }
-    
 
     const linkSet = new Set();
 
@@ -146,8 +147,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       } while (linkSet.has(`${pair.source}_${pair.target}`));
       linkSet.add(`${pair.source}_${pair.target}`);
       linkSet.add(`${pair.target}_${pair.source}`);
-    
+
       dataD3.edges[i] = {
+        id: i.toString(),
         source: pair.source,
         target: pair.target,
       };
@@ -175,7 +177,14 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       width,
       height
     );
-    console.log(data);
+    // const simulation = d3
+    //   .forceSimulation(data.dataD3.nodes)
+    //   .force(
+    //     "link",
+    //     d3.forceLink(data.dataD3.edges).id((d) => d.id)
+    //   )
+    //   .force("charge", d3.forceManyBody());
+    // console.log(simulation);
   }
 
   async runBenchmark(event: React.MouseEvent) {
@@ -198,7 +207,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     //   edgeCounts,
     // };
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < nodeCounts.length - 1; i++) {
       // let stepCount = 0;
       const nCount = nodeCounts[i].toString();
       const eCount = edgeCounts[i].toString();
@@ -294,7 +303,6 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     this.setState({
       FPSData: [...this.state.FPSData, [nodeLength, edgeLength, fps]],
     });
-    console.log(this.state.FPSData);
   }
 
   async testFunc(data, stats) {
@@ -314,9 +322,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     refreshing();
     await this.sleep(Constant.TIME_FOR_EACH_TEST);
     let FPS_Array = stats.getFPSHistory();
-    console.log(FPS_Array);
-    let FPS = FPS_Array.pop();
-
+    let FPS = FPS_Array.reduce((a, b) => a + b, 0) / FPS_Array.length;
     this.storeFPSResult(nodeLength, edgeLength, FPS);
     cancelAnimationFrame(requestId);
     return;

@@ -143,6 +143,7 @@ var Sidebar = /** @class */ (function (_super) {
             linkSet.add(pair.source + "_" + pair.target);
             linkSet.add(pair.target + "_" + pair.source);
             dataD3.edges[i] = {
+                id: i.toString(),
                 source: pair.source,
                 target: pair.target
             };
@@ -167,7 +168,6 @@ var Sidebar = /** @class */ (function (_super) {
                 edgeCount = nodeCount * density;
                 renderingCanvas = document.querySelectorAll("canvas")[0];
                 data = this.randomDataGen_Computation(nodeCount, edgeCount, width, height);
-                console.log(data);
                 return [2 /*return*/];
             });
         });
@@ -195,7 +195,7 @@ var Sidebar = /** @class */ (function (_super) {
                         i = 0;
                         _a.label = 1;
                     case 1:
-                        if (!(i < 5)) return [3 /*break*/, 4];
+                        if (!(i < nodeCounts.length - 1)) return [3 /*break*/, 4];
                         nCount = nodeCounts[i].toString();
                         eCount = edgeCounts[i].toString();
                         this.setState({ nodeCount: nCount });
@@ -287,7 +287,6 @@ var Sidebar = /** @class */ (function (_super) {
         this.setState({
             FPSData: __spreadArrays(this.state.FPSData, [[nodeLength, edgeLength, fps]])
         });
-        console.log(this.state.FPSData);
     };
     Sidebar.prototype.testFunc = function (data, stats) {
         return __awaiter(this, void 0, void 0, function () {
@@ -323,8 +322,7 @@ var Sidebar = /** @class */ (function (_super) {
                     case 1:
                         _a.sent();
                         FPS_Array = stats.getFPSHistory();
-                        console.log(FPS_Array);
-                        FPS = FPS_Array.pop();
+                        FPS = FPS_Array.reduce(function (a, b) { return a + b; }, 0) / FPS_Array.length;
                         this.storeFPSResult(nodeLength, edgeLength, FPS);
                         cancelAnimationFrame(requestId);
                         return [2 /*return*/];
