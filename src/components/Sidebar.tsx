@@ -14,6 +14,11 @@ const headers = [
   { label: "FPS", key: "FPS" },
 ];
 
+// const headerLayout = [
+//   { label: "Graph", key: "graph1" },
+//   { label: "Iteration number", key: "Iteration number" },
+//   { label: "time", key: "time" },
+// ];
 
 type SidebarProps = {
   setNodeEdgeData: (nodeData: Array<number>, edgeData: Array<number>) => void;
@@ -43,6 +48,8 @@ type SidebarState = {
   runBenchmark: boolean;
   jsonFormat: boolean;
   FPSData: Array<Array<string>>;
+  d3timing: timing;
+
   // canvasAdded: boolean;
 };
 type edge = {
@@ -66,6 +73,11 @@ type Graph = {
   nodes: Array<node>;
   edges: Array<edge>;
 };
+
+interface timing {
+  [iteration: string]: number;
+}
+
 class Sidebar extends React.Component<SidebarProps, SidebarState> {
   constructor(props) {
     super(props);
@@ -80,6 +92,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       jsonFormat: true,
       runBenchmark: false,
       FPSData: [],
+      d3timing: {},
       // canvasAdded: false,
     };
 
@@ -168,8 +181,14 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
   async d3TimingStudy(event: React.MouseEvent) {
     event.preventDefault();
+    const self = this;
     const width = 800;
     const height = 800;
+    let iterationCount = 0;
+    const iterationMeasure = {};
+    let startTime;
+    let lastTime;
+    let totalTime;
 
     var layoutCanvas = d3
       .select("#graphDiv")
@@ -182,57 +201,52 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     if (layoutDiv) {
       layoutDiv.style.color = "white";
     }
-    // .call(d3.behavior.zoom().on("zoom", simulationUpdate))
 
-    // this.setState({ canvasAdded: true });
     let context = layoutCanvas!.getContext("2d")!;
-
     if (!context) {
       console.log("no 2d context found");
       return;
     }
+
     context.fillStyle = "white";
 
-    var transform = d3.zoomIdentity;
-
     d3.json("./test_small_spec.json").then((data: any) => {
-      // const nodes = data.nodes.map((d) => {
-      //   d.x = d.x;
-      //   d.y = d.y;
-      //   d.vx = (d.vx * width) / 10;
-      //   d.vy = (d.vy * height) / 10;
-      //   return Object.create(d);
-      // });
-      // console.log(nodes);
-
-      // data.nodes = nodes;
-
-      // const edges = data.edges.map((d) => {
-      //   return Object.create(d);
-      // });
-
-      // data.edges = edges;
-
       console.log(data);
-
+      startTime = performance.now();
+      lastTime = startTime;
       const simulation = d3
         .forceSimulation(data.nodes)
         .force("charge", d3.forceManyBody().strength(-40))
-        .force("center", d3.forceCenter())
-        .force("link", d3.forceLink(data.edges).distance(1).strength(0.1));
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("link", d3.forceLink(data.edges).distance(5).strength(2.0));
 
       initGraph(data);
 
       function initGraph(data) {
         console.log(data.edges);
         simulation.on("tick", simulationUpdate);
+        simulation.on("end", () => {
+          let currentTime = performance.now();
+          totalTime = currentTime - startTime;
+          console.log("startTime", startTime);
+          console.log("totalTime", totalTime);
+          console.log("iterationMeasure", iterationMeasure);
+        });
       }
 
       function simulationUpdate() {
+        let currentTime = performance.now();
+        let dt = currentTime - lastTime;
+        iterationCount++;
+        iterationMeasure[iterationCount] = dt;
+        lastTime = currentTime;
+        self.setState({
+          d3timing: { ...self.state.d3timing, iterationCount: dt },
+        });
+
         context.save();
+        context.strokeStyle = "#aaa";
         context.clearRect(0, 0, width, height);
-        context.translate(transform.x, transform.y);
-        context.scale(transform.k, transform.k);
 
         data.edges.forEach(function (d) {
           context.beginPath();
@@ -241,14 +255,12 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           context.stroke();
         });
 
-        // Draw the nodes
         data.nodes.forEach(function (d, i) {
           context.beginPath();
           context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
           context.fillStyle = d.col ? "red" : "black";
           context.fill();
         });
-
         context.restore();
       }
     });
@@ -562,6 +574,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         <Button className="d3Timing_test" onClick={this.d3TimingStudy}>
           Run D3
         </Button>
+        {/* <CSVLink data={this.state.d3timing}>Download FPS data</CSVLink> */}
 
         <Form style={{ color: "white" }} onSubmit={this.handleSubmit}>
           <Form.Group controlId="formFile" className="mt-3 mb-3">

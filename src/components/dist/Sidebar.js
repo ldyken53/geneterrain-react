@@ -12,6 +12,17 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -84,7 +95,8 @@ var Sidebar = /** @class */ (function (_super) {
             e: {},
             jsonFormat: true,
             runBenchmark: false,
-            FPSData: []
+            FPSData: [],
+            d3timing: {}
         };
         _this.handleSubmit = _this.handleSubmit.bind(_this);
         _this.readFiles = _this.readFiles.bind(_this);
@@ -159,11 +171,14 @@ var Sidebar = /** @class */ (function (_super) {
     // }
     Sidebar.prototype.d3TimingStudy = function (event) {
         return __awaiter(this, void 0, void 0, function () {
-            var width, height, layoutCanvas, layoutDiv, context, transform;
+            var self, width, height, iterationCount, iterationMeasure, startTime, lastTime, totalTime, layoutCanvas, layoutDiv, context;
             return __generator(this, function (_a) {
                 event.preventDefault();
+                self = this;
                 width = 800;
                 height = 800;
+                iterationCount = 0;
+                iterationMeasure = {};
                 layoutCanvas = d3
                     .select("#graphDiv")
                     .append("canvas")
@@ -180,44 +195,45 @@ var Sidebar = /** @class */ (function (_super) {
                     return [2 /*return*/];
                 }
                 context.fillStyle = "white";
-                transform = d3.zoomIdentity;
                 d3.json("./test_small_spec.json").then(function (data) {
-                    // const nodes = data.nodes.map((d) => {
-                    //   d.x = d.x;
-                    //   d.y = d.y;
-                    //   d.vx = (d.vx * width) / 10;
-                    //   d.vy = (d.vy * height) / 10;
-                    //   return Object.create(d);
-                    // });
-                    // console.log(nodes);
-                    // data.nodes = nodes;
-                    // const edges = data.edges.map((d) => {
-                    //   return Object.create(d);
-                    // });
-                    // data.edges = edges;
                     console.log(data);
+                    startTime = performance.now();
+                    lastTime = startTime;
                     var simulation = d3
                         .forceSimulation(data.nodes)
                         .force("charge", d3.forceManyBody().strength(-40))
-                        .force("center", d3.forceCenter())
-                        .force("link", d3.forceLink(data.edges).distance(1).strength(0.1));
+                        .force("center", d3.forceCenter(width / 2, height / 2))
+                        .force("link", d3.forceLink(data.edges).distance(5).strength(2.0));
                     initGraph(data);
                     function initGraph(data) {
                         console.log(data.edges);
                         simulation.on("tick", simulationUpdate);
+                        simulation.on("end", function () {
+                            var currentTime = performance.now();
+                            totalTime = currentTime - startTime;
+                            console.log("startTime", startTime);
+                            console.log("totalTime", totalTime);
+                            console.log("iterationMeasure", iterationMeasure);
+                        });
                     }
                     function simulationUpdate() {
+                        var currentTime = performance.now();
+                        var dt = currentTime - lastTime;
+                        iterationCount++;
+                        iterationMeasure[iterationCount] = dt;
+                        lastTime = currentTime;
+                        self.setState({
+                            d3timing: __assign(__assign({}, self.state.d3timing), { iterationCount: dt })
+                        });
                         context.save();
+                        context.strokeStyle = "#aaa";
                         context.clearRect(0, 0, width, height);
-                        context.translate(transform.x, transform.y);
-                        context.scale(transform.k, transform.k);
                         data.edges.forEach(function (d) {
                             context.beginPath();
                             context.moveTo(d.source.x, d.source.y);
                             context.lineTo(d.target.x, d.target.y);
                             context.stroke();
                         });
-                        // Draw the nodes
                         data.nodes.forEach(function (d, i) {
                             context.beginPath();
                             context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
