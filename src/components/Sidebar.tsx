@@ -14,6 +14,7 @@ const headers = [
   { label: "FPS", key: "FPS" },
 ];
 
+
 type SidebarProps = {
   setNodeEdgeData: (nodeData: Array<number>, edgeData: Array<number>) => void;
   setWidthFactor: (widthFactor: number) => void;
@@ -42,7 +43,7 @@ type SidebarState = {
   runBenchmark: boolean;
   jsonFormat: boolean;
   FPSData: Array<Array<string>>;
-  canvasAdded: boolean;
+  // canvasAdded: boolean;
 };
 type edge = {
   id: string;
@@ -79,7 +80,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       jsonFormat: true,
       runBenchmark: false,
       FPSData: [],
-      canvasAdded: false,
+      // canvasAdded: false,
     };
 
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -177,6 +178,12 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       .attr("height", height + "px")
       .node();
 
+    let layoutDiv = document.getElementById("#graphDiv");
+    if (layoutDiv) {
+      layoutDiv.style.color = "white";
+    }
+    // .call(d3.behavior.zoom().on("zoom", simulationUpdate))
+
     // this.setState({ canvasAdded: true });
     let context = layoutCanvas!.getContext("2d")!;
 
@@ -184,45 +191,65 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       console.log("no 2d context found");
       return;
     }
+    context.fillStyle = "white";
 
     var transform = d3.zoomIdentity;
 
-    d3.json("test1.json").then((data: any) => {
+    d3.json("./test_small_spec.json").then((data: any) => {
+      // const nodes = data.nodes.map((d) => {
+      //   d.x = d.x;
+      //   d.y = d.y;
+      //   d.vx = (d.vx * width) / 10;
+      //   d.vy = (d.vy * height) / 10;
+      //   return Object.create(d);
+      // });
+      // console.log(nodes);
+
+      // data.nodes = nodes;
+
+      // const edges = data.edges.map((d) => {
+      //   return Object.create(d);
+      // });
+
+      // data.edges = edges;
+
       console.log(data);
+
       const simulation = d3
         .forceSimulation(data.nodes)
-        .force("charge", null)
+        .force("charge", d3.forceManyBody().strength(-40))
         .force("center", d3.forceCenter())
-        .force("link", d3.forceLink(data.edges));
+        .force("link", d3.forceLink(data.edges).distance(1).strength(0.1));
 
       initGraph(data);
 
       function initGraph(data) {
+        console.log(data.edges);
         simulation.on("tick", simulationUpdate);
+      }
 
-        function simulationUpdate() {
-          context.save();
-          context.clearRect(0, 0, width, height);
-          context.translate(transform.x, transform.y);
-          context.scale(transform.k, transform.k);
+      function simulationUpdate() {
+        context.save();
+        context.clearRect(0, 0, width, height);
+        context.translate(transform.x, transform.y);
+        context.scale(transform.k, transform.k);
 
-          data.edges.forEach(function (d) {
-            context.beginPath();
-            context.moveTo(d.source.x, d.source.y);
-            context.lineTo(d.target.x, d.target.y);
-            context.stroke();
-          });
+        data.edges.forEach(function (d) {
+          context.beginPath();
+          context.moveTo(d.source.x, d.source.y);
+          context.lineTo(d.target.x, d.target.y);
+          context.stroke();
+        });
 
-          // Draw the nodes
-          data.nodes.forEach(function (d, i) {
-            context.beginPath();
-            context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
-            context.fillStyle = d.col ? "red" : "black";
-            context.fill();
-          });
+        // Draw the nodes
+        data.nodes.forEach(function (d, i) {
+          context.beginPath();
+          context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
+          context.fillStyle = d.col ? "red" : "black";
+          context.fill();
+        });
 
-          context.restore();
-        }
+        context.restore();
       }
     });
   }

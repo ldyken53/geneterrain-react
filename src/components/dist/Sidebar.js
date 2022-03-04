@@ -84,8 +84,7 @@ var Sidebar = /** @class */ (function (_super) {
             e: {},
             jsonFormat: true,
             runBenchmark: false,
-            FPSData: [],
-            canvasAdded: false
+            FPSData: []
         };
         _this.handleSubmit = _this.handleSubmit.bind(_this);
         _this.readFiles = _this.readFiles.bind(_this);
@@ -160,7 +159,7 @@ var Sidebar = /** @class */ (function (_super) {
     // }
     Sidebar.prototype.d3TimingStudy = function (event) {
         return __awaiter(this, void 0, void 0, function () {
-            var width, height, layoutCanvas, context, transform;
+            var width, height, layoutCanvas, layoutDiv, context, transform;
             return __generator(this, function (_a) {
                 event.preventDefault();
                 width = 800;
@@ -171,42 +170,61 @@ var Sidebar = /** @class */ (function (_super) {
                     .attr("width", width + "px")
                     .attr("height", height + "px")
                     .node();
+                layoutDiv = document.getElementById("#graphDiv");
+                if (layoutDiv) {
+                    layoutDiv.style.color = "white";
+                }
                 context = layoutCanvas.getContext("2d");
                 if (!context) {
                     console.log("no 2d context found");
                     return [2 /*return*/];
                 }
+                context.fillStyle = "white";
                 transform = d3.zoomIdentity;
-                d3.json("test1.json").then(function (data) {
+                d3.json("./test_small_spec.json").then(function (data) {
+                    // const nodes = data.nodes.map((d) => {
+                    //   d.x = d.x;
+                    //   d.y = d.y;
+                    //   d.vx = (d.vx * width) / 10;
+                    //   d.vy = (d.vy * height) / 10;
+                    //   return Object.create(d);
+                    // });
+                    // console.log(nodes);
+                    // data.nodes = nodes;
+                    // const edges = data.edges.map((d) => {
+                    //   return Object.create(d);
+                    // });
+                    // data.edges = edges;
                     console.log(data);
                     var simulation = d3
                         .forceSimulation(data.nodes)
-                        .force("charge", null)
+                        .force("charge", d3.forceManyBody().strength(-40))
                         .force("center", d3.forceCenter())
-                        .force("link", d3.forceLink(data.edges));
+                        .force("link", d3.forceLink(data.edges).distance(1).strength(0.1));
                     initGraph(data);
                     function initGraph(data) {
+                        console.log(data.edges);
                         simulation.on("tick", simulationUpdate);
-                        function simulationUpdate() {
-                            context.save();
-                            context.clearRect(0, 0, width, height);
-                            context.translate(transform.x, transform.y);
-                            context.scale(transform.k, transform.k);
-                            data.edges.forEach(function (d) {
-                                context.beginPath();
-                                context.moveTo(d.source.x, d.source.y);
-                                context.lineTo(d.target.x, d.target.y);
-                                context.stroke();
-                            });
-                            // Draw the nodes
-                            data.nodes.forEach(function (d, i) {
-                                context.beginPath();
-                                context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
-                                context.fillStyle = d.col ? "red" : "black";
-                                context.fill();
-                            });
-                            context.restore();
-                        }
+                    }
+                    function simulationUpdate() {
+                        context.save();
+                        context.clearRect(0, 0, width, height);
+                        context.translate(transform.x, transform.y);
+                        context.scale(transform.k, transform.k);
+                        data.edges.forEach(function (d) {
+                            context.beginPath();
+                            context.moveTo(d.source.x, d.source.y);
+                            context.lineTo(d.target.x, d.target.y);
+                            context.stroke();
+                        });
+                        // Draw the nodes
+                        data.nodes.forEach(function (d, i) {
+                            context.beginPath();
+                            context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
+                            context.fillStyle = d.col ? "red" : "black";
+                            context.fill();
+                        });
+                        context.restore();
                     }
                 });
                 return [2 /*return*/];
