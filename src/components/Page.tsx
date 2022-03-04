@@ -210,11 +210,15 @@ class Page extends React.Component<{}, PageState> {
             <br />
             <Form.Label className={"out"} ref={this.state.iterRef}></Form.Label>
             <div id="node_count"></div>
+            <div id="graphDiv">
+              <canvas id="layoutCanvas"></canvas>
+            </div>
             <canvas
               ref={this.state.canvasRef}
               width={800}
               height={800}
             ></canvas>
+
             <canvas
               hidden={true}
               ref={this.state.outCanvasRef}

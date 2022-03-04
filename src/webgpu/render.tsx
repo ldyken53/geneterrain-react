@@ -2,8 +2,7 @@ import { Controller } from './ez_canvas_controller';
 import TerrainGenerator from './terrain_generator';
 import { display_2d_vert, display_2d_frag, node_vert, node_frag, edge_vert, edge_frag } from './wgsl';
 import { saveAs } from 'file-saver'; 
-import ForceDirected from './force_directed';
-import * as d3 from "d3";
+import ForceDirected from "./force_directed";
 
 class Renderer {
   public uniform2DBuffer: GPUBuffer | null = null;

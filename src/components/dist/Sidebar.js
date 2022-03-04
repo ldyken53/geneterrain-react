@@ -64,6 +64,7 @@ var stats_module_1 = require("../libs/stats.module");
 var Constant = require("../constant");
 var react_csv_1 = require("react-csv");
 var xml_writer_1 = require("xml-writer");
+var d3 = require("d3");
 var headers = [
     { label: "Node", key: "Node" },
     { label: "Edge", key: "Edge" },
@@ -83,7 +84,8 @@ var Sidebar = /** @class */ (function (_super) {
             e: {},
             jsonFormat: true,
             runBenchmark: false,
-            FPSData: []
+            FPSData: [],
+            canvasAdded: false
         };
         _this.handleSubmit = _this.handleSubmit.bind(_this);
         _this.readFiles = _this.readFiles.bind(_this);
@@ -98,8 +100,8 @@ var Sidebar = /** @class */ (function (_super) {
         _this.storeFPSResult = _this.storeFPSResult.bind(_this);
         // =========================================================
         _this.d3TimingStudy = _this.d3TimingStudy.bind(_this);
-        _this.randomDataGen_Computation = _this.randomDataGen_Computation.bind(_this);
         return _this;
+        // this.randomDataGen_Computation = this.randomDataGen_Computation.bind(this);
     }
     Sidebar.prototype.handleSubmit = function (event) {
         event.preventDefault();
@@ -110,64 +112,103 @@ var Sidebar = /** @class */ (function (_super) {
             setTimeout(resolve, time);
         });
     };
-    Sidebar.prototype.randomDataGen_Computation = function (nodeCount, edgeCount, width, height) {
-        var nodesWebGPU = [];
-        var edgesWebGPU = [];
-        var nodesD3 = [];
-        var edgesD3 = [];
-        var dataWebGPU = {
-            nodes: nodesWebGPU,
-            edges: edgesWebGPU
-        };
-        var dataD3 = {
-            nodes: nodesD3,
-            edges: edgesD3
-        };
-        dataWebGPU.nodes = new Array(4 * nodeCount).fill(0);
-        dataWebGPU.edges = new Array(2 * edgeCount).fill(0);
-        for (var i = 0; i < nodeCount; i++) {
-            var x = Math.random();
-            var y = Math.random();
-            dataD3.nodes[i] = { id: i.toString(), x: x * width, y: y * height };
-            dataWebGPU.nodes[4 * i] = 0;
-            dataWebGPU.nodes[4 * i + 1] = x;
-            dataWebGPU.nodes[4 * i + 2] = y;
-            dataWebGPU.nodes[4 * i + 3] = 1;
-        }
-        var linkSet = new Set();
-        for (var i = 0; i < edgeCount; i++) {
-            var pair = void 0;
-            do {
-                pair = this.generatePair(0, nodeCount);
-            } while (linkSet.has(pair.source + "_" + pair.target));
-            linkSet.add(pair.source + "_" + pair.target);
-            linkSet.add(pair.target + "_" + pair.source);
-            dataD3.edges[i] = {
-                id: i.toString(),
-                source: pair.source,
-                target: pair.target
-            };
-            dataWebGPU.edges[2 * i] = pair.source;
-            dataWebGPU.edges[2 * i + 1] = pair.target;
-        }
-        var dataCombined = {
-            dataD3: dataD3,
-            dataWebGPU: dataWebGPU
-        };
-        return dataCombined;
-    };
+    // randomDataGen_Computation(nodeCount, edgeCount, width, height) {
+    //   var nodesWebGPU: Array<number> = [];
+    //   var edgesWebGPU: Array<number> = [];
+    //   var nodesD3: Array<nodeD3> = [];
+    //   var edgesD3: Array<edge> = [];
+    //   const dataWebGPU = {
+    //     nodes: nodesWebGPU,
+    //     edges: edgesWebGPU,
+    //   };
+    //   const dataD3 = {
+    //     nodes: nodesD3,
+    //     edges: edgesD3,
+    //   };
+    //   dataWebGPU.nodes = new Array(4 * nodeCount).fill(0);
+    //   dataWebGPU.edges = new Array(2 * edgeCount).fill(0);
+    //   for (let i = 0; i < nodeCount; i++) {
+    //     let x = Math.random();
+    //     let y = Math.random();
+    //     dataD3.nodes[i] = { id: i.toString(), x: x * width, y: y * height };
+    //     dataWebGPU.nodes[4 * i] = 0;
+    //     dataWebGPU.nodes[4 * i + 1] = x;
+    //     dataWebGPU.nodes[4 * i + 2] = y;
+    //     dataWebGPU.nodes[4 * i + 3] = 1;
+    //   }
+    //   const linkSet = new Set();
+    //   for (let i = 0; i < edgeCount; i++) {
+    //     let pair;
+    //     do {
+    //       pair = this.generatePair(0, nodeCount);
+    //     } while (linkSet.has(`${pair.source}_${pair.target}`));
+    //     linkSet.add(`${pair.source}_${pair.target}`);
+    //     linkSet.add(`${pair.target}_${pair.source}`);
+    //     dataD3.edges[i] = {
+    //       id: i.toString(),
+    //       source: pair.source,
+    //       target: pair.target,
+    //     };
+    //     dataWebGPU.edges[2 * i] = pair.source;
+    //     dataWebGPU.edges[2 * i + 1] = pair.target;
+    //   }
+    //   let dataCombined = {
+    //     dataD3,
+    //     dataWebGPU,
+    //   };
+    //   return dataCombined;
+    // }
     Sidebar.prototype.d3TimingStudy = function (event) {
         return __awaiter(this, void 0, void 0, function () {
-            var width, height, nodeCount, density, edgeCount, renderingCanvas, data;
+            var width, height, layoutCanvas, context, transform;
             return __generator(this, function (_a) {
                 event.preventDefault();
                 width = 800;
                 height = 800;
-                nodeCount = 100;
-                density = 20;
-                edgeCount = nodeCount * density;
-                renderingCanvas = document.querySelectorAll("canvas")[0];
-                data = this.randomDataGen_Computation(nodeCount, edgeCount, width, height);
+                layoutCanvas = d3
+                    .select("#graphDiv")
+                    .append("canvas")
+                    .attr("width", width + "px")
+                    .attr("height", height + "px")
+                    .node();
+                context = layoutCanvas.getContext("2d");
+                if (!context) {
+                    console.log("no 2d context found");
+                    return [2 /*return*/];
+                }
+                transform = d3.zoomIdentity;
+                d3.json("test1.json").then(function (data) {
+                    console.log(data);
+                    var simulation = d3
+                        .forceSimulation(data.nodes)
+                        .force("charge", null)
+                        .force("center", d3.forceCenter())
+                        .force("link", d3.forceLink(data.edges));
+                    initGraph(data);
+                    function initGraph(data) {
+                        simulation.on("tick", simulationUpdate);
+                        function simulationUpdate() {
+                            context.save();
+                            context.clearRect(0, 0, width, height);
+                            context.translate(transform.x, transform.y);
+                            context.scale(transform.k, transform.k);
+                            data.edges.forEach(function (d) {
+                                context.beginPath();
+                                context.moveTo(d.source.x, d.source.y);
+                                context.lineTo(d.target.x, d.target.y);
+                                context.stroke();
+                            });
+                            // Draw the nodes
+                            data.nodes.forEach(function (d, i) {
+                                context.beginPath();
+                                context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
+                                context.fillStyle = d.col ? "red" : "black";
+                                context.fill();
+                            });
+                            context.restore();
+                        }
+                    }
+                });
                 return [2 /*return*/];
             });
         });
@@ -179,7 +220,7 @@ var Sidebar = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         event.preventDefault();
-                        nodeCounts = [1e2, 5e2, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 1e6];
+                        nodeCounts = [1e6];
                         density = 20;
                         edgeCounts = nodeCounts.map(function (n) { return n * density; });
                         stats = stats_module_1["default"]();

@@ -42,6 +42,7 @@ type SidebarState = {
   runBenchmark: boolean;
   jsonFormat: boolean;
   FPSData: Array<Array<string>>;
+  canvasAdded: boolean;
 };
 type edge = {
   id: string;
@@ -78,6 +79,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       jsonFormat: true,
       runBenchmark: false,
       FPSData: [],
+      canvasAdded: false,
     };
 
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -94,7 +96,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
     // =========================================================
     this.d3TimingStudy = this.d3TimingStudy.bind(this);
-    this.randomDataGen_Computation = this.randomDataGen_Computation.bind(this);
+    // this.randomDataGen_Computation = this.randomDataGen_Computation.bind(this);
   }
 
   handleSubmit(event) {
@@ -108,88 +110,126 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     });
   }
 
-  randomDataGen_Computation(nodeCount, edgeCount, width, height) {
-    var nodesWebGPU: Array<number> = [];
-    var edgesWebGPU: Array<number> = [];
+  // randomDataGen_Computation(nodeCount, edgeCount, width, height) {
+  //   var nodesWebGPU: Array<number> = [];
+  //   var edgesWebGPU: Array<number> = [];
 
-    var nodesD3: Array<nodeD3> = [];
-    var edgesD3: Array<edge> = [];
+  //   var nodesD3: Array<nodeD3> = [];
+  //   var edgesD3: Array<edge> = [];
 
-    const dataWebGPU = {
-      nodes: nodesWebGPU,
-      edges: edgesWebGPU,
-    };
+  //   const dataWebGPU = {
+  //     nodes: nodesWebGPU,
+  //     edges: edgesWebGPU,
+  //   };
 
-    const dataD3 = {
-      nodes: nodesD3,
-      edges: edgesD3,
-    };
+  //   const dataD3 = {
+  //     nodes: nodesD3,
+  //     edges: edgesD3,
+  //   };
 
-    dataWebGPU.nodes = new Array(4 * nodeCount).fill(0);
-    dataWebGPU.edges = new Array(2 * edgeCount).fill(0);
+  //   dataWebGPU.nodes = new Array(4 * nodeCount).fill(0);
+  //   dataWebGPU.edges = new Array(2 * edgeCount).fill(0);
 
-    for (let i = 0; i < nodeCount; i++) {
-      let x = Math.random();
-      let y = Math.random();
-      dataD3.nodes[i] = { id: i.toString(), x: x * width, y: y * height };
-      dataWebGPU.nodes[4 * i] = 0;
-      dataWebGPU.nodes[4 * i + 1] = x;
-      dataWebGPU.nodes[4 * i + 2] = y;
-      dataWebGPU.nodes[4 * i + 3] = 1;
-    }
+  //   for (let i = 0; i < nodeCount; i++) {
+  //     let x = Math.random();
+  //     let y = Math.random();
+  //     dataD3.nodes[i] = { id: i.toString(), x: x * width, y: y * height };
+  //     dataWebGPU.nodes[4 * i] = 0;
+  //     dataWebGPU.nodes[4 * i + 1] = x;
+  //     dataWebGPU.nodes[4 * i + 2] = y;
+  //     dataWebGPU.nodes[4 * i + 3] = 1;
+  //   }
 
-    const linkSet = new Set();
+  //   const linkSet = new Set();
 
-    for (let i = 0; i < edgeCount; i++) {
-      let pair;
-      do {
-        pair = this.generatePair(0, nodeCount);
-      } while (linkSet.has(`${pair.source}_${pair.target}`));
-      linkSet.add(`${pair.source}_${pair.target}`);
-      linkSet.add(`${pair.target}_${pair.source}`);
+  //   for (let i = 0; i < edgeCount; i++) {
+  //     let pair;
+  //     do {
+  //       pair = this.generatePair(0, nodeCount);
+  //     } while (linkSet.has(`${pair.source}_${pair.target}`));
+  //     linkSet.add(`${pair.source}_${pair.target}`);
+  //     linkSet.add(`${pair.target}_${pair.source}`);
 
-      dataD3.edges[i] = {
-        id: i.toString(),
-        source: pair.source,
-        target: pair.target,
-      };
-      dataWebGPU.edges[2 * i] = pair.source;
-      dataWebGPU.edges[2 * i + 1] = pair.target;
-    }
-    let dataCombined = {
-      dataD3,
-      dataWebGPU,
-    };
-    return dataCombined;
-  }
+  //     dataD3.edges[i] = {
+  //       id: i.toString(),
+  //       source: pair.source,
+  //       target: pair.target,
+  //     };
+  //     dataWebGPU.edges[2 * i] = pair.source;
+  //     dataWebGPU.edges[2 * i + 1] = pair.target;
+  //   }
+  //   let dataCombined = {
+  //     dataD3,
+  //     dataWebGPU,
+  //   };
+  //   return dataCombined;
+  // }
 
   async d3TimingStudy(event: React.MouseEvent) {
     event.preventDefault();
-    let width = 800;
-    let height = 800;
-    let nodeCount = 100;
-    let density = 20;
-    let edgeCount = nodeCount * density;
-    let renderingCanvas = document.querySelectorAll("canvas")[0];
-    let data = this.randomDataGen_Computation(
-      nodeCount,
-      edgeCount,
-      width,
-      height
-    );
-    // const simulation = d3
-    //   .forceSimulation(data.dataD3.nodes)
-    //   .force(
-    //     "link",
-    //     d3.forceLink(data.dataD3.edges).id((d) => d.id)
-    //   )
-    //   .force("charge", d3.forceManyBody());
-    // console.log(simulation);
+    const width = 800;
+    const height = 800;
+
+    var layoutCanvas = d3
+      .select("#graphDiv")
+      .append("canvas")
+      .attr("width", width + "px")
+      .attr("height", height + "px")
+      .node();
+
+    // this.setState({ canvasAdded: true });
+    let context = layoutCanvas!.getContext("2d")!;
+
+    if (!context) {
+      console.log("no 2d context found");
+      return;
+    }
+
+    var transform = d3.zoomIdentity;
+
+    d3.json("test1.json").then((data: any) => {
+      console.log(data);
+      const simulation = d3
+        .forceSimulation(data.nodes)
+        .force("charge", null)
+        .force("center", d3.forceCenter())
+        .force("link", d3.forceLink(data.edges));
+
+      initGraph(data);
+
+      function initGraph(data) {
+        simulation.on("tick", simulationUpdate);
+
+        function simulationUpdate() {
+          context.save();
+          context.clearRect(0, 0, width, height);
+          context.translate(transform.x, transform.y);
+          context.scale(transform.k, transform.k);
+
+          data.edges.forEach(function (d) {
+            context.beginPath();
+            context.moveTo(d.source.x, d.source.y);
+            context.lineTo(d.target.x, d.target.y);
+            context.stroke();
+          });
+
+          // Draw the nodes
+          data.nodes.forEach(function (d, i) {
+            context.beginPath();
+            context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
+            context.fillStyle = d.col ? "red" : "black";
+            context.fill();
+          });
+
+          context.restore();
+        }
+      }
+    });
   }
 
   async runBenchmark(event: React.MouseEvent) {
     event.preventDefault();
-    const nodeCounts = [1e2, 5e2, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 1e6];
+    const nodeCounts = [1e6];
     const density = 20;
     const edgeCounts = nodeCounts.map((n) => n * density);
     let stats = Stats();

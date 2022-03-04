@@ -249,6 +249,8 @@ var Page = /** @class */ (function (_super) {
                 react_1["default"].createElement("br", null),
                 react_1["default"].createElement(react_bootstrap_1.Form.Label, { className: "out", ref: this.state.iterRef }),
                 react_1["default"].createElement("div", { id: "node_count" }),
+                react_1["default"].createElement("div", { id: "graphDiv" },
+                    react_1["default"].createElement("canvas", { id: "layoutCanvas" })),
                 react_1["default"].createElement("canvas", { ref: this.state.canvasRef, width: 800, height: 800 }),
                 react_1["default"].createElement("canvas", { hidden: true, ref: this.state.outCanvasRef, width: 800, height: 800 }),
                 react_1["default"].createElement("canvas", { hidden: true, ref: this.state.colorCanvasRef, width: 180, height: 1 }))));
