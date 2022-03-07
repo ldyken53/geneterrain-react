@@ -177,33 +177,59 @@ class Page extends React.Component<{}, PageState> {
   
     render() {
       return (
-        <div>
-            <Sidebar 
-                setValleyValue={this.setValleyValue.bind(this)} 
-                setPeakValue={this.setPeakValue.bind(this)} 
-                setWidthFactor={this.setWidthFactor.bind(this)} 
-                setNodeEdgeData={this.setNodeEdgeData.bind(this)} 
-                setGlobalRange={this.setGlobalRange.bind(this)}
-                setIdealLength={this.setIdealLength.bind(this)}
-                setCoolingFactor={this.setCoolingFactor.bind(this)}
-                toggleNodeLayer={this.toggleNodeLayer.bind(this)}
-                toggleTerrainLayer={this.toggleTerrainLayer.bind(this)}
-                toggleEdgeLayer={this.toggleEdgeLayer.bind(this)}
-                runForceDirected={this.runForceDirected.bind(this)}
-                setColorHill={this.setColorHill.bind(this)}
-                setColorValley={this.setColorValley.bind(this)}
-                setColorMountain={this.setColorMountain.bind(this)}
-                onSave={this.onSave.bind(this)}
-            />
-            <div className="canvasContainer">
-                <Select className='m-2' placeholder="Choose colormap..." onChange={(e) => this.changeColormap(e!.value)} options={ colormap_list.map((cm) => {return {"label": cm, "value": cm}})}></Select>
-                <Form.Label className={"out"} ref={this.state.fpsRef} >FPS: n/a</Form.Label>
-                <br/>
-                <Form.Label className={"out"} ref={this.state.iterRef} ></Form.Label>
-                <canvas ref={this.state.canvasRef} width={800} height={800}></canvas>
-                <canvas hidden={true} ref={this.state.outCanvasRef} width={800} height={800}></canvas>
-                <canvas hidden={true} ref={this.state.colorCanvasRef} width={180} height={1}></canvas>
-            </div>
+        <div className="main_wrapper">
+          <Sidebar
+            setValleyValue={this.setValleyValue.bind(this)}
+            setPeakValue={this.setPeakValue.bind(this)}
+            setWidthFactor={this.setWidthFactor.bind(this)}
+            setNodeEdgeData={this.setNodeEdgeData.bind(this)}
+            setGlobalRange={this.setGlobalRange.bind(this)}
+            setIdealLength={this.setIdealLength.bind(this)}
+            setCoolingFactor={this.setCoolingFactor.bind(this)}
+            toggleNodeLayer={this.toggleNodeLayer.bind(this)}
+            toggleTerrainLayer={this.toggleTerrainLayer.bind(this)}
+            toggleEdgeLayer={this.toggleEdgeLayer.bind(this)}
+            runForceDirected={this.runForceDirected.bind(this)}
+            setColorHill={this.setColorHill.bind(this)}
+            setColorValley={this.setColorValley.bind(this)}
+            setColorMountain={this.setColorMountain.bind(this)}
+            onSave={this.onSave.bind(this)}
+          />
+          <div className="canvasContainer">
+            <Select
+              className="m-2"
+              placeholder="Choose colormap..."
+              onChange={(e) => this.changeColormap(e!.value)}
+              options={colormap_list.map((cm) => {
+                return { label: cm, value: cm };
+              })}
+            ></Select>
+            <Form.Label className={"out"} ref={this.state.fpsRef}>
+              FPS: n/a
+            </Form.Label>
+            <br />
+            <Form.Label className={"out"} ref={this.state.iterRef}></Form.Label>
+            <div id="node_count"></div>
+            <div id="graphDiv"></div>
+            <canvas
+              ref={this.state.canvasRef}
+              width={800}
+              height={800}
+            ></canvas>
+
+            <canvas
+              hidden={true}
+              ref={this.state.outCanvasRef}
+              width={800}
+              height={800}
+            ></canvas>
+            <canvas
+              hidden={true}
+              ref={this.state.colorCanvasRef}
+              width={180}
+              height={1}
+            ></canvas>
+          </div>
         </div>
       );
     }

@@ -13,13 +13,19 @@
   }
 }
 
+.main_wrapper{
+  display: flex;
+}
+
 .sidebar {
   text-align: center;
-  position: absolute;
-  left: 0;
-  width: 20%;
-  height: 100%;
+  /* position: absolute; */
+  /* left: 0; */
+  /* width: 20%; */
+  /* height: 100%; */
+  min-height: 100vh;
   background-color: #384158;
+  flex: 1 ;
 }
 
 .out {
@@ -29,10 +35,11 @@
 
 .canvasContainer {
   text-align: center;
-  position: absolute;
+  /* position: absolute; */
   margin-top: 10px;
-  right: 0;
-  width: 80%;
+  flex: 3;
+  /* right: 0; */
+  /* width: 80%; */
 }
 
 .canvas {
@@ -59,6 +66,10 @@
 
 .App-link {
   color: #61dafb;
+}
+
+#graphDiv canvas{
+  background: white;
 }
 
 @keyframes App-logo-spin {

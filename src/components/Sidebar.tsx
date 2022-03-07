@@ -2,272 +2,759 @@ import React from 'react';
 import {Form, Button} from "react-bootstrap";
 import Collapsible from 'react-collapsible';
 import { Matrix, matrix, subtract, eigs, column, min, max, index, sparse } from 'mathjs';
-import XMLWriter from 'xml-writer';
+import Stats from "../libs/stats.module";
+import * as Constant from "../constant";
+import { CSVLink } from "react-csv";
+import XMLWriter from "xml-writer";
+import * as d3 from "d3";
+
+const headers = [
+  { label: "Node", key: "Node" },
+  { label: "Edge", key: "Edge" },
+  { label: "FPS", key: "FPS" },
+];
+
+// const headerLayout = [
+//   { label: "Graph", key: "graph1" },
+//   { label: "Iteration number", key: "Iteration number" },
+//   { label: "time", key: "time" },
+// ];
 
 type SidebarProps = {
-  setNodeEdgeData: (nodeData : Array<number>, edgeData : Array<number>) => void,
-  setWidthFactor: (widthFactor : number) => void,
-  setPeakValue: (value : number) => void,
-  setValleyValue: (value : number) => void,
-  setCoolingFactor: (value : number) => void,
-  setIdealLength: (value : number) => void,
-  setColorValley: (value : number) => void,
-  setColorHill: (value : number) => void,
-  setColorMountain: (value : number) => void,
-  setGlobalRange: () => void,
-  toggleNodeLayer: () => void,
-  toggleTerrainLayer: () => void,
-  toggleEdgeLayer: () => void,
-  runForceDirected: () => void,
-  onSave: () => void,
-}
+  setNodeEdgeData: (nodeData: Array<number>, edgeData: Array<number>) => void;
+  setWidthFactor: (widthFactor: number) => void;
+  setPeakValue: (value: number) => void;
+  setValleyValue: (value: number) => void;
+  setCoolingFactor: (value: number) => void;
+  setIdealLength: (value: number) => void;
+  setColorValley: (value: number) => void;
+  setColorHill: (value: number) => void;
+  setColorMountain: (value: number) => void;
+  setGlobalRange: () => void;
+  toggleNodeLayer: () => void;
+  toggleTerrainLayer: () => void;
+  toggleEdgeLayer: () => void;
+  runForceDirected: () => void;
+  onSave: () => void;
+};
 type SidebarState = {
-  nodeData: Array<number>,
-  edgeData: Array<number>,
-  laplacian: Matrix,
-  adjacencyMatrix: Array<Array<number>>,
-  e: {},
-  jsonFormat: boolean,
-}
+  nodeData: Array<number>;
+  edgeData: Array<number>;
+  laplacian: Matrix;
+  adjacencyMatrix: Array<Array<number>>;
+  e: {};
+  nodeCount: string;
+  edgeCount: string;
+  runBenchmark: boolean;
+  jsonFormat: boolean;
+  FPSData: Array<Array<string>>;
+  d3timing: timing;
+
+  // canvasAdded: boolean;
+};
 type edge = {
-  source: number,
-  target: number
-}
+  id: string;
+  source: number;
+  target: number;
+};
 type node = {
-  name: string,
-  x: number,
-  y: number
-}
+  name: string;
+  x: number;
+  y: number;
+};
+
+type nodeD3 = {
+  id: string;
+  x: number;
+  y: number;
+};
+
 type Graph = {
-  nodes: Array<node>,
-  edges: Array<edge>
+  nodes: Array<node>;
+  edges: Array<edge>;
+};
+
+interface timing {
+  [iteration: string]: number;
 }
+
 class Sidebar extends React.Component<SidebarProps, SidebarState> {
-    constructor(props) {
-      super(props);
-      this.state = {nodeData: [], edgeData: [], laplacian: sparse([]), adjacencyMatrix: [], e: {}, jsonFormat: true};
-  
-      this.handleSubmit = this.handleSubmit.bind(this);
-      this.readFiles = this.readFiles.bind(this);
-    }
-  
-    handleSubmit(event) {
-      event.preventDefault();
-      this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
+  constructor(props) {
+    super(props);
+    this.state = {
+      nodeData: [],
+      edgeData: [],
+      nodeCount: "",
+      edgeCount: "",
+      laplacian: sparse([]),
+      adjacencyMatrix: [],
+      e: {},
+      jsonFormat: true,
+      runBenchmark: false,
+      FPSData: [],
+      d3timing: {},
+      // canvasAdded: false,
+    };
+
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.readFiles = this.readFiles.bind(this);
+    this.generateRandomGraph = this.generateRandomGraph.bind(this);
+    this.generatePair = this.generatePair.bind(this);
+    this.generateRandomData = this.generateRandomData.bind(this);
+    this.refresh = this.refresh.bind(this);
+    this.runTest = this.runTest.bind(this);
+    this.runBenchmark = this.runBenchmark.bind(this);
+    this.testFunc = this.testFunc.bind(this);
+    this.sleep = this.sleep.bind(this);
+    this.storeFPSResult = this.storeFPSResult.bind(this);
+
+    // =========================================================
+    this.d3TimingStudy = this.d3TimingStudy.bind(this);
+    // this.randomDataGen_Computation = this.randomDataGen_Computation.bind(this);
+  }
+
+  handleSubmit(event) {
+    event.preventDefault();
+    this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
+  }
+
+  sleep(time) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, time);
+    });
+  }
+
+  // randomDataGen_Computation(nodeCount, edgeCount, width, height) {
+  //   var nodesWebGPU: Array<number> = [];
+  //   var edgesWebGPU: Array<number> = [];
+
+  //   var nodesD3: Array<nodeD3> = [];
+  //   var edgesD3: Array<edge> = [];
+
+  //   const dataWebGPU = {
+  //     nodes: nodesWebGPU,
+  //     edges: edgesWebGPU,
+  //   };
+
+  //   const dataD3 = {
+  //     nodes: nodesD3,
+  //     edges: edgesD3,
+  //   };
+
+  //   dataWebGPU.nodes = new Array(4 * nodeCount).fill(0);
+  //   dataWebGPU.edges = new Array(2 * edgeCount).fill(0);
+
+  //   for (let i = 0; i < nodeCount; i++) {
+  //     let x = Math.random();
+  //     let y = Math.random();
+  //     dataD3.nodes[i] = { id: i.toString(), x: x * width, y: y * height };
+  //     dataWebGPU.nodes[4 * i] = 0;
+  //     dataWebGPU.nodes[4 * i + 1] = x;
+  //     dataWebGPU.nodes[4 * i + 2] = y;
+  //     dataWebGPU.nodes[4 * i + 3] = 1;
+  //   }
+
+  //   const linkSet = new Set();
+
+  //   for (let i = 0; i < edgeCount; i++) {
+  //     let pair;
+  //     do {
+  //       pair = this.generatePair(0, nodeCount);
+  //     } while (linkSet.has(`${pair.source}_${pair.target}`));
+  //     linkSet.add(`${pair.source}_${pair.target}`);
+  //     linkSet.add(`${pair.target}_${pair.source}`);
+
+  //     dataD3.edges[i] = {
+  //       id: i.toString(),
+  //       source: pair.source,
+  //       target: pair.target,
+  //     };
+  //     dataWebGPU.edges[2 * i] = pair.source;
+  //     dataWebGPU.edges[2 * i + 1] = pair.target;
+  //   }
+  //   let dataCombined = {
+  //     dataD3,
+  //     dataWebGPU,
+  //   };
+  //   return dataCombined;
+  // }
+
+  async d3TimingStudy(event: React.MouseEvent) {
+    event.preventDefault();
+    const self = this;
+    const width = 800;
+    const height = 800;
+    let iterationCount = 0;
+    const iterationMeasure = {};
+    let startTime;
+    let lastTime;
+    let totalTime;
+
+    var layoutCanvas = d3
+      .select("#graphDiv")
+      .append("canvas")
+      .attr("width", width + "px")
+      .attr("height", height + "px")
+      .node();
+
+    let layoutDiv = document.getElementById("#graphDiv");
+    if (layoutDiv) {
+      layoutDiv.style.color = "white";
     }
 
-    readFiles(event : React.ChangeEvent<HTMLInputElement>) {
-        const files : FileList = event.target.files!;
-        console.log(files);
-        var nodeIDToValue = {};
-        // var nodeIDToPos = {};
-        var nodeIDToIndex = {};
-        var nodeData : Array<number> = [];
-        var edgeData : Array<number> = [];
-        var degreeMatrix : Array<Array<number>> = [];
-        var adjacencyMatrix : Array<Array<number>> = [];
-        const edgeReader = new FileReader();
-        edgeReader.onload = (event) => {
-          var edgeRaw = (edgeReader.result as string).split("\n");
-          for (var element of edgeRaw) {
-            var parts = element.split("\t");
-            if (nodeIDToValue[parts[0]] && nodeIDToValue[parts[1]]) {
-              edgeData.push(
-                nodeIDToIndex[parts[0]], 
-                nodeIDToIndex[parts[1]],
-              );
-              degreeMatrix[nodeIDToIndex[parts[0]]][nodeIDToIndex[parts[0]]] += 1;
-              degreeMatrix[nodeIDToIndex[parts[1]]][nodeIDToIndex[parts[1]]] += 1;
-              adjacencyMatrix[nodeIDToIndex[parts[0]]][nodeIDToIndex[parts[1]]] += 1;
-              adjacencyMatrix[nodeIDToIndex[parts[1]]][nodeIDToIndex[parts[0]]] += 1;
-            }
-          }
-          this.setState({edgeData: edgeData});
-          var laplacian : Matrix = subtract(sparse(degreeMatrix), sparse(adjacencyMatrix)) as Matrix;
-          console.log(laplacian);
-          this.setState({laplacian: laplacian, adjacencyMatrix: adjacencyMatrix});
-        };
-        const layoutReader = new FileReader();
-        layoutReader.onload = (event) => {
-          var layoutData = (layoutReader.result as string).split("\n");
-          for (var element of layoutData) {
-            var parts = element.split("\t");
-            if (nodeIDToValue[parts[0]]) {
-              nodeIDToIndex[parts[0]] = nodeData.length / 4;
-              // Pushes values to node data in order of struct for WebGPU:
-              // nodeValue, nodeX, nodeY, nodeSize
-              nodeData.push(parseFloat(nodeIDToValue[parts[0]]), parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
-              // nodeIDToPos[parts[0]] = [parseFloat(parts[1]) * 2.0 - 1, parseFloat(parts[2]) * 2.0 - 1];
-            }
-          }
-          this.setState({nodeData: nodeData});
-          for (var i = 0; i < nodeData.length / 4; i++) {
-            degreeMatrix.push([]);
-            adjacencyMatrix.push([]);
-            for (var j = 0; j < nodeData.length / 4; j++) {
-              degreeMatrix[i].push(0);
-              adjacencyMatrix[i].push(0);
-            }
-          }
-          edgeReader.readAsText(files[2]);
-        };
-        const nodeReader = new FileReader();
-        nodeReader.onload = (event) => {
-          var rawNodes = (nodeReader.result as string).split("\n");
-          for (var element of rawNodes) {
-            nodeIDToValue[element.split("\t")[0]] = element.split("\t")[1]
-          }
-          console.log(nodeIDToValue);
-          layoutReader.readAsText(files[1]);
-        };
-        nodeReader.readAsText(files[0]);
+    let context = layoutCanvas!.getContext("2d")!;
+    if (!context) {
+      console.log("no 2d context found");
+      return;
     }
 
-    readJson(event : React.ChangeEvent<HTMLInputElement>) {
-      const files : FileList = event.target.files!;
-      const jsonReader = new FileReader();
-      var nodeData : Array<number> = [];
-      var edgeData : Array<number> = [];
-      jsonReader.onload = (event) => {
-        var graph : Graph = JSON.parse(jsonReader.result as string);
-        console.log(graph);
-        for (var i = 0; i < graph.nodes.length; i++) {
-          if (graph.nodes[i].x) {
-            nodeData.push(0.0, graph.nodes[i].x, graph.nodes[i].y, 1.0);
-          } else {
-            nodeData.push(0.0, Math.random(), Math.random(), 1.0);
-          }
+    context.fillStyle = "white";
+
+    d3.json("./test_small_spec.json").then((data: any) => {
+      console.log(data);
+      startTime = performance.now();
+      lastTime = startTime;
+      const simulation = d3
+        .forceSimulation(data.nodes)
+        .force("charge", d3.forceManyBody().strength(-40))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("link", d3.forceLink(data.edges).distance(5).strength(2.0));
+
+      initGraph(data);
+
+      function initGraph(data) {
+        console.log(data.edges);
+        simulation.on("tick", simulationUpdate);
+        simulation.on("end", () => {
+          let currentTime = performance.now();
+          totalTime = currentTime - startTime;
+          console.log("startTime", startTime);
+          console.log("totalTime", totalTime);
+          console.log("iterationMeasure", iterationMeasure);
+        });
+      }
+
+      function simulationUpdate() {
+        let currentTime = performance.now();
+        let dt = currentTime - lastTime;
+        iterationCount++;
+        iterationMeasure[iterationCount] = dt;
+        lastTime = currentTime;
+        self.setState({
+          d3timing: { ...self.state.d3timing, iterationCount: dt },
+        });
+
+        context.save();
+        context.strokeStyle = "#aaa";
+        context.clearRect(0, 0, width, height);
+
+        data.edges.forEach(function (d) {
+          context.beginPath();
+          context.moveTo(d.source.x, d.source.y);
+          context.lineTo(d.target.x, d.target.y);
+          context.stroke();
+        });
+
+        data.nodes.forEach(function (d, i) {
+          context.beginPath();
+          context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
+          context.fillStyle = d.col ? "red" : "black";
+          context.fill();
+        });
+        context.restore();
+      }
+    });
+  }
+
+  async runBenchmark(event: React.MouseEvent) {
+    event.preventDefault();
+    const nodeCounts = [1e6];
+    const density = 20;
+    const edgeCounts = nodeCounts.map((n) => n * density);
+    let stats = Stats();
+    stats.showPanel(0);
+    stats.dom.setAttribute("class", "status");
+    document.body.appendChild(stats.dom);
+    this.setState({ runBenchmark: true });
+    let renderingCanvas = document.querySelectorAll("canvas")[0];
+    renderingCanvas.width = 500;
+    renderingCanvas.height = 500;
+    renderingCanvas.style.width = "500px";
+    renderingCanvas.style.height = "500px";
+    // const testCase = {
+    //   nodeCounts,
+    //   edgeCounts,
+    // };
+
+    for (let i = 0; i < nodeCounts.length - 1; i++) {
+      // let stepCount = 0;
+      const nCount = nodeCounts[i].toString();
+      const eCount = edgeCounts[i].toString();
+
+      this.setState({ nodeCount: nCount });
+      this.setState({ edgeCount: eCount });
+
+      let data = this.generateRandomData(nodeCounts, edgeCounts, i);
+      this.setState({ nodeData: data.nodes });
+      this.setState({ edgeData: data.edges });
+      // this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
+      await this.testFunc(data, stats);
+    }
+
+    this.setState({ runBenchmark: false });
+    renderingCanvas.width = 800;
+    renderingCanvas.height = 800;
+    renderingCanvas.style.width = "800px";
+    renderingCanvas.style.height = "800px";
+  }
+
+  generatePair(min, max) {
+    function randRange(min, max) {
+      return min + Math.floor(Math.random() * (max - min));
+    }
+    const source = randRange(min, max);
+    let target = randRange(min, max);
+    while (source === target) {
+      target = randRange(min, max);
+    }
+    return {
+      source: source,
+      target: target,
+    };
+  }
+
+  generateRandomData(nodeCounts, edgeCounts, stepCount) {
+    let nodeCount = nodeCounts[stepCount];
+    let edgeCount = edgeCounts[stepCount];
+
+    let generatedData = this.generateRandomGraph(nodeCount, edgeCount);
+    return generatedData;
+  }
+
+  generateRandomGraph(nodeCount, edgeCount) {
+    var nodes: Array<number> = [];
+    var edges: Array<number> = [];
+    const data = {
+      nodes: nodes,
+      edges: edges,
+    };
+
+    data.nodes = Array(4 * nodeCount).fill(0);
+
+    for (let i = 0; i < 4 * nodeCount; i = i + 4) {
+      data.nodes[i] = 0;
+      data.nodes[i + 1] = Math.random();
+      data.nodes[i + 2] = Math.random();
+      data.nodes[i + 3] = 1;
+    }
+    const edgeHashMap = new Map();
+
+    data.edges = Array(2 * edgeCount).fill(0);
+    let pair;
+
+    for (let i = 0; i < 2 * edgeCount; i = i + 2) {
+      do {
+        pair = this.generatePair(0, nodeCount);
+      } while (edgeHashMap.has(`${pair.source}_${pair.target}`));
+      edgeHashMap.set(`${pair.source}_${pair.target}`, true);
+      edgeHashMap.set(`${pair.target}_${pair.source}`, true);
+      data.edges[i] = pair.source;
+      data.edges[i + 1] = pair.target;
+    }
+    return data;
+  }
+
+  refresh(length) {
+    var nodes: Array<number> = [];
+    for (let i = 0; i < 4 * length; i = i + 4) {
+      nodes[i + 1] = Math.random();
+      nodes[i + 2] = Math.random();
+    }
+    this.setState({ nodeData: nodes });
+    this.props.setNodeEdgeData(nodes, this.state.edgeData);
+  }
+
+  storeFPSResult(nodeLength, edgeLength, fps) {
+    nodeLength = nodeLength.toString();
+    edgeLength = edgeLength.toString();
+    fps = fps.toString();
+
+    this.setState({
+      FPSData: [...this.state.FPSData, [nodeLength, edgeLength, fps]],
+    });
+  }
+
+  async testFunc(data, stats) {
+    let nodeLength = data.nodes.length / 4;
+    let edgeLength = data.edges.length / 2;
+    await this.runTest(nodeLength, edgeLength, stats);
+  }
+
+  async runTest(nodeLength, edgeLength, stats) {
+    let requestId;
+    const refreshing = () => {
+      stats.begin();
+      this.refresh(nodeLength);
+      stats.end();
+      requestId = requestAnimationFrame(refreshing);
+    };
+    refreshing();
+    await this.sleep(Constant.TIME_FOR_EACH_TEST);
+    let FPS_Array = stats.getFPSHistory();
+    let FPS = FPS_Array.reduce((a, b) => a + b, 0) / FPS_Array.length;
+    this.storeFPSResult(nodeLength, edgeLength, FPS);
+    cancelAnimationFrame(requestId);
+    return;
+  }
+  readFiles(event: React.ChangeEvent<HTMLInputElement>) {
+    const files: FileList = event.target.files!;
+    console.log(files);
+    var nodeIDToValue = {};
+    // var nodeIDToPos = {};
+    var nodeIDToIndex = {};
+    var nodeData: Array<number> = [];
+    var edgeData: Array<number> = [];
+    var degreeMatrix: Array<Array<number>> = [];
+    var adjacencyMatrix: Array<Array<number>> = [];
+    const edgeReader = new FileReader();
+    edgeReader.onload = (event) => {
+      var edgeRaw = (edgeReader.result as string).split("\n");
+      for (var element of edgeRaw) {
+        var parts = element.split("\t");
+        if (nodeIDToValue[parts[0]] && nodeIDToValue[parts[1]]) {
+          edgeData.push(nodeIDToIndex[parts[0]], nodeIDToIndex[parts[1]]);
+          degreeMatrix[nodeIDToIndex[parts[0]]][nodeIDToIndex[parts[0]]] += 1;
+          degreeMatrix[nodeIDToIndex[parts[1]]][nodeIDToIndex[parts[1]]] += 1;
+          adjacencyMatrix[nodeIDToIndex[parts[0]]][
+            nodeIDToIndex[parts[1]]
+          ] += 1;
+          adjacencyMatrix[nodeIDToIndex[parts[1]]][
+            nodeIDToIndex[parts[0]]
+          ] += 1;
         }
-        for (var i = 0; i < graph.edges.length; i++) {
-          var source = graph.edges[i].source;
-          var target = graph.edges[i].target;
-          edgeData.push(source, target);
+      }
+      this.setState({ edgeData: edgeData });
+      var laplacian: Matrix = subtract(
+        sparse(degreeMatrix),
+        sparse(adjacencyMatrix)
+      ) as Matrix;
+      console.log(laplacian);
+      this.setState({ laplacian: laplacian, adjacencyMatrix: adjacencyMatrix });
+    };
+    const layoutReader = new FileReader();
+    layoutReader.onload = (event) => {
+      var layoutData = (layoutReader.result as string).split("\n");
+      for (var element of layoutData) {
+        var parts = element.split("\t");
+        if (nodeIDToValue[parts[0]]) {
+          nodeIDToIndex[parts[0]] = nodeData.length / 4;
+          // Pushes values to node data in order of struct for WebGPU:
+          // nodeValue, nodeX, nodeY, nodeSize
+          nodeData.push(
+            parseFloat(nodeIDToValue[parts[0]]),
+            parseFloat(parts[1]),
+            parseFloat(parts[2]),
+            parseFloat(parts[3])
+          );
+          // nodeIDToPos[parts[0]] = [parseFloat(parts[1]) * 2.0 - 1, parseFloat(parts[2]) * 2.0 - 1];
         }
-        this.setState({nodeData: nodeData, edgeData: edgeData});
-      };
-      jsonReader.readAsText(files[0]);
-    }
-
-    applySpectral() {
-      var e = eigs(this.state.laplacian);
-      console.log(e);
-      var nodeData = this.state.nodeData;
-      var x = column(e.vectors, 1) as Matrix;
-      var y = column(e.vectors, 2) as Matrix;
-      var x_max = max(x);
-      var y_max = max(y);
-      var x_min = min(x);
-      var y_min = min(y);
+      }
+      this.setState({ nodeData: nodeData });
       for (var i = 0; i < nodeData.length / 4; i++) {
-        nodeData[i * 4 + 1] = (x.get([i, 0]) - x_min) / (x_max - x_min);
-        nodeData[i * 4 + 2] = (y.get([i, 0]) - y_min) / (y_max - y_min);
+        degreeMatrix.push([]);
+        adjacencyMatrix.push([]);
+        for (var j = 0; j < nodeData.length / 4; j++) {
+          degreeMatrix[i].push(0);
+          adjacencyMatrix[i].push(0);
+        }
       }
-      this.setState({nodeData: nodeData});
-      this.props.setNodeEdgeData(nodeData, this.state.edgeData);
-    }
+      edgeReader.readAsText(files[2]);
+    };
+    const nodeReader = new FileReader();
+    nodeReader.onload = (event) => {
+      var rawNodes = (nodeReader.result as string).split("\n");
+      for (var element of rawNodes) {
+        nodeIDToValue[element.split("\t")[0]] = element.split("\t")[1];
+      }
+      console.log(nodeIDToValue);
+      layoutReader.readAsText(files[1]);
+    };
+    nodeReader.readAsText(files[0]);
+  }
 
-    onSaveXML() {
-      var xw = new XMLWriter(true);
-      xw.startDocument();
-      xw.startElement('GeneTerrain');
-      xw.startElement('Nodes');
-      for (var i = 0; i < this.state.nodeData.length; i+=4) {
-        xw.startElement('Node');
-        xw.writeAttribute('NodeID', i / 4);
-        xw.writeAttribute('InputValue', this.state.nodeData[i]);
-        xw.writeAttribute('InputWeight', this.state.nodeData[i + 3]);
-        xw.writeAttribute('NodeBackendX', this.state.nodeData[i + 1]);
-        xw.writeAttribute('NodeBackendY', this.state.nodeData[i + 2]);
-        xw.endElement('Node');
+  readJson(event: React.ChangeEvent<HTMLInputElement>) {
+    const files: FileList = event.target.files!;
+    const jsonReader = new FileReader();
+    var nodeData: Array<number> = [];
+    var edgeData: Array<number> = [];
+    jsonReader.onload = (event) => {
+      var graph: Graph = JSON.parse(jsonReader.result as string);
+      console.log(graph);
+      for (var i = 0; i < graph.nodes.length; i++) {
+        if (graph.nodes[i].x) {
+          nodeData.push(0.0, graph.nodes[i].x, graph.nodes[i].y, 1.0);
+        } else {
+          nodeData.push(0.0, Math.random(), Math.random(), 1.0);
+        }
       }
-      xw.endElement('Nodes');
-      xw.startElement('Edges');
-      for (var i = 0; i < this.state.edgeData.length; i+=2) {
-        xw.startElement('Edge');
-        xw.writeAttribute('BeginID', this.state.edgeData[i]);
-        xw.writeAttribute('EndID', this.state.edgeData[i + 1]);
-        xw.endElement('Edge');
+      for (var i = 0; i < graph.edges.length; i++) {
+        var source = graph.edges[i].source;
+        var target = graph.edges[i].target;
+        edgeData.push(source, target);
       }
-      xw.endElement('Edges');
-      xw.endDocument();
-      const element = document.createElement("a");
-      const file = new Blob([xw.toString()], {type: 'application/xml'});
-      element.href = URL.createObjectURL(file);
-      element.download = "terrain.xml";
-      document.body.appendChild(element); // Required for this to work in FireFox
-      element.click();
+      this.setState({ nodeData: nodeData, edgeData: edgeData });
+    };
+    jsonReader.readAsText(files[0]);
+  }
+
+  applySpectral() {
+    var e = eigs(this.state.laplacian);
+    console.log(e);
+    var nodeData = this.state.nodeData;
+    var x = column(e.vectors, 1) as Matrix;
+    var y = column(e.vectors, 2) as Matrix;
+    var x_max = max(x);
+    var y_max = max(y);
+    var x_min = min(x);
+    var y_min = min(y);
+    for (var i = 0; i < nodeData.length / 4; i++) {
+      nodeData[i * 4 + 1] = (x.get([i, 0]) - x_min) / (x_max - x_min);
+      nodeData[i * 4 + 2] = (y.get([i, 0]) - y_min) / (y_max - y_min);
     }
-  
-    render() {
-      return (
-        <div className="sidebar"> 
-        <Form style={{color: 'white'}} onSubmit={this.handleSubmit}>
+    this.setState({ nodeData: nodeData });
+    this.props.setNodeEdgeData(nodeData, this.state.edgeData);
+  }
+
+  onSaveXML() {
+    var xw = new XMLWriter(true);
+    xw.startDocument();
+    xw.startElement("GeneTerrain");
+    xw.startElement("Nodes");
+    for (var i = 0; i < this.state.nodeData.length; i += 4) {
+      xw.startElement("Node");
+      xw.writeAttribute("NodeID", i / 4);
+      xw.writeAttribute("InputValue", this.state.nodeData[i]);
+      xw.writeAttribute("InputWeight", this.state.nodeData[i + 3]);
+      xw.writeAttribute("NodeBackendX", this.state.nodeData[i + 1]);
+      xw.writeAttribute("NodeBackendY", this.state.nodeData[i + 2]);
+      xw.endElement("Node");
+    }
+    xw.endElement("Nodes");
+    xw.startElement("Edges");
+    for (var i = 0; i < this.state.edgeData.length; i += 2) {
+      xw.startElement("Edge");
+      xw.writeAttribute("BeginID", this.state.edgeData[i]);
+      xw.writeAttribute("EndID", this.state.edgeData[i + 1]);
+      xw.endElement("Edge");
+    }
+    xw.endElement("Edges");
+    xw.endDocument();
+    const element = document.createElement("a");
+    const file = new Blob([xw.toString()], { type: "application/xml" });
+    element.href = URL.createObjectURL(file);
+    element.download = "terrain.xml";
+    document.body.appendChild(element); // Required for this to work in FireFox
+    element.click();
+  }
+
+  render() {
+    return (
+      <div className="sidebar">
+        <hr />
+        <Button className="benchmark_test" onClick={this.runBenchmark}>
+          Run Benchmark
+        </Button>
+        <div style={{ margin: 10, color: "white" }}>
+          <p>Node count: {this.state.nodeCount}</p>
+          <p>Edge count: {this.state.edgeCount}</p>
+        </div>
+        <CSVLink data={this.state.FPSData}>Download FPS data</CSVLink>
+        <hr />
+
+        <Button className="d3Timing_test" onClick={this.d3TimingStudy}>
+          Run D3
+        </Button>
+        {/* <CSVLink data={this.state.d3timing}>Download FPS data</CSVLink> */}
+
+        <Form style={{ color: "white" }} onSubmit={this.handleSubmit}>
           <Form.Group controlId="formFile" className="mt-3 mb-3">
-            <Form.Check defaultChecked={true} onClick={() => this.setState({jsonFormat: !this.state.jsonFormat})} type="checkbox" label="Json Format"></Form.Check>
+            <Form.Check
+              defaultChecked={true}
+              onClick={() =>
+                this.setState({ jsonFormat: !this.state.jsonFormat })
+              }
+              type="checkbox"
+              label="Json Format"
+            ></Form.Check>
             <Form.Label>Select Example Files</Form.Label>
-            <Form.Control className="form-control" type="file" multiple onChange={(e) => {if (this.state.jsonFormat) {this.readJson(e as React.ChangeEvent<HTMLInputElement>)} else {this.readFiles(e as React.ChangeEvent<HTMLInputElement>)}}}/>
-            <Button className="mt-2" type="submit" variant="secondary" value="Submit">Submit</ Button>
+            <Form.Control
+              className="form-control"
+              type="file"
+              multiple
+              onChange={(e) => {
+                if (this.state.jsonFormat) {
+                  this.readJson(e as React.ChangeEvent<HTMLInputElement>);
+                } else {
+                  this.readFiles(e as React.ChangeEvent<HTMLInputElement>);
+                }
+              }}
+            />
+            <Button
+              className="mt-2"
+              type="submit"
+              variant="secondary"
+              value="Submit"
+            >
+              Submit
+            </Button>
           </Form.Group>
           <Collapsible trigger="Terrain Options">
-            <Form.Group> 
-              <Form.Label> Width Factor </ Form.Label>
-              <br/>
-              <input type="range" defaultValue={1000} min={0} max={2000} onChange={(e) => this.props.setWidthFactor(parseFloat(e.target.value))} />
-            </Form.Group>
-            <Form.Group> 
-              <Form.Label> Peak and Valley Values </ Form.Label>
-              <br/>
-              <input type="range" defaultValue={0.8} min={0.5} max={1} step={0.01} onChange={(e) => this.props.setPeakValue(parseFloat(e.target.value))} />
-              <input type="range" defaultValue={0.2} min={0} max={0.5} step={0.01} onChange={(e) => this.props.setValleyValue(parseFloat(e.target.value))} />
+            <Form.Group>
+              <Form.Label> Width Factor </Form.Label>
+              <br />
+              <input
+                type="range"
+                defaultValue={1000}
+                min={0}
+                max={2000}
+                onChange={(e) =>
+                  this.props.setWidthFactor(parseFloat(e.target.value))
+                }
+              />
             </Form.Group>
             <Form.Group>
-              <Form.Check defaultChecked={true} onClick={(e) => this.props.setGlobalRange()} type="checkbox" label="Use Global Min/Max"></Form.Check>
+              <Form.Label> Peak and Valley Values </Form.Label>
+              <br />
+              <input
+                type="range"
+                defaultValue={0.8}
+                min={0.5}
+                max={1}
+                step={0.01}
+                onChange={(e) =>
+                  this.props.setPeakValue(parseFloat(e.target.value))
+                }
+              />
+              <input
+                type="range"
+                defaultValue={0.2}
+                min={0}
+                max={0.5}
+                step={0.01}
+                onChange={(e) =>
+                  this.props.setValleyValue(parseFloat(e.target.value))
+                }
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Check
+                defaultChecked={true}
+                onClick={(e) => this.props.setGlobalRange()}
+                type="checkbox"
+                label="Use Global Min/Max"
+              ></Form.Check>
             </Form.Group>
           </Collapsible>
-          <Collapsible trigger="Colormap Options"> 
+          <Collapsible trigger="Colormap Options">
             <Form.Row>
               <div>Valley</div>
-              <input type="range" defaultValue={45} min={1} max={60} step={1} onChange={(e) => this.props.setColorValley(parseFloat(e.target.value))} />
+              <input
+                type="range"
+                defaultValue={45}
+                min={1}
+                max={60}
+                step={1}
+                onChange={(e) =>
+                  this.props.setColorValley(parseFloat(e.target.value))
+                }
+              />
             </Form.Row>
             <Form.Row>
               <div>Hill</div>
-              <input type="range" defaultValue={90} min={61} max={120} step={1} onChange={(e) => this.props.setColorHill(parseFloat(e.target.value))} />
+              <input
+                type="range"
+                defaultValue={90}
+                min={61}
+                max={120}
+                step={1}
+                onChange={(e) =>
+                  this.props.setColorHill(parseFloat(e.target.value))
+                }
+              />
             </Form.Row>
             <Form.Row>
               <div>Mountain</div>
-              <input type="range" defaultValue={135} min={121} max={180} step={1} onChange={(e) => this.props.setColorMountain(parseFloat(e.target.value))} />
+              <input
+                type="range"
+                defaultValue={135}
+                min={121}
+                max={180}
+                step={1}
+                onChange={(e) =>
+                  this.props.setColorMountain(parseFloat(e.target.value))
+                }
+              />
             </Form.Row>
           </Collapsible>
-          <Collapsible trigger="Layers"> 
-            <Form.Check defaultChecked={false} onClick={(e) => this.props.toggleTerrainLayer()} type="checkbox" label="Terrain Layer"/>
-            <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleNodeLayer()} type="checkbox" label="Node Layer"/>
-            <Form.Check defaultChecked={true} onClick={(e) => this.props.toggleEdgeLayer()} type="checkbox" label="Edge Layer"/>
+          <Collapsible trigger="Layers">
+            <Form.Check
+              defaultChecked={false}
+              onClick={(e) => this.props.toggleTerrainLayer()}
+              type="checkbox"
+              label="Terrain Layer"
+            />
+            <Form.Check
+              defaultChecked={true}
+              onClick={(e) => this.props.toggleNodeLayer()}
+              type="checkbox"
+              label="Node Layer"
+            />
+            <Form.Check
+              defaultChecked={true}
+              onClick={(e) => this.props.toggleEdgeLayer()}
+              type="checkbox"
+              label="Edge Layer"
+            />
           </Collapsible>
           <Collapsible trigger="Force Directed Options">
             <Form.Label> Ideal Length and Cooling Factor </Form.Label>
-            <br/>
-            <input type="range" defaultValue={0.05} min={0.001} max={0.1} step={0.001} onChange={(e) => this.props.setIdealLength(parseFloat(e.target.value))} />
-            <input type="range" defaultValue={0.9} min={0.75} max={0.999} step={0.001} onChange={(e) => this.props.setCoolingFactor(parseFloat(e.target.value))} />
+            <br />
+            <input
+              type="range"
+              defaultValue={0.05}
+              min={0.001}
+              max={0.1}
+              step={0.001}
+              onChange={(e) =>
+                this.props.setIdealLength(parseFloat(e.target.value))
+              }
+            />
+            <input
+              type="range"
+              defaultValue={0.9}
+              min={0.75}
+              max={0.999}
+              step={0.001}
+              onChange={(e) =>
+                this.props.setCoolingFactor(parseFloat(e.target.value))
+              }
+            />
           </Collapsible>
-          <Button onClick={(e) => this.props.onSave()}>
-            Save Terrain
-          </Button>
-          <br/>
+          <Button onClick={(e) => this.props.onSave()}>Save Terrain</Button>
+          <br />
           <Button onClick={(e) => this.applySpectral()}>
             Apply Spectral Layout
           </Button>
-          <br/>
+          <br />
           <Button onClick={(e) => this.props.runForceDirected()}>
             Run Force Directed Layout
           </Button>
-          <br/>
-          <Button onClick={(e) => this.onSaveXML()}>
-            Save Terrain to XML
-          </Button>
+          <br />
+          <Button onClick={(e) => this.onSaveXML()}>Save Terrain to XML</Button>
         </Form>
-        </ div>
-      );
-    }
+      </div>
+    );
   }
+}
 
 export default Sidebar;
