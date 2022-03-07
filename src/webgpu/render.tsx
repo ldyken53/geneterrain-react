@@ -527,6 +527,7 @@ class Renderer {
 
       device.queue.submit([commandEncoder.finish()]);
       await device.queue.onSubmittedWorkDone();
+      console.log("rendering task finished for", render.edgeLength);
       var end = performance.now();
       if (timeToSecond - (end - start) < 0) {
         fpsRef.current!.innerText = `FPS: ${frameCount}`;

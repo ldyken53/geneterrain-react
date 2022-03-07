@@ -14,11 +14,11 @@ const headers = [
   { label: "FPS", key: "FPS" },
 ];
 
-// const headerLayout = [
-//   { label: "Graph", key: "graph1" },
-//   { label: "Iteration number", key: "Iteration number" },
-//   { label: "time", key: "time" },
-// ];
+const headerForLayout = [
+  { label: "iterationCount", key: "iterationCount" },
+  { label: "time", key: "time" },
+  { label: "renderTime", key: "renderTime" },
+];
 
 type SidebarProps = {
   setNodeEdgeData: (nodeData: Array<number>, edgeData: Array<number>) => void;
@@ -48,7 +48,7 @@ type SidebarState = {
   runBenchmark: boolean;
   jsonFormat: boolean;
   FPSData: Array<Array<string>>;
-  d3timing: timing;
+  d3timing: Array<timing>;
 
   // canvasAdded: boolean;
 };
@@ -75,7 +75,9 @@ type Graph = {
 };
 
 interface timing {
-  [iteration: string]: number;
+  iterationCount: number;
+  totalTime: number;
+  renderingTime: number;
 }
 
 class Sidebar extends React.Component<SidebarProps, SidebarState> {
@@ -92,7 +94,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       jsonFormat: true,
       runBenchmark: false,
       FPSData: [],
-      d3timing: {},
+      d3timing: [],
       // canvasAdded: false,
     };
 
@@ -210,28 +212,41 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
     context.fillStyle = "white";
 
-    d3.json("./test_small_spec.json").then((data: any) => {
+    d3.json("./sample_test_data/sample_data100_2000.json").then((data: any) => {
       console.log(data);
       startTime = performance.now();
       lastTime = startTime;
       const simulation = d3
         .forceSimulation(data.nodes)
-        .force("charge", d3.forceManyBody().strength(-40))
+        .force("charge", d3.forceManyBody().strength(-20))
         .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("link", d3.forceLink(data.edges).distance(5).strength(2.0));
+        .force("link", d3.forceLink(data.edges).distance(20).strength(2.0));
 
       initGraph(data);
 
       function initGraph(data) {
-        console.log(data.edges);
         simulation.on("tick", simulationUpdate);
         simulation.on("end", () => {
           let currentTime = performance.now();
           totalTime = currentTime - startTime;
+          const [totalAverageTime, renderAverageTime] = findAverage(
+            self.state.d3timing
+          );
+          console.log(totalAverageTime, renderAverageTime);
           console.log("startTime", startTime);
           console.log("totalTime", totalTime);
           console.log("iterationMeasure", iterationMeasure);
         });
+      }
+
+      function findAverage(d3timing) {
+        let totalAverageTime =
+          d3timing.reduce((a, b) => {
+            return a + b.totalTime;
+          }, 0) / d3timing.length;
+        let renderAvergaeTime =
+          d3timing.reduce((a, b) => a + b.renderingTime, 0) / d3timing.length;
+        return [totalAverageTime, renderAvergaeTime];
       }
 
       function simulationUpdate() {
@@ -240,10 +255,8 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         iterationCount++;
         iterationMeasure[iterationCount] = dt;
         lastTime = currentTime;
-        self.setState({
-          d3timing: { ...self.state.d3timing, iterationCount: dt },
-        });
 
+        let renderingStartTime = performance.now();
         context.save();
         context.strokeStyle = "#aaa";
         context.clearRect(0, 0, width, height);
@@ -262,50 +275,66 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           context.fill();
         });
         context.restore();
+        let renderingEndTime = performance.now();
+        let renderTime = renderingEndTime - renderingStartTime;
+        self.setState({
+          d3timing: [
+            ...self.state.d3timing,
+            {
+              iterationCount: iterationCount,
+              totalTime: dt,
+              renderingTime: renderTime,
+            },
+          ],
+        });
       }
     });
   }
 
   async runBenchmark(event: React.MouseEvent) {
-    event.preventDefault();
-    const nodeCounts = [1e6];
-    const density = 20;
-    const edgeCounts = nodeCounts.map((n) => n * density);
-    let stats = Stats();
-    stats.showPanel(0);
-    stats.dom.setAttribute("class", "status");
-    document.body.appendChild(stats.dom);
-    this.setState({ runBenchmark: true });
-    let renderingCanvas = document.querySelectorAll("canvas")[0];
-    renderingCanvas.width = 500;
-    renderingCanvas.height = 500;
-    renderingCanvas.style.width = "500px";
-    renderingCanvas.style.height = "500px";
-    // const testCase = {
-    //   nodeCounts,
-    //   edgeCounts,
-    // };
+    try {
+      event.preventDefault();
+      const nodeCounts = [1e2, 5e5];
+      const density = 5;
+      const edgeCounts = nodeCounts.map((n) => n * density);
+      let stats = Stats();
+      stats.showPanel(0);
+      stats.dom.setAttribute("class", "status");
+      document.body.appendChild(stats.dom);
+      this.setState({ runBenchmark: true });
+      let renderingCanvas = document.querySelectorAll("canvas")[0];
+      renderingCanvas.width = 500;
+      renderingCanvas.height = 500;
+      renderingCanvas.style.width = "500px";
+      renderingCanvas.style.height = "500px";
+      // const testCase = {
+      //   nodeCounts,
+      //   edgeCounts,
+      // };
 
-    for (let i = 0; i < nodeCounts.length - 1; i++) {
-      // let stepCount = 0;
-      const nCount = nodeCounts[i].toString();
-      const eCount = edgeCounts[i].toString();
+      for (let i = 0; i < nodeCounts.length; i++) {
+        // let stepCount = 0;
+        const nCount = nodeCounts[i].toString();
+        const eCount = edgeCounts[i].toString();
 
-      this.setState({ nodeCount: nCount });
-      this.setState({ edgeCount: eCount });
+        this.setState({ nodeCount: nCount });
+        this.setState({ edgeCount: eCount });
 
-      let data = this.generateRandomData(nodeCounts, edgeCounts, i);
-      this.setState({ nodeData: data.nodes });
-      this.setState({ edgeData: data.edges });
-      // this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
-      await this.testFunc(data, stats);
+        let data = this.generateRandomData(nodeCounts, edgeCounts, i);
+        this.setState({ nodeData: data.nodes });
+        this.setState({ edgeData: data.edges });
+        // this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
+        await this.testFunc(data, stats);
+      }
+
+      this.setState({ runBenchmark: false });
+      renderingCanvas.width = 800;
+      renderingCanvas.height = 800;
+      renderingCanvas.style.width = "800px";
+      renderingCanvas.style.height = "800px";
+    } catch (e) {
+      console.log(e);
     }
-
-    this.setState({ runBenchmark: false });
-    renderingCanvas.width = 800;
-    renderingCanvas.height = 800;
-    renderingCanvas.style.width = "800px";
-    renderingCanvas.style.height = "800px";
   }
 
   generatePair(min, max) {
@@ -347,31 +376,34 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       data.nodes[i + 2] = Math.random();
       data.nodes[i + 3] = 1;
     }
-    const edgeHashMap = new Map();
-
     data.edges = Array(2 * edgeCount).fill(0);
     let pair;
 
     for (let i = 0; i < 2 * edgeCount; i = i + 2) {
-      do {
-        pair = this.generatePair(0, nodeCount);
-      } while (edgeHashMap.has(`${pair.source}_${pair.target}`));
-      edgeHashMap.set(`${pair.source}_${pair.target}`, true);
-      edgeHashMap.set(`${pair.target}_${pair.source}`, true);
+      pair = this.generatePair(0, nodeCount);
       data.edges[i] = pair.source;
       data.edges[i + 1] = pair.target;
     }
+    console.log("data generated");
     return data;
   }
 
   refresh(length) {
-    var nodes: Array<number> = [];
-    for (let i = 0; i < 4 * length; i = i + 4) {
-      nodes[i + 1] = Math.random();
-      nodes[i + 2] = Math.random();
+    try {
+      var nodes: Array<number> = [];
+      for (let i = 0; i < 4 * length; i = i + 4) {
+        nodes[i + 1] = Math.random();
+        nodes[i + 2] = Math.random();
+      }
+      this.setState({ nodeData: nodes });
+      console.log(
+        "called",
+        this.props.setNodeEdgeData(nodes, this.state.edgeData)
+      );
+      console.log("rendererd");
+    } catch (err) {
+      console.error(err);
     }
-    this.setState({ nodeData: nodes });
-    this.props.setNodeEdgeData(nodes, this.state.edgeData);
   }
 
   storeFPSResult(nodeLength, edgeLength, fps) {
@@ -387,24 +419,33 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
   async testFunc(data, stats) {
     let nodeLength = data.nodes.length / 4;
     let edgeLength = data.edges.length / 2;
+    console.log(nodeLength);
     await this.runTest(nodeLength, edgeLength, stats);
   }
 
   async runTest(nodeLength, edgeLength, stats) {
-    let requestId;
-    const refreshing = () => {
-      stats.begin();
-      this.refresh(nodeLength);
-      stats.end();
-      requestId = requestAnimationFrame(refreshing);
-    };
-    refreshing();
-    await this.sleep(Constant.TIME_FOR_EACH_TEST);
-    let FPS_Array = stats.getFPSHistory();
-    let FPS = FPS_Array.reduce((a, b) => a + b, 0) / FPS_Array.length;
-    this.storeFPSResult(nodeLength, edgeLength, FPS);
-    cancelAnimationFrame(requestId);
-    return;
+    try {
+      let requestId;
+      let count = 0;
+      const refreshing = () => {
+        stats.begin();
+        console.log("intiital count", count);
+        count++;
+        this.refresh(nodeLength);
+        console.log("final count", count);
+        stats.end();
+        requestId = requestAnimationFrame(refreshing);
+      };
+      refreshing();
+      await this.sleep(Constant.TIME_FOR_EACH_TEST);
+      let FPS_Array = stats.getFPSHistory();
+      let FPS = FPS_Array.reduce((a, b) => a + b, 0) / FPS_Array.length;
+      this.storeFPSResult(nodeLength, edgeLength, FPS);
+      cancelAnimationFrame(requestId);
+      return;
+    } catch (err) {
+      console.error(err);
+    }
   }
   readFiles(event: React.ChangeEvent<HTMLInputElement>) {
     const files: FileList = event.target.files!;
@@ -574,7 +615,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         <Button className="d3Timing_test" onClick={this.d3TimingStudy}>
           Run D3
         </Button>
-        {/* <CSVLink data={this.state.d3timing}>Download FPS data</CSVLink> */}
+        <CSVLink data={this.state.d3timing} header={headerForLayout}>
+          Download FPS data
+        </CSVLink>
 
         <Form style={{ color: "white" }} onSubmit={this.handleSubmit}>
           <Form.Group controlId="formFile" className="mt-3 mb-3">

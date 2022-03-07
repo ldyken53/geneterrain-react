@@ -12,17 +12,6 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -81,6 +70,11 @@ var headers = [
     { label: "Edge", key: "Edge" },
     { label: "FPS", key: "FPS" },
 ];
+var headerForLayout = [
+    { label: "iterationCount", key: "iterationCount" },
+    { label: "time", key: "time" },
+    { label: "renderTime", key: "renderTime" },
+];
 var Sidebar = /** @class */ (function (_super) {
     __extends(Sidebar, _super);
     function Sidebar(props) {
@@ -96,7 +90,7 @@ var Sidebar = /** @class */ (function (_super) {
             jsonFormat: true,
             runBenchmark: false,
             FPSData: [],
-            d3timing: {}
+            d3timing: []
         };
         _this.handleSubmit = _this.handleSubmit.bind(_this);
         _this.readFiles = _this.readFiles.bind(_this);
@@ -195,26 +189,34 @@ var Sidebar = /** @class */ (function (_super) {
                     return [2 /*return*/];
                 }
                 context.fillStyle = "white";
-                d3.json("./test_small_spec.json").then(function (data) {
+                d3.json("./sample_test_data/sample_data100_2000.json").then(function (data) {
                     console.log(data);
                     startTime = performance.now();
                     lastTime = startTime;
                     var simulation = d3
                         .forceSimulation(data.nodes)
-                        .force("charge", d3.forceManyBody().strength(-40))
+                        .force("charge", d3.forceManyBody().strength(-20))
                         .force("center", d3.forceCenter(width / 2, height / 2))
-                        .force("link", d3.forceLink(data.edges).distance(5).strength(2.0));
+                        .force("link", d3.forceLink(data.edges).distance(20).strength(2.0));
                     initGraph(data);
                     function initGraph(data) {
-                        console.log(data.edges);
                         simulation.on("tick", simulationUpdate);
                         simulation.on("end", function () {
                             var currentTime = performance.now();
                             totalTime = currentTime - startTime;
+                            var _a = findAverage(self.state.d3timing), totalAverageTime = _a[0], renderAverageTime = _a[1];
+                            console.log(totalAverageTime, renderAverageTime);
                             console.log("startTime", startTime);
                             console.log("totalTime", totalTime);
                             console.log("iterationMeasure", iterationMeasure);
                         });
+                    }
+                    function findAverage(d3timing) {
+                        var totalAverageTime = d3timing.reduce(function (a, b) {
+                            return a + b.totalTime;
+                        }, 0) / d3timing.length;
+                        var renderAvergaeTime = d3timing.reduce(function (a, b) { return a + b.renderingTime; }, 0) / d3timing.length;
+                        return [totalAverageTime, renderAvergaeTime];
                     }
                     function simulationUpdate() {
                         var currentTime = performance.now();
@@ -222,9 +224,7 @@ var Sidebar = /** @class */ (function (_super) {
                         iterationCount++;
                         iterationMeasure[iterationCount] = dt;
                         lastTime = currentTime;
-                        self.setState({
-                            d3timing: __assign(__assign({}, self.state.d3timing), { iterationCount: dt })
-                        });
+                        var renderingStartTime = performance.now();
                         context.save();
                         context.strokeStyle = "#aaa";
                         context.clearRect(0, 0, width, height);
@@ -241,6 +241,17 @@ var Sidebar = /** @class */ (function (_super) {
                             context.fill();
                         });
                         context.restore();
+                        var renderingEndTime = performance.now();
+                        var renderTime = renderingEndTime - renderingStartTime;
+                        self.setState({
+                            d3timing: __spreadArrays(self.state.d3timing, [
+                                {
+                                    iterationCount: iterationCount,
+                                    totalTime: dt,
+                                    renderingTime: renderTime
+                                },
+                            ])
+                        });
                     }
                 });
                 return [2 /*return*/];
@@ -249,14 +260,15 @@ var Sidebar = /** @class */ (function (_super) {
     };
     Sidebar.prototype.runBenchmark = function (event) {
         return __awaiter(this, void 0, void 0, function () {
-            var nodeCounts, density, edgeCounts, stats, renderingCanvas, i, nCount, eCount, data;
+            var nodeCounts, density_1, edgeCounts, stats, renderingCanvas, i, nCount, eCount, data, e_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        _a.trys.push([0, 5, , 6]);
                         event.preventDefault();
-                        nodeCounts = [1e6];
-                        density = 20;
-                        edgeCounts = nodeCounts.map(function (n) { return n * density; });
+                        nodeCounts = [1e2, 5e5];
+                        density_1 = 5;
+                        edgeCounts = nodeCounts.map(function (n) { return n * density_1; });
                         stats = stats_module_1["default"]();
                         stats.showPanel(0);
                         stats.dom.setAttribute("class", "status");
@@ -270,7 +282,7 @@ var Sidebar = /** @class */ (function (_super) {
                         i = 0;
                         _a.label = 1;
                     case 1:
-                        if (!(i < nodeCounts.length - 1)) return [3 /*break*/, 4];
+                        if (!(i < nodeCounts.length)) return [3 /*break*/, 4];
                         nCount = nodeCounts[i].toString();
                         eCount = edgeCounts[i].toString();
                         this.setState({ nodeCount: nCount });
@@ -293,7 +305,12 @@ var Sidebar = /** @class */ (function (_super) {
                         renderingCanvas.height = 800;
                         renderingCanvas.style.width = "800px";
                         renderingCanvas.style.height = "800px";
-                        return [2 /*return*/];
+                        return [3 /*break*/, 6];
+                    case 5:
+                        e_1 = _a.sent();
+                        console.log(e_1);
+                        return [3 /*break*/, 6];
+                    case 6: return [2 /*return*/];
                 }
             });
         });
@@ -332,28 +349,30 @@ var Sidebar = /** @class */ (function (_super) {
             data.nodes[i + 2] = Math.random();
             data.nodes[i + 3] = 1;
         }
-        var edgeHashMap = new Map();
         data.edges = Array(2 * edgeCount).fill(0);
         var pair;
         for (var i = 0; i < 2 * edgeCount; i = i + 2) {
-            do {
-                pair = this.generatePair(0, nodeCount);
-            } while (edgeHashMap.has(pair.source + "_" + pair.target));
-            edgeHashMap.set(pair.source + "_" + pair.target, true);
-            edgeHashMap.set(pair.target + "_" + pair.source, true);
+            pair = this.generatePair(0, nodeCount);
             data.edges[i] = pair.source;
             data.edges[i + 1] = pair.target;
         }
+        console.log("data generated");
         return data;
     };
     Sidebar.prototype.refresh = function (length) {
-        var nodes = [];
-        for (var i = 0; i < 4 * length; i = i + 4) {
-            nodes[i + 1] = Math.random();
-            nodes[i + 2] = Math.random();
+        try {
+            var nodes = [];
+            for (var i = 0; i < 4 * length; i = i + 4) {
+                nodes[i + 1] = Math.random();
+                nodes[i + 2] = Math.random();
+            }
+            this.setState({ nodeData: nodes });
+            console.log("called", this.props.setNodeEdgeData(nodes, this.state.edgeData));
+            console.log("rendererd");
         }
-        this.setState({ nodeData: nodes });
-        this.props.setNodeEdgeData(nodes, this.state.edgeData);
+        catch (err) {
+            console.error(err);
+        }
     };
     Sidebar.prototype.storeFPSResult = function (nodeLength, edgeLength, fps) {
         nodeLength = nodeLength.toString();
@@ -371,6 +390,7 @@ var Sidebar = /** @class */ (function (_super) {
                     case 0:
                         nodeLength = data.nodes.length / 4;
                         edgeLength = data.edges.length / 2;
+                        console.log(nodeLength);
                         return [4 /*yield*/, this.runTest(nodeLength, edgeLength, stats)];
                     case 1:
                         _a.sent();
@@ -381,26 +401,36 @@ var Sidebar = /** @class */ (function (_super) {
     };
     Sidebar.prototype.runTest = function (nodeLength, edgeLength, stats) {
         return __awaiter(this, void 0, void 0, function () {
-            var requestId, refreshing, FPS_Array, FPS;
+            var requestId_1, count_1, refreshing_1, FPS_Array, FPS, err_1;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        refreshing = function () {
+                        _a.trys.push([0, 2, , 3]);
+                        count_1 = 0;
+                        refreshing_1 = function () {
                             stats.begin();
+                            console.log("intiital count", count_1);
+                            count_1++;
                             _this.refresh(nodeLength);
+                            console.log("final count", count_1);
                             stats.end();
-                            requestId = requestAnimationFrame(refreshing);
+                            requestId_1 = requestAnimationFrame(refreshing_1);
                         };
-                        refreshing();
+                        refreshing_1();
                         return [4 /*yield*/, this.sleep(Constant.TIME_FOR_EACH_TEST)];
                     case 1:
                         _a.sent();
                         FPS_Array = stats.getFPSHistory();
                         FPS = FPS_Array.reduce(function (a, b) { return a + b; }, 0) / FPS_Array.length;
                         this.storeFPSResult(nodeLength, edgeLength, FPS);
-                        cancelAnimationFrame(requestId);
+                        cancelAnimationFrame(requestId_1);
                         return [2 /*return*/];
+                    case 2:
+                        err_1 = _a.sent();
+                        console.error(err_1);
+                        return [3 /*break*/, 3];
+                    case 3: return [2 /*return*/];
                 }
             });
         });
@@ -561,6 +591,7 @@ var Sidebar = /** @class */ (function (_super) {
             react_1["default"].createElement(react_csv_1.CSVLink, { data: this.state.FPSData }, "Download FPS data"),
             react_1["default"].createElement("hr", null),
             react_1["default"].createElement(react_bootstrap_1.Button, { className: "d3Timing_test", onClick: this.d3TimingStudy }, "Run D3"),
+            react_1["default"].createElement(react_csv_1.CSVLink, { data: this.state.d3timing, header: headerForLayout }, "Download FPS data"),
             react_1["default"].createElement(react_bootstrap_1.Form, { style: { color: "white" }, onSubmit: this.handleSubmit },
                 react_1["default"].createElement(react_bootstrap_1.Form.Group, { controlId: "formFile", className: "mt-3 mb-3" },
                     react_1["default"].createElement(react_bootstrap_1.Form.Check, { defaultChecked: true, onClick: function () {
