@@ -489,7 +489,6 @@ var Renderer = /** @class */ (function () {
                             return [4 /*yield*/, device.queue.onSubmittedWorkDone()];
                         case 1:
                             _a.sent();
-                            console.log("rendering task finished for", render.edgeLength);
                             end = performance.now();
                             if (timeToSecond - (end - start) < 0) {
                                 fpsRef.current.innerText = "FPS: " + frameCount;

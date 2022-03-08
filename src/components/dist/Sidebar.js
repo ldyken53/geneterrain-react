@@ -195,20 +195,18 @@ var Sidebar = /** @class */ (function (_super) {
                     lastTime = startTime;
                     var simulation = d3
                         .forceSimulation(data.nodes)
-                        .force("charge", d3.forceManyBody().strength(-20))
+                        .force("charge", d3.forceManyBody().strength(-40))
                         .force("center", d3.forceCenter(width / 2, height / 2))
-                        .force("link", d3.forceLink(data.edges).distance(20).strength(2.0));
+                        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0));
                     initGraph(data);
                     function initGraph(data) {
                         simulation.on("tick", simulationUpdate);
                         simulation.on("end", function () {
                             var currentTime = performance.now();
                             totalTime = currentTime - startTime;
-                            var _a = findAverage(self.state.d3timing), totalAverageTime = _a[0], renderAverageTime = _a[1];
-                            console.log(totalAverageTime, renderAverageTime);
-                            console.log("startTime", startTime);
+                            var _a = findAverage(self.state.d3timing), totalAverageTime = _a[0], layoutAverageTime = _a[1], renderAverageTime = _a[2];
+                            console.log("totalAverageTime", totalAverageTime, "layoutAverageTime", layoutAverageTime, "averageTimetoRender", renderAverageTime);
                             console.log("totalTime", totalTime);
-                            console.log("iterationMeasure", iterationMeasure);
                         });
                     }
                     function findAverage(d3timing) {
@@ -216,7 +214,9 @@ var Sidebar = /** @class */ (function (_super) {
                             return a + b.totalTime;
                         }, 0) / d3timing.length;
                         var renderAvergaeTime = d3timing.reduce(function (a, b) { return a + b.renderingTime; }, 0) / d3timing.length;
-                        return [totalAverageTime, renderAvergaeTime];
+                        var layoutAverageTime = d3timing.reduce(function (a, b) { return a + (b.totalTime - b.renderingTime); }, 0) /
+                            d3timing.length;
+                        return [totalAverageTime, layoutAverageTime, renderAvergaeTime];
                     }
                     function simulationUpdate() {
                         var currentTime = performance.now();

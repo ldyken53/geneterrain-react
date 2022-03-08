@@ -218,9 +218,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       lastTime = startTime;
       const simulation = d3
         .forceSimulation(data.nodes)
-        .force("charge", d3.forceManyBody().strength(-20))
+        .force("charge", d3.forceManyBody().strength(-40))
         .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("link", d3.forceLink(data.edges).distance(20).strength(2.0));
+        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0));
 
       initGraph(data);
 
@@ -229,13 +229,17 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         simulation.on("end", () => {
           let currentTime = performance.now();
           totalTime = currentTime - startTime;
-          const [totalAverageTime, renderAverageTime] = findAverage(
-            self.state.d3timing
+          const [totalAverageTime, layoutAverageTime, renderAverageTime] =
+            findAverage(self.state.d3timing);
+          console.log(
+            "totalAverageTime",
+            totalAverageTime,
+            "layoutAverageTime",
+            layoutAverageTime,
+            "averageTimetoRender",
+            renderAverageTime
           );
-          console.log(totalAverageTime, renderAverageTime);
-          console.log("startTime", startTime);
           console.log("totalTime", totalTime);
-          console.log("iterationMeasure", iterationMeasure);
         });
       }
 
@@ -246,7 +250,11 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           }, 0) / d3timing.length;
         let renderAvergaeTime =
           d3timing.reduce((a, b) => a + b.renderingTime, 0) / d3timing.length;
-        return [totalAverageTime, renderAvergaeTime];
+        let layoutAverageTime =
+          d3timing.reduce((a, b) => a + (b.totalTime - b.renderingTime), 0) /
+          d3timing.length;
+
+        return [totalAverageTime, layoutAverageTime, renderAvergaeTime];
       }
 
       function simulationUpdate() {
