@@ -515,7 +515,7 @@ class Renderer {
     this.edgeLength = edgeData.length;
     console.log(this.edgeLength);
     this.nodeLength = nodeData.length / 4;
-    this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
+    // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
   }
 
   setWidthFactor(widthFactor : number) {

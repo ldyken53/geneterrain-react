@@ -19,11 +19,15 @@ struct Uniforms {
     cooling_factor : f32;
     ideal_length : f32;
 };
+struct Batch {
+    batch_id : u32;
+}
 
 @group(0) @binding(0) var<storage, read> nodes : Nodes;
 @group(0) @binding(1) var<storage, read> adjmat : Edges;
 @group(0) @binding(2) var<storage, write> forces : Forces;
 @group(0) @binding(3) var<uniform> uniforms : Uniforms;
+@group(0) @binding(4) var<uniform> batch : Batch;
 
 fn get_bit_selector(bit_index : u32) -> u32 {
     return 1u << bit_index;
@@ -36,17 +40,18 @@ fn get_nth_bit(packed : u32, bit_index : u32) -> u32 {
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     let l : f32 = uniforms.ideal_length;
-    let node : Node = nodes.nodes[global_id.x];
+    var index : u32 = global_id.x + batch.batch_id * (uniforms.nodes_length / 10u);
+    let node : Node = nodes.nodes[index];
     var r_force : vec2<f32> = vec2<f32>(0.0, 0.0);
     var a_force : vec2<f32> = vec2<f32>(0.0, 0.0);
     for (var i : u32 = 0u; i < uniforms.nodes_length; i = i + 1u) {
-        if (i == global_id.x) {
+        if (i == index) {
             continue;
         }
         var node2 : Node = nodes.nodes[i];
         var dist : f32 = distance(vec2<f32>(node.x, node.y), vec2<f32>(node2.x, node2.y));
         if (dist > 0.0){
-            if (get_nth_bit(adjmat.edges[(i * uniforms.nodes_length + global_id.x) / 32u], (i * uniforms.nodes_length + global_id.x) % 32u) != 0u) {
+            if (get_nth_bit(adjmat.edges[(i * uniforms.nodes_length + index) / 32u], (i * uniforms.nodes_length + index) % 32u) != 0u) {
                 var dir : vec2<f32> = normalize(vec2<f32>(node2.x, node2.y) - vec2<f32>(node.x, node.y));
                 a_force = a_force + ((dist * dist) / l) * dir;
             } else {
@@ -64,6 +69,6 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
         force.x = 0.0;
         force.y = 0.0;
     }
-    forces.forces[global_id.x * 2u] = force.x;
-    forces.forces[global_id.x * 2u + 1u] = force.y;
+    forces.forces[index * 2u] = force.x;
+    forces.forces[index * 2u + 1u] = force.y;
 }

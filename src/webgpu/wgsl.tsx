@@ -377,11 +377,15 @@ struct Uniforms {
     cooling_factor : f32;
     ideal_length : f32;
 };
+struct Batch {
+    batch_id : u32;
+}
 
 @group(0) @binding(0) var<storage, read> nodes : Nodes;
 @group(0) @binding(1) var<storage, read> adjmat : Edges;
 @group(0) @binding(2) var<storage, write> forces : Forces;
 @group(0) @binding(3) var<uniform> uniforms : Uniforms;
+@group(0) @binding(4) var<uniform> batch : Batch;
 
 fn get_bit_selector(bit_index : u32) -> u32 {
     return 1u << bit_index;
@@ -394,17 +398,18 @@ fn get_nth_bit(packed : u32, bit_index : u32) -> u32 {
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     let l : f32 = uniforms.ideal_length;
-    let node : Node = nodes.nodes[global_id.x];
+    var index : u32 = global_id.x + batch.batch_id * (uniforms.nodes_length / 10u);
+    let node : Node = nodes.nodes[index];
     var r_force : vec2<f32> = vec2<f32>(0.0, 0.0);
     var a_force : vec2<f32> = vec2<f32>(0.0, 0.0);
     for (var i : u32 = 0u; i < uniforms.nodes_length; i = i + 1u) {
-        if (i == global_id.x) {
+        if (i == index) {
             continue;
         }
         var node2 : Node = nodes.nodes[i];
         var dist : f32 = distance(vec2<f32>(node.x, node.y), vec2<f32>(node2.x, node2.y));
         if (dist > 0.0){
-            if (get_nth_bit(adjmat.edges[(i * uniforms.nodes_length + global_id.x) / 32u], (i * uniforms.nodes_length + global_id.x) % 32u) != 0u) {
+            if (get_nth_bit(adjmat.edges[(i * uniforms.nodes_length + index) / 32u], (i * uniforms.nodes_length + index) % 32u) != 0u) {
                 var dir : vec2<f32> = normalize(vec2<f32>(node2.x, node2.y) - vec2<f32>(node.x, node.y));
                 a_force = a_force + ((dist * dist) / l) * dir;
             } else {
@@ -422,8 +427,8 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
         force.x = 0.0;
         force.y = 0.0;
     }
-    forces.forces[global_id.x * 2u] = force.x;
-    forces.forces[global_id.x * 2u + 1u] = force.y;
+    forces.forces[index * 2u] = force.x;
+    forces.forces[index * 2u + 1u] = force.y;
 }
 `;
 export const  apply_forces = `struct Node {
@@ -438,21 +443,32 @@ struct Nodes {
 struct Forces {
     forces : array<f32>;
 };
+struct Uniforms {
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
+};
 
 @group(0) @binding(0) var<storage, read_write> nodes : Nodes;
 @group(0) @binding(1) var<storage, read_write> forces : Forces;
+// @group(0) @binding(2) var<uniform> uniforms : Uniforms;
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
-    nodes.nodes[global_id.x].x = nodes.nodes[global_id.x].x + forces.forces[global_id.x * 2u];
-    nodes.nodes[global_id.x].y = nodes.nodes[global_id.x].y + forces.forces[global_id.x * 2u + 1u]; 
-    forces.forces[global_id.x * 2u] = 0.0;
-    forces.forces[global_id.x * 2u + 1u] = 0.0;
+    var index : u32 = global_id.x;
+    for (var iter : u32 = 0u; iter < 1u; iter = iter + 1u) {
+        nodes.nodes[index].x = nodes.nodes[index].x + forces.forces[index * 2u];
+        nodes.nodes[index].y = nodes.nodes[index].y + forces.forces[index * 2u + 1u]; 
+        forces.forces[index * 2u] = 0.0;
+        forces.forces[index * 2u + 1u] = 0.0;
+        // index = index + ((uniforms.nodes_length + 11u) / 12u);
     // nodes.nodes[global_id.x].x = min(1.0, max(-1.0, nodes.nodes[global_id.x].x));
     // nodes.nodes[global_id.x].y = min(1.0, max(-1.0, nodes.nodes[global_id.x].y));
     // nodes.nodes[global_id.x].x = nodes.nodes[global_id.x].x + 0.01;
     // nodes.nodes[global_id.x].y = nodes.nodes[global_id.x].y + 0.01;
     // var test : f32 = forces.forces[0]; 
     // var test2 : f32 = nodes.nodes[0].x;
+    }
 }
 `;
 export const  create_adjacency_matrix = `struct Edges {

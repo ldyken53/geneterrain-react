@@ -4,11 +4,11 @@ import numpy as np
 from scipy.sparse.linalg import eigs
 
 nodes = []
-N = 30000
-clusters = 30
+N = 40000
+clusters = 6
 edges = []
 for i in range(clusters):
-    for j in range(N * 2):
+    for j in range(N * 3):
         source = random.randint(i * (N // clusters), i * (N // clusters) + (N // clusters - 1))
         target = random.randint(i * (N // clusters), i * (N // clusters) + (N // clusters - 1))
         # if laplacian_matrix[source, target] == 0 and source != target:
@@ -17,18 +17,18 @@ for i in range(clusters):
         #     laplacian_matrix[source, source] += 1
         #     laplacian_matrix[target, target] += 1
         edges.append({"source": source, "target": target})
-clusters2 = 6
-for i in range(clusters2):
-    for j in range(N):
-        source = random.randint(i * (N // clusters2), i * (N // clusters2) + (N // clusters2 - 1))
-        target = random.randint(i * (N // clusters2), i * (N // clusters2) + (N // clusters2 - 1))
-        # if laplacian_matrix[source, target] == 0 and source != target:
-        #     laplacian_matrix[source, target] = -1
-        #     laplacian_matrix[target, source] = -1
-        #     laplacian_matrix[source, source] += 1
-        #     laplacian_matrix[target, target] += 1
-        edges.append({"source": source, "target": target})      
-for j in range(N // 10):
+# clusters2 = 6
+# for i in range(clusters2):
+#     for j in range(N):
+#         source = random.randint(i * (N // clusters2), i * (N // clusters2) + (N // clusters2 - 1))
+#         target = random.randint(i * (N // clusters2), i * (N // clusters2) + (N // clusters2 - 1))
+#         # if laplacian_matrix[source, target] == 0 and source != target:
+#         #     laplacian_matrix[source, target] = -1
+#         #     laplacian_matrix[target, source] = -1
+#         #     laplacian_matrix[source, source] += 1
+#         #     laplacian_matrix[target, target] += 1
+#         edges.append({"source": source, "target": target})      
+for j in range(N * 2):
     source = random.randint(0, N - 1)
     target = random.randint(0, N - 1)
     # if laplacian_matrix[source, target] == 0 and source != target:
@@ -52,7 +52,7 @@ for j in range(N // 10):
 # for i in range(N):
 #     nodes.append({"name": str(i), "x": x[i], "y": y[i]})
 for i in range(N):
-    nodes.append({"name": str(i), "x": random.random() * 4, "y": random.random() * 4})
+    nodes.append({"name": str(i), "x": random.random(), "y": random.random()})
 # for j in range(4):
 #     for i in range(100000):
 #         source = random.randint(0, j * 2000)
@@ -70,7 +70,7 @@ graph = {
     "nodes": nodes,
     "edges": edges
 }
-f = open("test_big.json", "w")
+f = open("test_nodes.json", "w")
 f.write(json.dumps(graph))
 
 
