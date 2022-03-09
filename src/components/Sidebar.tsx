@@ -302,13 +302,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
   async runBenchmark(event: React.MouseEvent) {
     try {
       event.preventDefault();
-      const nodeCounts = [500000];
+      const nodeCounts = [50000];
       const density = 20;
       const edgeCounts = nodeCounts.map((n) => n * density);
-      let stats = Stats();
-      stats.showPanel(0);
-      stats.dom.setAttribute("class", "status");
-      document.body.appendChild(stats.dom);
       this.setState({ runBenchmark: true });
       let renderingCanvas = document.querySelectorAll("canvas")[0];
       renderingCanvas.width = 500;
@@ -321,6 +317,10 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       // };
 
       for (let i = 0; i < nodeCounts.length; i++) {
+        let stats = Stats();
+        stats.showPanel(0);
+        stats.dom.setAttribute("class", "status");
+        document.body.appendChild(stats.dom);
         // let stepCount = 0;
         const nCount = nodeCounts[i].toString();
         const eCount = edgeCounts[i].toString();
@@ -447,6 +447,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       refreshing();
       await this.sleep(Constant.TIME_FOR_EACH_TEST);
       let FPS_Array = stats.getFPSHistory();
+      console.log(FPS_Array);
       let FPS = FPS_Array.reduce((a, b) => a + b, 0) / FPS_Array.length;
       this.storeFPSResult(nodeLength, edgeLength, FPS);
       cancelAnimationFrame(requestId);
