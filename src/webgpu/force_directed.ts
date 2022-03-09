@@ -258,6 +258,12 @@ class ForceDirected {
                     resource: {
                         buffer: this.forceDataBuffer,
                     }
+                },
+                {
+                    binding: 2,
+                    resource: {
+                        buffer: this.paramsBuffer
+                    }
                 }
             ],
         });
@@ -528,7 +534,7 @@ class ForceDirected {
             // Run apply forces pass
             pass.setBindGroup(0, applyBindGroup);
             pass.setPipeline(this.applyForcesPipeline);
-            pass.dispatch(nodeLength, 1, 1);
+            pass.dispatch(Math.ceil(nodeLength / 2), 1, 1);
             pass.endPass();
 
             this.device.queue.submit([commandEncoder.finish()]);
@@ -546,6 +552,7 @@ class ForceDirected {
             console.log(output);
             console.log(output[10]);
             console.log(output[11]);
+
             // console.log(output[23]);
             console.log(output[35]);
             await gpuReadBuffer3.mapAsync(GPUMapMode.READ);
@@ -568,6 +575,10 @@ class ForceDirected {
             //         break;
             //     }
             // }
+            // if (output[11] > 0) {
+            //     break;
+            // }
+            stackBuffer.destroy();
             this.coolingFactor = this.coolingFactor * coolingFactor;
             
         }

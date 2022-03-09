@@ -87,6 +87,9 @@ fn main() {
                     0.0, 0.0
                 );
                 counter = counter + 4u;
+                // if (any(quads.quads[index].CoM == vec2<f32>(nodes.nodes[i].x, nodes.nodes[i].y))) {
+                //     quads.quads[index].CoM = quads.quads[index].CoM + vec2<f32>(0.001, 0.001);
+                // }
                 let x : f32 = quads.quads[index].CoM.x;
                 let y : f32 = quads.quads[index].CoM.y;
                 if (x <= boundary.x + boundary.w / 2.0) {
