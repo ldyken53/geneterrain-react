@@ -126,7 +126,8 @@ class ForceDirected {
         new Uint32Array(mapping).set([nodeLength, edgeLength]);
         new Float32Array(mapping).set([this.coolingFactor, l], 2);
         upload.unmap();
-        let adjMatrixSize = Math.ceil((nodeLength * nodeLength * 4) / 32);
+        var adjMatrixSize = Math.ceil((nodeLength * nodeLength * 4) / 32);
+        adjMatrixSize = adjMatrixSize + (4 - adjMatrixSize % 4); 
         console.log(adjMatrixSize);
         this.adjMatrixBuffer = this.device.createBuffer({
             size: adjMatrixSize,
@@ -189,16 +190,16 @@ class ForceDirected {
         this.device.queue.submit([commandEncoder.finish()]);
         
         // Log adjacency matrix (count should be equal to the number of nonduplicate edges)
-        // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
-        // const arrayBuffer = gpuReadBuffer.getMappedRange();
-        // var output = new Int32Array(arrayBuffer);
-        // var count = 0;
-        // // for (var i = 0; i < output.length; i++) {
-        // //     count+=output[i];
-        // // }
-        // console.log(output);
-        // console.log(count);
-        // console.log(output.length);
+        await gpuReadBuffer.mapAsync(GPUMapMode.READ);
+        const arrayBuffer = gpuReadBuffer.getMappedRange();
+        var output = new Uint32Array(arrayBuffer);
+        var count = 0;
+        // for (var i = 0; i < output.length; i++) {
+        //     count+=output[i];
+        // }
+        console.log(output);
+        console.log(count);
+        console.log(output.length);
 
         this.forceDataBuffer = this.device.createBuffer({
             size: nodeLength * 2 * 4,
