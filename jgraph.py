@@ -4,11 +4,14 @@ import numpy as np
 from scipy.sparse.linalg import eigs
 
 nodes = []
-N = 50000
-clusters = 5
+N = 100000
+clusters = 10
 edges = []
+nodes = {}
 for i in range(clusters):
-    for j in range(N * 4):
+    print(i)
+    print((i + 1) / (clusters + 2))
+    for j in range(N * 2):
         source = random.randint(i * (N // clusters), i * (N // clusters) + (N // clusters - 1))
         target = random.randint(i * (N // clusters), i * (N // clusters) + (N // clusters - 1))
         # if laplacian_matrix[source, target] == 0 and source != target:
@@ -16,7 +19,16 @@ for i in range(clusters):
         #     laplacian_matrix[target, source] = -1
         #     laplacian_matrix[source, source] += 1
         #     laplacian_matrix[target, target] += 1
+        if not nodes.get(source):
+            nodes[source] = {
+                "name": str(i), 
+                "x": random.gauss((i + 1) / (clusters + 1), 0.025), 
+                "y": random.gauss((i % 2 + 0.6) / 2, 0.025)
+            }
         edges.append({"source": source, "target": target})
+nodes = [node for node in nodes.values()]
+# for i in range(N):
+#     nodes.append({"name": str(i), "x": random.random() * (i / N), "y": random.random() * (i / N)})
 # clusters2 = 0
 # for i in range(clusters2):
 #     for j in range(N):
@@ -51,8 +63,8 @@ for i in range(clusters):
 # y = np.real((vecs[:,2] - np.min(vecs[:,2])) / (np.max(vecs[:,2]) - np.min(vecs[:,2])))
 # for i in range(N):
 #     nodes.append({"name": str(i), "x": x[i], "y": y[i]})
-for i in range(N):
-    nodes.append({"name": str(i), "x": random.random(), "y": random.random()})
+# for i in range(N):
+#     nodes.append({"name": str(i), "x": random.random(), "y": random.random()})
 # for j in range(4):
 #     for i in range(100000):
 #         source = random.randint(0, j * 2000)
@@ -70,7 +82,7 @@ graph = {
     "nodes": nodes,
     "edges": edges
 }
-f = open("test_nodes.json", "w")
+f = open("test_huge.json", "w")
 f.write(json.dumps(graph))
 
 

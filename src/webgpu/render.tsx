@@ -458,6 +458,33 @@ class Renderer {
   }
 
   setNodeEdgeData(nodeData : Array<number>, edgeData : Array<number>) {
+    // function randn_bm(mean, sigma) {
+    //   var u = 0, v = 0;
+    //   while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+    //   while(v === 0) v = Math.random();
+    //   var mag = sigma * Math.sqrt(-2.0 * Math.log(u));
+    //   return mag * Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v ) + mean;
+    // }
+    // var N = 100000;
+    // var clusters = 10;
+    // var edgeData : Array<number> = [];
+    // var nodeData : Array<number> = [];
+    // for (var x = 0; x < N; x++) {
+    //   nodeData.push(0.0, 0.0, 0.0, 1.0);
+    // } 
+    // for (var i = 0; i < clusters; i++){
+    //   for (var j = 0; j < N * 2; j++) {
+    //     var source = Math.floor(Math.random() * (N / clusters)) + i * (N / clusters);
+    //     var target = Math.floor(Math.random() * (N / clusters)) + i * (N / clusters);
+    //     if (!nodeData[source * 4 + 1]){
+    //         nodeData[source * 4 + 1] = Math.random();
+    //         nodeData[source * 4 + 2] = Math.random();
+    //     }
+    //     edgeData.push(source, target);
+    //   }
+    // }
+    // console.log("nodes length" + nodeData.length / 4);
+    // console.log("edges_length" + edgeData.length / 2);
     this.nodeDataBuffer = this.device.createBuffer({
       size: nodeData.length * 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,

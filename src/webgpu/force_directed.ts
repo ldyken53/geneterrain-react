@@ -283,6 +283,10 @@ class ForceDirected {
                 }
             ]
         });
+        var batchBuffer = this.device.createBuffer({
+            size: 4,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
+        });
         // iterationCount = 2;
         while (iterationCount > 0 && this.coolingFactor > 0.0001 && this.force >= 0) {
             iterationCount--;
@@ -309,6 +313,8 @@ class ForceDirected {
             pass.setPipeline(this.createQuadTreePipeline);
             pass.dispatch(1, 1, 1);
             pass.endPass();
+            this.device.queue.submit([commandEncoder.finish()]);
+            var commandEncoder = this.device.createCommandEncoder();
             // this.device.queue.submit([commandEncoder.finish()]);
             // var start : number = performance.now();
             // await this.device.queue.onSubmittedWorkDone();
@@ -385,6 +391,12 @@ class ForceDirected {
                             buffer: stackBuffer,
                         },
                     },
+                    {
+                        binding: 5,
+                        resource: {
+                            buffer: batchBuffer
+                        }
+                    }
                 ],
             });
 
@@ -438,11 +450,30 @@ class ForceDirected {
             // pass.endPass();
 
             // Run compute forces BH pass
-            var pass = commandEncoder.beginComputePass();
-            pass.setBindGroup(0, bindGroup);
-            pass.setPipeline(this.computeForcesBHPipeline);
-            pass.dispatch(nodeLength, 1, 1);
-            pass.endPass();
+            for (var i = 0; i < 10; i++) {
+                var upload = this.device.createBuffer({
+                    size: 4,
+                    usage: GPUBufferUsage.COPY_SRC,
+                    mappedAtCreation: true,
+                });
+                var mapping = upload.getMappedRange();
+                new Uint32Array(mapping).set([i]);
+                upload.unmap();
+                commandEncoder.copyBufferToBuffer(upload, 0, batchBuffer, 0, 4);
+                var pass = commandEncoder.beginComputePass();
+                pass.setBindGroup(0, bindGroup);
+                pass.setPipeline(this.computeForcesBHPipeline);
+                pass.dispatch(Math.ceil(nodeLength / 10), 1, 1);
+                pass.endPass();
+                this.device.queue.submit([commandEncoder.finish()]);
+                // await this.device.queue.onSubmittedWorkDone();
+                var commandEncoder = this.device.createCommandEncoder();
+            }
+            // var pass = commandEncoder.beginComputePass();
+            // pass.setBindGroup(0, bindGroup);
+            // pass.setPipeline(this.computeForcesBHPipeline);
+            // pass.dispatch(nodeLength, 1, 1);
+            // pass.endPass();
 
             // Testing timing of both passes (comment out when not debugging)
             // pass.endPass();
@@ -458,7 +489,7 @@ class ForceDirected {
                 usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
             });
             const gpuReadBuffer3 = this.device.createBuffer({
-                size: nodeLength * 4 * 4,
+                size: nodeLength * 2 * 4,
                 usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
             });
             // const gpuReadBuffer2 = this.device.createBuffer({
@@ -472,6 +503,13 @@ class ForceDirected {
                 gpuReadBuffer /* destination buffer */ ,
                 0 /* destination offset */ ,
                 quadTreeLength /* size */
+            );
+            commandEncoder.copyBufferToBuffer(
+                this.forceDataBuffer /* source buffer */ ,
+                0 /* source offset */ ,
+                gpuReadBuffer3 /* destination buffer */ ,
+                0 /* destination offset */ ,
+                nodeLength * 2 * 4 /* size */
             );
             // Encode commands for copying buffer to buffer.
             // commandEncoder.copyBufferToBuffer(
@@ -491,13 +529,6 @@ class ForceDirected {
             pass.setPipeline(this.applyForcesPipeline);
             pass.dispatch(nodeLength, 1, 1);
             pass.endPass();
-            commandEncoder.copyBufferToBuffer(
-                this.nodeDataBuffer /* source buffer */ ,
-                0 /* source offset */ ,
-                gpuReadBuffer3 /* destination buffer */ ,
-                0 /* destination offset */ ,
-                nodeLength * 4 * 4 /* size */
-            );
 
             this.device.queue.submit([commandEncoder.finish()]);
             var start : number = performance.now();
