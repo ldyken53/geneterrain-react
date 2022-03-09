@@ -152,7 +152,8 @@ class ForceDirected {
         new Uint32Array(mapping).set([nodeLength, edgeLength]);
         new Float32Array(mapping).set([this.coolingFactor, l], 2);
         upload.unmap();
-        let adjMatrixSize = Math.ceil((nodeLength * nodeLength * 4) / 32);
+        var adjMatrixSize = Math.ceil((nodeLength * nodeLength * 4) / 32);
+        adjMatrixSize = adjMatrixSize + (4 - adjMatrixSize % 4); 
         console.log(adjMatrixSize);
         // this.adjMatrixBuffer = this.device.createBuffer({
         //     size: adjMatrixSize,
