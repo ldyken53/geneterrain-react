@@ -354,7 +354,7 @@ fn main(@builtin(instance_index) index : u32, @location(0) position: vec2<f32>)-
 }`;
 export const  edge_frag = `@stage(fragment)
 fn main()->@location(0) vec4<f32>{
-    return vec4<f32>(0.0, 0.0, 0.0, 0.02);
+    return vec4<f32>(0.0, 0.0, 0.0, 0.01);
 }`;
 export const  compute_forces = `struct Node {
     value : f32;

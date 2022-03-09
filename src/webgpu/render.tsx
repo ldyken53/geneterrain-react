@@ -544,6 +544,8 @@ class Renderer {
   }
 
   setNodeEdgeData(nodeData: Array<number>, edgeData: Array<number>) {
+    this.nodeDataBuffer!.destroy();
+    this.edgeDataBuffer!.destroy();
     this.nodeDataBuffer = this.device.createBuffer({
       size: nodeData.length * 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,

@@ -302,8 +302,8 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
   async runBenchmark(event: React.MouseEvent) {
     try {
       event.preventDefault();
-      const nodeCounts = [1e2, 5e5];
-      const density = 5;
+      const nodeCounts = [500000];
+      const density = 20;
       const edgeCounts = nodeCounts.map((n) => n * density);
       let stats = Stats();
       stats.showPanel(0);
