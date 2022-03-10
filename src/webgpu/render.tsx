@@ -30,7 +30,6 @@ class Renderer {
   public idealLength: number = 0.05;
   public coolingFactor: number = 0.9;
   public iterRef: React.RefObject<HTMLLabelElement>;
-  public newRender: boolean = false;
 
   constructor(
     adapter: GPUAdapter,
@@ -530,7 +529,6 @@ class Renderer {
       // await device.queue.onSubmittedWorkDone();
       // console.log("rendering task finished for", render.edgeLength);
       var end = performance.now();
-      render.newRender = false;
       if (timeToSecond - (end - start) < 0) {
         fpsRef.current!.innerText = `FPS: ${frameCount}`;
         timeToSecond = 1000 + (timeToSecond - (end - start));
@@ -608,7 +606,6 @@ class Renderer {
     });
     this.edgeLength = edgeData.length;
     this.nodeLength = nodeData.length / 4;
-    this.newRender = true;
     console.time("before sleep");
     await this.sleep();
     console.timeEnd("before sleep")
