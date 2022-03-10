@@ -89,7 +89,9 @@ var Page = /** @class */ (function (_super) {
             var adapter, device, colormapImage, imageBitmap;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, navigator.gpu.requestAdapter()];
+                    case 0: return [4 /*yield*/, navigator.gpu.requestAdapter({
+                            powerPreference: "high-performance"
+                        })];
                     case 1:
                         adapter = (_a.sent());
                         console.log(adapter);

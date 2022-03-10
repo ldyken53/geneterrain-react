@@ -47,7 +47,10 @@ class Page extends React.Component<{}, PageState> {
     }
 
     async componentDidMount() {
-        const adapter = (await navigator.gpu.requestAdapter())!;
+        const adapter = (await navigator.gpu.requestAdapter({
+          powerPreference: "high-performance",
+        }))!;
+
         console.log(adapter);
         const device = await adapter.requestDevice({
             requiredLimits: {

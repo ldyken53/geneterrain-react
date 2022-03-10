@@ -189,7 +189,7 @@ var Sidebar = /** @class */ (function (_super) {
                     return [2 /*return*/];
                 }
                 context.fillStyle = "white";
-                d3.json("./sample_test_data/sample_data100_2000.json").then(function (data) {
+                d3.json("./sample_test_data/sample_data10000_200000.json").then(function (data) {
                     console.log(data);
                     startTime = performance.now();
                     lastTime = startTime;
@@ -197,7 +197,8 @@ var Sidebar = /** @class */ (function (_super) {
                         .forceSimulation(data.nodes)
                         .force("charge", d3.forceManyBody().strength(-40))
                         .force("center", d3.forceCenter(width / 2, height / 2))
-                        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0));
+                        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0))
+                        .alphaDecay(0.077);
                     initGraph(data);
                     function initGraph(data) {
                         simulation.on("tick", simulationUpdate);
@@ -222,6 +223,7 @@ var Sidebar = /** @class */ (function (_super) {
                         var currentTime = performance.now();
                         var dt = currentTime - lastTime;
                         iterationCount++;
+                        console.log(iterationCount);
                         iterationMeasure[iterationCount] = dt;
                         lastTime = currentTime;
                         var renderingStartTime = performance.now();
@@ -260,19 +262,15 @@ var Sidebar = /** @class */ (function (_super) {
     };
     Sidebar.prototype.runBenchmark = function (event) {
         return __awaiter(this, void 0, void 0, function () {
-            var nodeCounts, density_1, edgeCounts, stats, renderingCanvas, i, nCount, eCount, data, e_1;
+            var nodeCounts, density_1, edgeCounts, renderingCanvas, i, stats, nCount, eCount, data, e_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         _a.trys.push([0, 5, , 6]);
                         event.preventDefault();
-                        nodeCounts = [1e2, 5e5];
-                        density_1 = 5;
+                        nodeCounts = [1e2, 1e3, 2e3, 5e3, 1e4];
+                        density_1 = 20;
                         edgeCounts = nodeCounts.map(function (n) { return n * density_1; });
-                        stats = stats_module_1["default"]();
-                        stats.showPanel(0);
-                        stats.dom.setAttribute("class", "status");
-                        document.body.appendChild(stats.dom);
                         this.setState({ runBenchmark: true });
                         renderingCanvas = document.querySelectorAll("canvas")[0];
                         renderingCanvas.width = 500;
@@ -283,6 +281,10 @@ var Sidebar = /** @class */ (function (_super) {
                         _a.label = 1;
                     case 1:
                         if (!(i < nodeCounts.length)) return [3 /*break*/, 4];
+                        stats = stats_module_1["default"]();
+                        stats.showPanel(0);
+                        stats.dom.setAttribute("class", "status");
+                        document.body.appendChild(stats.dom);
                         nCount = nodeCounts[i].toString();
                         eCount = edgeCounts[i].toString();
                         this.setState({ nodeCount: nCount });
@@ -367,8 +369,8 @@ var Sidebar = /** @class */ (function (_super) {
                 nodes[i + 2] = Math.random();
             }
             this.setState({ nodeData: nodes });
-            console.log("called", this.props.setNodeEdgeData(nodes, this.state.edgeData));
-            console.log("rendererd");
+            this.props.setNodeEdgeData(nodes, this.state.edgeData);
+            // console.log("rendererd");
         }
         catch (err) {
             console.error(err);
@@ -401,19 +403,19 @@ var Sidebar = /** @class */ (function (_super) {
     };
     Sidebar.prototype.runTest = function (nodeLength, edgeLength, stats) {
         return __awaiter(this, void 0, void 0, function () {
-            var requestId_1, count_1, refreshing_1, FPS_Array, FPS, err_1;
+            var requestId_1, count, refreshing_1, FPS_Array, FPS, err_1;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         _a.trys.push([0, 2, , 3]);
-                        count_1 = 0;
+                        count = 0;
                         refreshing_1 = function () {
                             stats.begin();
-                            console.log("intiital count", count_1);
-                            count_1++;
+                            // console.log("intiital count", count);
+                            // count++;
                             _this.refresh(nodeLength);
-                            console.log("final count", count_1);
+                            // console.log("final count", count);
                             stats.end();
                             requestId_1 = requestAnimationFrame(refreshing_1);
                         };
@@ -422,6 +424,7 @@ var Sidebar = /** @class */ (function (_super) {
                     case 1:
                         _a.sent();
                         FPS_Array = stats.getFPSHistory();
+                        console.log(FPS_Array);
                         FPS = FPS_Array.reduce(function (a, b) { return a + b; }, 0) / FPS_Array.length;
                         this.storeFPSResult(nodeLength, edgeLength, FPS);
                         cancelAnimationFrame(requestId_1);

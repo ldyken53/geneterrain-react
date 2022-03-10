@@ -212,7 +212,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
     context.fillStyle = "white";
 
-    d3.json("./sample_test_data/sample_data100_2000.json").then((data: any) => {
+    d3.json("./sample_test_data/sample_data10000_200000.json").then((data: any) => {
       console.log(data);
       startTime = performance.now();
       lastTime = startTime;
@@ -220,7 +220,8 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         .forceSimulation(data.nodes)
         .force("charge", d3.forceManyBody().strength(-40))
         .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0));
+        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0))
+        .alphaDecay(0.077);
 
       initGraph(data);
 
@@ -261,6 +262,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         let currentTime = performance.now();
         let dt = currentTime - lastTime;
         iterationCount++;
+        console.log(iterationCount);
         iterationMeasure[iterationCount] = dt;
         lastTime = currentTime;
 
@@ -302,7 +304,8 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
   async runBenchmark(event: React.MouseEvent) {
     try {
       event.preventDefault();
-      const nodeCounts = [50000];
+      // 5e2, 1e3, 2e3, 5e3, 1e4, 2e4, 3e4, 4e4, 1e5
+      const nodeCounts = [1e2, 1e3, 2e3, 5e3, 1e4];
       const density = 20;
       const edgeCounts = nodeCounts.map((n) => n * density);
       this.setState({ runBenchmark: true });
@@ -404,11 +407,8 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         nodes[i + 2] = Math.random();
       }
       this.setState({ nodeData: nodes });
-      console.log(
-        "called",
-        this.props.setNodeEdgeData(nodes, this.state.edgeData)
-      );
-      console.log("rendererd");
+      this.props.setNodeEdgeData(nodes, this.state.edgeData);
+      // console.log("rendererd");
     } catch (err) {
       console.error(err);
     }
@@ -437,10 +437,10 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       let count = 0;
       const refreshing = () => {
         stats.begin();
-        console.log("intiital count", count);
-        count++;
+        // console.log("intiital count", count);
+        // count++;
         this.refresh(nodeLength);
-        console.log("final count", count);
+        // console.log("final count", count);
         stats.end();
         requestId = requestAnimationFrame(refreshing);
       };
