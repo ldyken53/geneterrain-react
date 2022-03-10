@@ -13,6 +13,8 @@ class Renderer {
   public nodeBindGroup: GPUBindGroup | null = null;
   public edgeBindGroup: GPUBindGroup | null = null;
   public nodeDataBuffer: GPUBuffer | null = null;
+  public nodeIndexBuffer: GPUBuffer | null = null;
+  public edgeIndexBuffer: GPUBuffer | null = null;
   public edgeDataBuffer: GPUBuffer | null = null;
   public colorTexture: GPUTexture | null = null;
   public viewBoxBuffer: GPUBuffer | null = null;
@@ -590,15 +592,17 @@ class Renderer {
       passEncoder.setPipeline(this.edgePipeline!);
       passEncoder.setVertexBuffer(0, edgePositionBuffer);
       passEncoder.setBindGroup(0, this.edgeBindGroup!);
-      passEncoder.draw(2, this.edgeLength, 0, 0);
+      passEncoder.draw(2, this.edgeLength);
       passEncoder.setPipeline(this.nodePipeline!);
       passEncoder.setVertexBuffer(0, nodePositionBuffer);
       passEncoder.setBindGroup(0, this.nodeBindGroup!);
-      passEncoder.draw(6, this.nodeLength, 0, 0);
+      passEncoder.draw(6, this.nodeLength);
       passEncoder.endPass();
 
       device.queue.submit([commandEncoder.finish()]);
+
       await device.queue.onSubmittedWorkDone();
+      // await device.queue.onSubmittedWorkDone();
     }
 
     // requestAnimationFrame(frame);
@@ -615,6 +619,11 @@ class Renderer {
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       mappedAtCreation: true,
     });
+    // this.nodeIndexBuffer = this.device.createBuffer({
+    //   size: nodeData.length * 4,
+    //   usage: GPUBufferUsage.INDEX,
+    //   mappedAtCreation: true,
+    // });
     new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
     this.nodeDataBuffer.unmap();
     if (this.edgeLength < 2) {
@@ -670,6 +679,7 @@ class Renderer {
     this.nodeLength = nodeData.length / 4;
     console.time("before sleep");
     await this.testFrame!();
+    // await this.device.queue.onSubmittedWorkDone();
     console.timeEnd("before sleep")
     // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
   }

@@ -330,7 +330,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
         let data = this.generateRandomData(nodeCounts, edgeCounts, i);
         this.setState({ nodeData: data.nodes, edgeData: data.edges });
-        this.testFunc(data, stats);
+        await this.testFunc(data, stats);
         // this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
       }
 
@@ -395,7 +395,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     return data;
   }
 
-  async refresh(length) {
+  async refresh(data, length) {
     try {
       var nodes: Array<number> = [];
       for (let i = 0; i < 4 * length; i = i + 4) {
@@ -403,7 +403,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         nodes[i + 2] = Math.random();
       }
       this.setState({ nodeData: nodes });
-      await this.props.setNodeEdgeData(nodes, this.state.edgeData)
+      await this.props.setNodeEdgeData(nodes, data.edges)
       console.log("rendererd");
     } catch (err) {
       console.error(err);
@@ -424,16 +424,16 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     let nodeLength = data.nodes.length / 4;
     let edgeLength = data.edges.length / 2;
     console.log(nodeLength);
-    await this.runTest(nodeLength, edgeLength, stats);
+    await this.runTest(data, nodeLength, edgeLength, stats);
   }
 
-  async runTest(nodeLength, edgeLength, stats) {
+  async runTest(data, nodeLength, edgeLength, stats) {
     try {
       let count = 0;
       const refreshing = async () => {
         stats.begin();
         count++;
-        await this.refresh(nodeLength);
+        await this.refresh(data, nodeLength);
         console.log("count", count);
         stats.end();
         if (count < 100) {
