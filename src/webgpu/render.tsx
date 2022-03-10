@@ -6,7 +6,7 @@ import ForceDirected from "./force_directed";
 
 class Renderer {
   public uniform2DBuffer: GPUBuffer | null = null;
-  public terrainGenerator: TerrainGenerator | null = null;
+  // public terrainGenerator: TerrainGenerator | null = null;
   public forceDirected: ForceDirected | null = null;
   public device: GPUDevice;
   public bindGroup2D: GPUBindGroup | null = null;
@@ -30,6 +30,7 @@ class Renderer {
   public idealLength: number = 0.05;
   public coolingFactor: number = 0.9;
   public iterRef: React.RefObject<HTMLLabelElement>;
+  public newRender: boolean = false;
 
   constructor(
     adapter: GPUAdapter,
@@ -310,40 +311,40 @@ class Renderer {
       [colormap.width, colormap.height, 1]
     );
 
-    this.terrainGenerator = new TerrainGenerator(
-      device,
-      this.canvasSize![0],
-      this.canvasSize![1]
-    );
+    // this.terrainGenerator = new TerrainGenerator(
+    //   device,
+    //   this.canvasSize![0],
+    //   this.canvasSize![1]
+    // );
     this.forceDirected = new ForceDirected(device);
 
-    this.bindGroup2D = device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(0),
-      entries: [
-        {
-          binding: 0,
-          resource: this.colorTexture.createView(),
-        },
-        {
-          binding: 1,
-          resource: {
-            buffer: this.terrainGenerator.pixelValueBuffer,
-          },
-        },
-        {
-          binding: 2,
-          resource: {
-            buffer: this.uniform2DBuffer,
-          },
-        },
-        {
-          binding: 3,
-          resource: {
-            buffer: imageSizeBuffer,
-          },
-        },
-      ],
-    });
+    // this.bindGroup2D = device.createBindGroup({
+    //   layout: pipeline.getBindGroupLayout(0),
+    //   entries: [
+    //     {
+    //       binding: 0,
+    //       resource: this.colorTexture.createView(),
+    //     },
+    //     {
+    //       binding: 1,
+    //       resource: {
+    //         buffer: this.terrainGenerator.pixelValueBuffer,
+    //       },
+    //     },
+    //     {
+    //       binding: 2,
+    //       resource: {
+    //         buffer: this.uniform2DBuffer,
+    //       },
+    //     },
+    //     {
+    //       binding: 3,
+    //       resource: {
+    //         buffer: imageSizeBuffer,
+    //       },
+    //     },
+    //   ],
+    // });
     this.viewBoxBuffer = device.createBuffer({
       size: 4 * 4,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -358,7 +359,7 @@ class Renderer {
     var translation = [0, 0, 1, 1];
     var newTranslation = [0, 0, 1, 1];
     var controller = new Controller();
-    var terrainGenerator = this.terrainGenerator;
+    // var terrainGenerator = this.terrainGenerator;
     var render = this;
     controller.mousemove = function (prev, cur, evt) {
       if (evt.buttons == 1) {
@@ -381,15 +382,15 @@ class Renderer {
             0.03 * (translation[3] - translation[1])
         ) {
           translation = newTranslation;
-          if (render.terrainToggle) {
-            terrainGenerator!.computeTerrain(
-              undefined,
-              undefined,
-              translation,
-              render.rangeBuffer,
-              render.nodeLength
-            );
-          }
+          // if (render.terrainToggle) {
+          //   terrainGenerator!.computeTerrain(
+          //     undefined,
+          //     undefined,
+          //     translation,
+          //     render.rangeBuffer,
+          //     render.nodeLength
+          //   );
+          // }
           device.queue.writeBuffer(
             render.viewBoxBuffer!,
             0,
@@ -413,15 +414,15 @@ class Renderer {
         newTranslation[3] - newTranslation[1] > 0.01
       ) {
         translation = newTranslation;
-        if (render.terrainToggle) {
-          terrainGenerator!.computeTerrain(
-            undefined,
-            undefined,
-            translation,
-            render.rangeBuffer,
-            render.nodeLength
-          );
-        }
+        // if (render.terrainToggle) {
+        //   terrainGenerator!.computeTerrain(
+        //     undefined,
+        //     undefined,
+        //     translation,
+        //     render.rangeBuffer,
+        //     render.nodeLength
+        //   );
+        // }
         device.queue.writeBuffer(
           render.viewBoxBuffer!,
           0,
@@ -526,9 +527,10 @@ class Renderer {
       passEncoder.endPass();
 
       device.queue.submit([commandEncoder.finish()]);
-      await device.queue.onSubmittedWorkDone();
+      // await device.queue.onSubmittedWorkDone();
       // console.log("rendering task finished for", render.edgeLength);
       var end = performance.now();
+      render.newRender = false;
       if (timeToSecond - (end - start) < 0) {
         fpsRef.current!.innerText = `FPS: ${frameCount}`;
         timeToSecond = 1000 + (timeToSecond - (end - start));
@@ -543,7 +545,11 @@ class Renderer {
     requestAnimationFrame(frame);
   }
 
-  setNodeEdgeData(nodeData: Array<number>, edgeData: Array<number>) {
+  async sleep() { 
+    return new Promise(requestAnimationFrame); 
+  }
+
+  async setNodeEdgeData(nodeData: Array<number>, edgeData: Array<number>) {
     this.nodeDataBuffer!.destroy();
     this.edgeDataBuffer!.destroy();
     this.nodeDataBuffer = this.device.createBuffer({
@@ -602,17 +608,21 @@ class Renderer {
     });
     this.edgeLength = edgeData.length;
     this.nodeLength = nodeData.length / 4;
+    this.newRender = true;
+    console.time("before sleep");
+    await this.sleep();
+    console.timeEnd("before sleep")
     // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
   }
 
   setWidthFactor(widthFactor: number) {
-    this.terrainGenerator!.computeTerrain(
-      undefined,
-      widthFactor,
-      undefined,
-      this.rangeBuffer,
-      this.nodeLength
-    );
+    // this.terrainGenerator!.computeTerrain(
+    //   undefined,
+    //   widthFactor,
+    //   undefined,
+    //   this.rangeBuffer,
+    //   this.nodeLength
+    // );
   }
 
   setPeakValue(value: number) {
@@ -699,13 +709,13 @@ class Renderer {
     console.log(width, height);
     var commandEncoder = this.device.createCommandEncoder();
     // Encode commands for copying buffer to buffer.
-    commandEncoder.copyBufferToBuffer(
-      this.terrainGenerator!.pixelValueBuffer /* source buffer */,
-      0 /* source offset */,
-      gpuReadBuffer /* destination buffer */,
-      0 /* destination offset */,
-      width * height * 4 /* size */
-    );
+    // commandEncoder.copyBufferToBuffer(
+    //   this.terrainGenerator!.pixelValueBuffer /* source buffer */,
+    //   0 /* source offset */,
+    //   gpuReadBuffer /* destination buffer */,
+    //   0 /* destination offset */,
+    //   width * height * 4 /* size */
+    // );
 
     // Submit GPU commands.
     const gpuCommands = commandEncoder.finish();

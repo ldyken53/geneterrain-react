@@ -302,7 +302,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
   async runBenchmark(event: React.MouseEvent) {
     try {
       event.preventDefault();
-      const nodeCounts = [50000];
+      const nodeCounts = [100, 500];
       const density = 20;
       const edgeCounts = nodeCounts.map((n) => n * density);
       this.setState({ runBenchmark: true });
@@ -396,7 +396,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     return data;
   }
 
-  refresh(length) {
+  async refresh(length) {
     try {
       var nodes: Array<number> = [];
       for (let i = 0; i < 4 * length; i = i + 4) {
@@ -404,10 +404,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         nodes[i + 2] = Math.random();
       }
       this.setState({ nodeData: nodes });
-      console.log(
-        "called",
-        this.props.setNodeEdgeData(nodes, this.state.edgeData)
-      );
+      await this.props.setNodeEdgeData(nodes, this.state.edgeData)
       console.log("rendererd");
     } catch (err) {
       console.error(err);
@@ -433,24 +430,23 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
   async runTest(nodeLength, edgeLength, stats) {
     try {
-      let requestId;
       let count = 0;
-      const refreshing = () => {
+      const refreshing = async () => {
         stats.begin();
         console.log("intiital count", count);
         count++;
-        this.refresh(nodeLength);
+        await this.refresh(nodeLength);
         console.log("final count", count);
         stats.end();
-        requestId = requestAnimationFrame(refreshing);
+        if (count < 60) {
+          await refreshing();
+        }
       };
-      refreshing();
-      await this.sleep(Constant.TIME_FOR_EACH_TEST);
+      await refreshing();
       let FPS_Array = stats.getFPSHistory();
       console.log(FPS_Array);
       let FPS = FPS_Array.reduce((a, b) => a + b, 0) / FPS_Array.length;
       this.storeFPSResult(nodeLength, edgeLength, FPS);
-      cancelAnimationFrame(requestId);
       return;
     } catch (err) {
       console.error(err);

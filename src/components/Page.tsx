@@ -47,7 +47,9 @@ class Page extends React.Component<{}, PageState> {
     }
 
     async componentDidMount() {
-        const adapter = (await navigator.gpu.requestAdapter())!;
+        const adapter = (await navigator.gpu.requestAdapter({
+            powerPreference: "high-performance"
+        }))!;
         console.log(adapter);
         const device = await adapter.requestDevice({
             requiredLimits: {
@@ -64,8 +66,8 @@ class Page extends React.Component<{}, PageState> {
         });
     }
 
-    setNodeEdgeData(nodeData : Array<number>, edgeData : Array<number>) {
-        this.state.renderer!.setNodeEdgeData(nodeData, edgeData);
+    async setNodeEdgeData(nodeData : Array<number>, edgeData : Array<number>) {
+        await this.state.renderer!.setNodeEdgeData(nodeData, edgeData);
     }
 
     setWidthFactor(widthFactor : number) {
