@@ -1,6 +1,6 @@
 import { Controller } from './ez_canvas_controller';
 import TerrainGenerator from './terrain_generator';
-import { display_2d_vert, display_2d_frag, node_vert, node_frag, edge_vert, edge_frag } from './wgsl';
+import { display_2d_vert, display_2d_frag, node_vert, node_frag, edge_vert, edge_frag, randomize_graph } from './wgsl';
 import { saveAs } from 'file-saver'; 
 import ForceDirected from "./force_directed";
 
@@ -30,6 +30,7 @@ class Renderer {
   public idealLength: number = 0.05;
   public coolingFactor: number = 0.9;
   public iterRef: React.RefObject<HTMLLabelElement>;
+  public testFrame : null | (() => Promise<void>) = null;
 
   constructor(
     adapter: GPUAdapter,
@@ -475,6 +476,7 @@ class Renderer {
       ],
     });
 
+
     const texture = device.createTexture({
       size: presentationSize,
       sampleCount: 4,
@@ -482,7 +484,14 @@ class Renderer {
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
     const view = texture.createView();
-
+    var randomPipeline = device.createComputePipeline({
+      compute: {
+        module: device.createShaderModule({
+            code: randomize_graph
+        }),
+        entryPoint: "main",
+      },
+    });   
     var render = this;
     var frameCount = 0;
     var timeToSecond = 1000;
@@ -503,7 +512,6 @@ class Renderer {
           },
         ],
       };
-
       const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
       if (render.terrainToggle) {
         passEncoder.setPipeline(pipeline);
@@ -526,7 +534,7 @@ class Renderer {
       passEncoder.endPass();
 
       device.queue.submit([commandEncoder.finish()]);
-      // await device.queue.onSubmittedWorkDone();
+      await device.queue.onSubmittedWorkDone();
       // console.log("rendering task finished for", render.edgeLength);
       var end = performance.now();
       if (timeToSecond - (end - start) < 0) {
@@ -537,10 +545,63 @@ class Renderer {
         timeToSecond -= end - start;
       }
       frameCount += 1;
+      // var randomBindGroup = render.device.createBindGroup({
+      //   layout: randomPipeline.getBindGroupLayout(0),
+      //   entries: [
+      //       {
+      //           binding: 0,
+      //           resource: {
+      //               buffer: render.nodeDataBuffer!,
+      //           }
+      //       },
+      //       {
+      //           binding: 1,
+      //           resource: {
+      //               buffer: render.edgeDataBuffer!,
+      //           }
+      //       },
+      //   ]
+      // });
+      // const computeEncoder = device.createCommandEncoder();
+      // var pass = computeEncoder.beginComputePass();
+      // pass.setPipeline(randomPipeline);
+      // pass.setBindGroup(0, randomBindGroup);
+      // pass.dispatch(render.nodeLength, 1, 1);      
+      // pass.endPass();
+      // device.queue.submit([computeEncoder.finish()]);
+      // await device.queue.onSubmittedWorkDone();
       requestAnimationFrame(frame);
     }
 
-    requestAnimationFrame(frame);
+    this.testFrame = async () => {
+      const commandEncoder = this.device.createCommandEncoder();
+
+      const renderPassDescriptor: GPURenderPassDescriptor = {
+        colorAttachments: [
+          {
+            view,
+            resolveTarget: context.getCurrentTexture().createView(),
+            loadValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
+            storeOp: "discard" as GPUStoreOp,
+          },
+        ],
+      };
+      const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+      passEncoder.setPipeline(this.edgePipeline!);
+      passEncoder.setVertexBuffer(0, edgePositionBuffer);
+      passEncoder.setBindGroup(0, this.edgeBindGroup!);
+      passEncoder.draw(2, this.edgeLength, 0, 0);
+      passEncoder.setPipeline(this.nodePipeline!);
+      passEncoder.setVertexBuffer(0, nodePositionBuffer);
+      passEncoder.setBindGroup(0, this.nodeBindGroup!);
+      passEncoder.draw(6, this.nodeLength, 0, 0);
+      passEncoder.endPass();
+
+      device.queue.submit([commandEncoder.finish()]);
+      await device.queue.onSubmittedWorkDone();
+    }
+
+    // requestAnimationFrame(frame);
   }
 
   async sleep() { 
@@ -549,7 +610,6 @@ class Renderer {
 
   async setNodeEdgeData(nodeData: Array<number>, edgeData: Array<number>) {
     this.nodeDataBuffer!.destroy();
-    this.edgeDataBuffer!.destroy();
     this.nodeDataBuffer = this.device.createBuffer({
       size: nodeData.length * 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
@@ -557,13 +617,15 @@ class Renderer {
     });
     new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
     this.nodeDataBuffer.unmap();
-    this.edgeDataBuffer = this.device.createBuffer({
-      size: edgeData.length * 4,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
-      mappedAtCreation: true,
-    });
-    new Uint32Array(this.edgeDataBuffer.getMappedRange()).set(edgeData);
-    this.edgeDataBuffer.unmap();
+    if (this.edgeLength < 2) {
+      this.edgeDataBuffer = this.device.createBuffer({
+        size: edgeData.length * 4,
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
+        mappedAtCreation: true,
+      });
+      new Uint32Array(this.edgeDataBuffer.getMappedRange()).set(edgeData);
+      this.edgeDataBuffer.unmap();
+    }
     this.edgeBindGroup = this.device.createBindGroup({
       layout: this.edgePipeline!.getBindGroupLayout(0),
       entries: [
@@ -607,7 +669,7 @@ class Renderer {
     this.edgeLength = edgeData.length;
     this.nodeLength = nodeData.length / 4;
     console.time("before sleep");
-    await this.sleep();
+    await this.testFrame!();
     console.timeEnd("before sleep")
     // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
   }

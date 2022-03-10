@@ -13,7 +13,8 @@ shaders = [
     "compute_forces.wgsl",
     "apply_forces.wgsl",
     "create_adjacency_matrix.wgsl",
-    "create_quadtree.wgsl"
+    "create_quadtree.wgsl",
+    "randomize_graph.wgsl"
 ]
 compiled_shaders = ""
 

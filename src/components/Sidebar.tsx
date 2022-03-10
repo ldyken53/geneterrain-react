@@ -21,7 +21,7 @@ const headerForLayout = [
 ];
 
 type SidebarProps = {
-  setNodeEdgeData: (nodeData: Array<number>, edgeData: Array<number>) => void;
+  setNodeEdgeData: (nodeData: Array<number>, edgeData: Array<number>) => Promise<void>;
   setWidthFactor: (widthFactor: number) => void;
   setPeakValue: (value: number) => void;
   setValleyValue: (value: number) => void;
@@ -302,15 +302,15 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
   async runBenchmark(event: React.MouseEvent) {
     try {
       event.preventDefault();
-      const nodeCounts = [100, 500];
+      const nodeCounts = [50000];
       const density = 20;
       const edgeCounts = nodeCounts.map((n) => n * density);
       this.setState({ runBenchmark: true });
-      let renderingCanvas = document.querySelectorAll("canvas")[0];
-      renderingCanvas.width = 500;
-      renderingCanvas.height = 500;
-      renderingCanvas.style.width = "500px";
-      renderingCanvas.style.height = "500px";
+      // let renderingCanvas = document.querySelectorAll("canvas")[0];
+      // renderingCanvas.width = 500;
+      // renderingCanvas.height = 500;
+      // renderingCanvas.style.width = "500px";
+      // renderingCanvas.style.height = "500px";
       // const testCase = {
       //   nodeCounts,
       //   edgeCounts,
@@ -329,17 +329,16 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         this.setState({ edgeCount: eCount });
 
         let data = this.generateRandomData(nodeCounts, edgeCounts, i);
-        this.setState({ nodeData: data.nodes });
-        this.setState({ edgeData: data.edges });
+        this.setState({ nodeData: data.nodes, edgeData: data.edges });
+        this.testFunc(data, stats);
         // this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
-        await this.testFunc(data, stats);
       }
 
       this.setState({ runBenchmark: false });
-      renderingCanvas.width = 800;
-      renderingCanvas.height = 800;
-      renderingCanvas.style.width = "800px";
-      renderingCanvas.style.height = "800px";
+      // renderingCanvas.width = 800;
+      // renderingCanvas.height = 800;
+      // renderingCanvas.style.width = "800px";
+      // renderingCanvas.style.height = "800px";
     } catch (e) {
       console.log(e);
     }
@@ -433,12 +432,11 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       let count = 0;
       const refreshing = async () => {
         stats.begin();
-        console.log("intiital count", count);
         count++;
         await this.refresh(nodeLength);
-        console.log("final count", count);
+        console.log("count", count);
         stats.end();
-        if (count < 60) {
+        if (count < 100) {
           await refreshing();
         }
       };
