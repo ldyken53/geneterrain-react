@@ -192,113 +192,168 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     let lastTime;
     let totalTime;
 
-    var layoutCanvas = d3
-      .select("#graphDiv")
-      .append("canvas")
-      .attr("width", width + "px")
-      .attr("height", height + "px")
-      .node();
+    // var layoutCanvas = d3
+    //   .select("#graphDiv")
+    //   .append("canvas")
+    //   .attr("width", width + "px")
+    //   .attr("height", height + "px")
+    //   .node();
 
-    let layoutDiv = document.getElementById("#graphDiv");
-    if (layoutDiv) {
-      layoutDiv.style.color = "white";
-    }
+    // let layoutDiv = document.getElementById("#graphDiv");
+    // if (layoutDiv) {
+    //   layoutDiv.style.color = "white";
+    // }
 
-    let context = layoutCanvas!.getContext("2d")!;
-    if (!context) {
-      console.log("no 2d context found");
-      return;
-    }
+    // let context = layoutCanvas!.getContext("2d")!;
+    // if (!context) {
+    //   console.log("no 2d context found");
+    //   return;
+    // }
 
-    context.fillStyle = "white";
+    // context.fillStyle = "white";
 
-    d3.json("./sample_test_data/sample_data10000_200000.json").then((data: any) => {
-      console.log(data);
-      startTime = performance.now();
-      lastTime = startTime;
-      const simulation = d3
-        .forceSimulation(data.nodes)
-        .force("charge", d3.forceManyBody().strength(-40))
-        .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0))
-        .alphaDecay(0.077);
+    d3.json("./sample_test_data/sample_data10000_200000.json").then(
+      (data: any) => {
+        console.log(data);
+        let timeToFormatData = 0;
+        startTime = performance.now();
+        lastTime = startTime;
+        const simulation = d3
+          .forceSimulation(data.nodes)
+          .force("charge", d3.forceManyBody().strength(-40))
+          .force("center", d3.forceCenter(width / 2, height / 2))
+          .force("link", d3.forceLink(data.edges).distance(400).strength(2.0))
+          .alphaDecay(0.077);
 
-      initGraph(data);
+        initGraph(data);
 
-      function initGraph(data) {
-        simulation.on("tick", simulationUpdate);
-        simulation.on("end", () => {
+        function initGraph(data) {
+          simulation.on("tick", simulationUpdate);
+          simulation.on("end", () => {
+            let currentTime2 = performance.now();
+            totalTime = currentTime2 - startTime - timeToFormatData;
+            const [totalAverageTime, layoutAverageTime, renderAverageTime] =
+              findAverage(self.state.d3timing);
+            console.log(
+              "totalAverageTime",
+              totalAverageTime,
+              "layoutAverageTime",
+              layoutAverageTime,
+              "averageTimetoRender",
+              renderAverageTime
+            );
+            console.log("totalTime", totalTime);
+          });
+        }
+
+        function formatData(nodesList, edgesList) {
+          var nodes: Array<number> = [];
+          var edges: Array<number> = [];
+          const data = {
+            nodes: nodes,
+            edges: edges,
+          };
+
+          let nodeCount = nodesList.length;
+          data.nodes = Array(4 * nodeCount).fill(0);
+
+          let maxX = 0;
+          let maxY = 0;
+
+          for (let i = 0; i < 4 * nodeCount; i = i + 4) {
+            data.nodes[i] = 0;
+            let nodeX = Math.abs(nodesList[i / 4].x);
+            let nodeY = Math.abs(nodesList[i / 4].y);
+            if (nodeX > maxX) {
+              maxX = nodeX;
+            }
+            if (nodeY > maxY) {
+              maxY = nodeY;
+            }
+            data.nodes[i + 3] = 1;
+          }
+
+          for (let i = 0; i < 4 * nodeCount; i = i + 4) {
+            data.nodes[i + 1] = nodesList[i / 4].x / maxX;
+            data.nodes[i + 2] = nodesList[i / 4].y / maxY;
+          }
+
+          data.edges = Array(2 * nodeCount * 20).fill(0);
+          for (let i = 0; i < 2 * 20 * nodeCount; i = i + 2) {
+            data.edges[i] = parseInt(edgesList[i / 2].source.name);
+            data.edges[i + 1] = parseInt(edgesList[i / 2].target.name);
+          }
+          return data;
+        }
+
+        function findAverage(d3timing) {
+          let totalAverageTime =
+            d3timing.reduce((a, b) => {
+              return a + b.totalTime;
+            }, 0) / d3timing.length;
+          let renderAvergaeTime =
+            d3timing.reduce((a, b) => a + b.renderingTime, 0) / d3timing.length;
+          let layoutAverageTime =
+            d3timing.reduce((a, b) => a + (b.totalTime - b.renderingTime), 0) /
+            d3timing.length;
+
+          return [totalAverageTime, layoutAverageTime, renderAvergaeTime];
+        }
+
+        function simulationUpdate() {
           let currentTime = performance.now();
-          totalTime = currentTime - startTime;
-          const [totalAverageTime, layoutAverageTime, renderAverageTime] =
-            findAverage(self.state.d3timing);
-          console.log(
-            "totalAverageTime",
-            totalAverageTime,
-            "layoutAverageTime",
-            layoutAverageTime,
-            "averageTimetoRender",
-            renderAverageTime
-          );
-          console.log("totalTime", totalTime);
-        });
+          let newData = formatData(data.nodes, data.edges);
+          let formatStopTime = performance.now();
+          let localtimeToFormatData = formatStopTime - currentTime;
+          timeToFormatData += localtimeToFormatData;
+
+          let renderingStartTime = performance.now();
+          // context.save();
+          // context.strokeStyle = "#aaa";
+          // context.clearRect(0, 0, width, height);
+
+          // data.edges.forEach(function (d) {
+          //   context.beginPath();
+          //   context.moveTo(d.source.x, d.source.y);
+          //   context.lineTo(d.target.x, d.target.y);
+          //   context.stroke();
+          // });
+
+          // data.nodes.forEach(function (d, i) {
+          //   context.beginPath();
+          //   context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
+          //   context.fillStyle = d.col ? "red" : "black";
+          //   context.fill();
+          // });
+
+          self.setState({ nodeData: newData.nodes });
+          self.props.setNodeEdgeData(newData.nodes, newData.edges);
+          //context.restore();
+
+          let renderingEndTime = performance.now();
+          let renderTime = renderingEndTime - renderingStartTime;
+
+          let endTime = performance.now();
+          // lastTime = currentTime;
+          let dt = endTime - currentTime - localtimeToFormatData;
+          iterationCount++;
+          console.log(iterationCount);
+          iterationMeasure[iterationCount] = dt;
+
+          self.setState({
+            d3timing: [
+              ...self.state.d3timing,
+              {
+                iterationCount: iterationCount,
+                totalTime: dt,
+                renderingTime: renderTime,
+              },
+            ],
+          });
+        }
+
       }
-
-      function findAverage(d3timing) {
-        let totalAverageTime =
-          d3timing.reduce((a, b) => {
-            return a + b.totalTime;
-          }, 0) / d3timing.length;
-        let renderAvergaeTime =
-          d3timing.reduce((a, b) => a + b.renderingTime, 0) / d3timing.length;
-        let layoutAverageTime =
-          d3timing.reduce((a, b) => a + (b.totalTime - b.renderingTime), 0) /
-          d3timing.length;
-
-        return [totalAverageTime, layoutAverageTime, renderAvergaeTime];
-      }
-
-      function simulationUpdate() {
-        let currentTime = performance.now();
-        let dt = currentTime - lastTime;
-        iterationCount++;
-        console.log(iterationCount);
-        iterationMeasure[iterationCount] = dt;
-        lastTime = currentTime;
-
-        let renderingStartTime = performance.now();
-        context.save();
-        context.strokeStyle = "#aaa";
-        context.clearRect(0, 0, width, height);
-
-        data.edges.forEach(function (d) {
-          context.beginPath();
-          context.moveTo(d.source.x, d.source.y);
-          context.lineTo(d.target.x, d.target.y);
-          context.stroke();
-        });
-
-        data.nodes.forEach(function (d, i) {
-          context.beginPath();
-          context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
-          context.fillStyle = d.col ? "red" : "black";
-          context.fill();
-        });
-        context.restore();
-        let renderingEndTime = performance.now();
-        let renderTime = renderingEndTime - renderingStartTime;
-        self.setState({
-          d3timing: [
-            ...self.state.d3timing,
-            {
-              iterationCount: iterationCount,
-              totalTime: dt,
-              renderingTime: renderTime,
-            },
-          ],
-        });
-      }
-    });
+    );
   }
 
   async runBenchmark(event: React.MouseEvent) {
@@ -371,6 +426,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     return generatedData;
   }
 
+  
   generateRandomGraph(nodeCount, edgeCount) {
     var nodes: Array<number> = [];
     var edges: Array<number> = [];

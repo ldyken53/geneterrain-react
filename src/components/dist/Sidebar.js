@@ -165,7 +165,7 @@ var Sidebar = /** @class */ (function (_super) {
     // }
     Sidebar.prototype.d3TimingStudy = function (event) {
         return __awaiter(this, void 0, void 0, function () {
-            var self, width, height, iterationCount, iterationMeasure, startTime, lastTime, totalTime, layoutCanvas, layoutDiv, context;
+            var self, width, height, iterationCount, iterationMeasure, startTime, lastTime, totalTime;
             return __generator(this, function (_a) {
                 event.preventDefault();
                 self = this;
@@ -173,24 +173,25 @@ var Sidebar = /** @class */ (function (_super) {
                 height = 800;
                 iterationCount = 0;
                 iterationMeasure = {};
-                layoutCanvas = d3
-                    .select("#graphDiv")
-                    .append("canvas")
-                    .attr("width", width + "px")
-                    .attr("height", height + "px")
-                    .node();
-                layoutDiv = document.getElementById("#graphDiv");
-                if (layoutDiv) {
-                    layoutDiv.style.color = "white";
-                }
-                context = layoutCanvas.getContext("2d");
-                if (!context) {
-                    console.log("no 2d context found");
-                    return [2 /*return*/];
-                }
-                context.fillStyle = "white";
+                // var layoutCanvas = d3
+                //   .select("#graphDiv")
+                //   .append("canvas")
+                //   .attr("width", width + "px")
+                //   .attr("height", height + "px")
+                //   .node();
+                // let layoutDiv = document.getElementById("#graphDiv");
+                // if (layoutDiv) {
+                //   layoutDiv.style.color = "white";
+                // }
+                // let context = layoutCanvas!.getContext("2d")!;
+                // if (!context) {
+                //   console.log("no 2d context found");
+                //   return;
+                // }
+                // context.fillStyle = "white";
                 d3.json("./sample_test_data/sample_data10000_200000.json").then(function (data) {
                     console.log(data);
+                    var timeToFormatData = 0;
                     startTime = performance.now();
                     lastTime = startTime;
                     var simulation = d3
@@ -203,12 +204,46 @@ var Sidebar = /** @class */ (function (_super) {
                     function initGraph(data) {
                         simulation.on("tick", simulationUpdate);
                         simulation.on("end", function () {
-                            var currentTime = performance.now();
-                            totalTime = currentTime - startTime;
+                            var currentTime2 = performance.now();
+                            totalTime = currentTime2 - startTime - timeToFormatData;
                             var _a = findAverage(self.state.d3timing), totalAverageTime = _a[0], layoutAverageTime = _a[1], renderAverageTime = _a[2];
                             console.log("totalAverageTime", totalAverageTime, "layoutAverageTime", layoutAverageTime, "averageTimetoRender", renderAverageTime);
                             console.log("totalTime", totalTime);
                         });
+                    }
+                    function formatData(nodesList, edgesList) {
+                        var nodes = [];
+                        var edges = [];
+                        var data = {
+                            nodes: nodes,
+                            edges: edges
+                        };
+                        var nodeCount = nodesList.length;
+                        data.nodes = Array(4 * nodeCount).fill(0);
+                        var maxX = 0;
+                        var maxY = 0;
+                        for (var i = 0; i < 4 * nodeCount; i = i + 4) {
+                            data.nodes[i] = 0;
+                            var nodeX = Math.abs(nodesList[i / 4].x);
+                            var nodeY = Math.abs(nodesList[i / 4].y);
+                            if (nodeX > maxX) {
+                                maxX = nodeX;
+                            }
+                            if (nodeY > maxY) {
+                                maxY = nodeY;
+                            }
+                            data.nodes[i + 3] = 1;
+                        }
+                        for (var i = 0; i < 4 * nodeCount; i = i + 4) {
+                            data.nodes[i + 1] = nodesList[i / 4].x / maxX;
+                            data.nodes[i + 2] = nodesList[i / 4].y / maxY;
+                        }
+                        data.edges = Array(2 * nodeCount * 20).fill(0);
+                        for (var i = 0; i < 2 * 20 * nodeCount; i = i + 2) {
+                            data.edges[i] = parseInt(edgesList[i / 2].source.name);
+                            data.edges[i + 1] = parseInt(edgesList[i / 2].target.name);
+                        }
+                        return data;
                     }
                     function findAverage(d3timing) {
                         var totalAverageTime = d3timing.reduce(function (a, b) {
@@ -221,30 +256,37 @@ var Sidebar = /** @class */ (function (_super) {
                     }
                     function simulationUpdate() {
                         var currentTime = performance.now();
-                        var dt = currentTime - lastTime;
+                        var newData = formatData(data.nodes, data.edges);
+                        var formatStopTime = performance.now();
+                        var localtimeToFormatData = formatStopTime - currentTime;
+                        timeToFormatData += localtimeToFormatData;
+                        var renderingStartTime = performance.now();
+                        // context.save();
+                        // context.strokeStyle = "#aaa";
+                        // context.clearRect(0, 0, width, height);
+                        // data.edges.forEach(function (d) {
+                        //   context.beginPath();
+                        //   context.moveTo(d.source.x, d.source.y);
+                        //   context.lineTo(d.target.x, d.target.y);
+                        //   context.stroke();
+                        // });
+                        // data.nodes.forEach(function (d, i) {
+                        //   context.beginPath();
+                        //   context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
+                        //   context.fillStyle = d.col ? "red" : "black";
+                        //   context.fill();
+                        // });
+                        self.setState({ nodeData: newData.nodes });
+                        self.props.setNodeEdgeData(newData.nodes, newData.edges);
+                        //context.restore();
+                        var renderingEndTime = performance.now();
+                        var renderTime = renderingEndTime - renderingStartTime;
+                        var endTime = performance.now();
+                        // lastTime = currentTime;
+                        var dt = endTime - currentTime - localtimeToFormatData;
                         iterationCount++;
                         console.log(iterationCount);
                         iterationMeasure[iterationCount] = dt;
-                        lastTime = currentTime;
-                        var renderingStartTime = performance.now();
-                        context.save();
-                        context.strokeStyle = "#aaa";
-                        context.clearRect(0, 0, width, height);
-                        data.edges.forEach(function (d) {
-                            context.beginPath();
-                            context.moveTo(d.source.x, d.source.y);
-                            context.lineTo(d.target.x, d.target.y);
-                            context.stroke();
-                        });
-                        data.nodes.forEach(function (d, i) {
-                            context.beginPath();
-                            context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
-                            context.fillStyle = d.col ? "red" : "black";
-                            context.fill();
-                        });
-                        context.restore();
-                        var renderingEndTime = performance.now();
-                        var renderTime = renderingEndTime - renderingStartTime;
                         self.setState({
                             d3timing: __spreadArrays(self.state.d3timing, [
                                 {
