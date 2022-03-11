@@ -256,36 +256,19 @@ var Sidebar = /** @class */ (function (_super) {
                     }
                     function simulationUpdate() {
                         var currentTime = performance.now();
+                        var formatStartTime = performance.now();
                         var newData = formatData(data.nodes, data.edges);
                         var formatStopTime = performance.now();
-                        var localtimeToFormatData = formatStopTime - currentTime;
+                        var localtimeToFormatData = formatStopTime - formatStartTime;
                         timeToFormatData += localtimeToFormatData;
-                        var renderingStartTime = performance.now();
-                        // context.save();
-                        // context.strokeStyle = "#aaa";
-                        // context.clearRect(0, 0, width, height);
-                        // data.edges.forEach(function (d) {
-                        //   context.beginPath();
-                        //   context.moveTo(d.source.x, d.source.y);
-                        //   context.lineTo(d.target.x, d.target.y);
-                        //   context.stroke();
-                        // });
-                        // data.nodes.forEach(function (d, i) {
-                        //   context.beginPath();
-                        //   context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
-                        //   context.fillStyle = d.col ? "red" : "black";
-                        //   context.fill();
-                        // });
                         self.setState({ nodeData: newData.nodes });
                         self.props.setNodeEdgeData(newData.nodes, newData.edges);
-                        //context.restore();
-                        var renderingEndTime = performance.now();
-                        var renderTime = renderingEndTime - renderingStartTime;
+                        var renderTime = 0;
                         var endTime = performance.now();
                         // lastTime = currentTime;
                         var dt = endTime - currentTime - localtimeToFormatData;
                         iterationCount++;
-                        console.log(iterationCount);
+                        console.log(iterationCount, dt);
                         iterationMeasure[iterationCount] = dt;
                         self.setState({
                             d3timing: __spreadArrays(self.state.d3timing, [

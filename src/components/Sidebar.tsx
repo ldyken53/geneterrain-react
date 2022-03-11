@@ -302,44 +302,24 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
         function simulationUpdate() {
           let currentTime = performance.now();
+
+          let formatStartTime = performance.now();
           let newData = formatData(data.nodes, data.edges);
           let formatStopTime = performance.now();
-          let localtimeToFormatData = formatStopTime - currentTime;
+          let localtimeToFormatData = formatStopTime - formatStartTime;
           timeToFormatData += localtimeToFormatData;
-
-          let renderingStartTime = performance.now();
-          // context.save();
-          // context.strokeStyle = "#aaa";
-          // context.clearRect(0, 0, width, height);
-
-          // data.edges.forEach(function (d) {
-          //   context.beginPath();
-          //   context.moveTo(d.source.x, d.source.y);
-          //   context.lineTo(d.target.x, d.target.y);
-          //   context.stroke();
-          // });
-
-          // data.nodes.forEach(function (d, i) {
-          //   context.beginPath();
-          //   context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
-          //   context.fillStyle = d.col ? "red" : "black";
-          //   context.fill();
-          // });
 
           self.setState({ nodeData: newData.nodes });
           self.props.setNodeEdgeData(newData.nodes, newData.edges);
-          //context.restore();
 
-          let renderingEndTime = performance.now();
-          let renderTime = renderingEndTime - renderingStartTime;
+          let renderTime = 0;
 
           let endTime = performance.now();
           // lastTime = currentTime;
           let dt = endTime - currentTime - localtimeToFormatData;
           iterationCount++;
-          console.log(iterationCount);
-          iterationMeasure[iterationCount] = dt;
-
+          console.log(iterationCount, dt);
+          iterationMeasure[iterationCount] = dt;          
           self.setState({
             d3timing: [
               ...self.state.d3timing,
