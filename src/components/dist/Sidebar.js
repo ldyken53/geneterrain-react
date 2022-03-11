@@ -189,7 +189,7 @@ var Sidebar = /** @class */ (function (_super) {
                 //   return;
                 // }
                 // context.fillStyle = "white";
-                d3.json("./sample_test_data/sample_data10000_200000.json").then(function (data) {
+                d3.json("./sample_test_data/sample_data2000_40000.json").then(function (data) {
                     console.log(data);
                     var timeToFormatData = 0;
                     startTime = performance.now();
@@ -202,14 +202,27 @@ var Sidebar = /** @class */ (function (_super) {
                         .alphaDecay(0.077);
                     initGraph(data);
                     function initGraph(data) {
+                        var _this = this;
                         simulation.on("tick", simulationUpdate);
-                        simulation.on("end", function () {
-                            var currentTime2 = performance.now();
-                            totalTime = currentTime2 - startTime - timeToFormatData;
-                            var _a = findAverage(self.state.d3timing), totalAverageTime = _a[0], layoutAverageTime = _a[1], renderAverageTime = _a[2];
-                            console.log("totalAverageTime", totalAverageTime, "layoutAverageTime", layoutAverageTime, "averageTimetoRender", renderAverageTime);
-                            console.log("totalTime", totalTime);
-                        });
+                        simulation.on("end", function () { return __awaiter(_this, void 0, void 0, function () {
+                            var extraTime, extraEnd, currentTime2, _a, totalAverageTime, layoutAverageTime, renderAverageTime;
+                            return __generator(this, function (_b) {
+                                switch (_b.label) {
+                                    case 0:
+                                        extraTime = performance.now();
+                                        return [4 /*yield*/, self.props.setNodeEdgeData(self.state.nodeData, self.state.edgeData)];
+                                    case 1:
+                                        _b.sent();
+                                        extraEnd = performance.now();
+                                        currentTime2 = performance.now();
+                                        totalTime = currentTime2 - startTime;
+                                        _a = findAverage(self.state.d3timing), totalAverageTime = _a[0], layoutAverageTime = _a[1], renderAverageTime = _a[2];
+                                        console.log("totalAverageTime", totalAverageTime, "layoutAverageTime", layoutAverageTime, "averageTimetoRender", renderAverageTime);
+                                        console.log("totalTime", totalTime - timeToFormatData);
+                                        return [2 /*return*/];
+                                }
+                            });
+                        }); });
                     }
                     function formatData(nodesList, edgesList) {
                         var nodes = [];
@@ -255,29 +268,39 @@ var Sidebar = /** @class */ (function (_super) {
                         return [totalAverageTime, layoutAverageTime, renderAvergaeTime];
                     }
                     function simulationUpdate() {
-                        var currentTime = performance.now();
-                        var formatStartTime = performance.now();
-                        var newData = formatData(data.nodes, data.edges);
-                        var formatStopTime = performance.now();
-                        var localtimeToFormatData = formatStopTime - formatStartTime;
-                        timeToFormatData += localtimeToFormatData;
-                        self.setState({ nodeData: newData.nodes });
-                        self.props.setNodeEdgeData(newData.nodes, newData.edges);
-                        var renderTime = 0;
-                        var endTime = performance.now();
-                        // lastTime = currentTime;
-                        var dt = endTime - currentTime - localtimeToFormatData;
-                        iterationCount++;
-                        console.log(iterationCount, dt);
-                        iterationMeasure[iterationCount] = dt;
-                        self.setState({
-                            d3timing: __spreadArrays(self.state.d3timing, [
-                                {
-                                    iterationCount: iterationCount,
-                                    totalTime: dt,
-                                    renderingTime: renderTime
-                                },
-                            ])
+                        return __awaiter(this, void 0, void 0, function () {
+                            var currentTime, formatStartTime, newData, formatStopTime, localtimeToFormatData, renderTime, endTime, dt;
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0:
+                                        currentTime = performance.now();
+                                        formatStartTime = performance.now();
+                                        newData = formatData(data.nodes, data.edges);
+                                        formatStopTime = performance.now();
+                                        localtimeToFormatData = formatStopTime - formatStartTime;
+                                        timeToFormatData += localtimeToFormatData;
+                                        self.setState({ nodeData: newData.nodes });
+                                        return [4 /*yield*/, self.props.setNodeEdgeData(newData.nodes, newData.edges)];
+                                    case 1:
+                                        _a.sent();
+                                        renderTime = 0;
+                                        endTime = performance.now();
+                                        dt = endTime - currentTime - localtimeToFormatData;
+                                        iterationCount++;
+                                        console.log(iterationCount, dt);
+                                        iterationMeasure[iterationCount] = dt;
+                                        self.setState({
+                                            d3timing: __spreadArrays(self.state.d3timing, [
+                                                {
+                                                    iterationCount: iterationCount,
+                                                    totalTime: dt,
+                                                    renderingTime: renderTime
+                                                },
+                                            ])
+                                        });
+                                        return [2 /*return*/];
+                                }
+                            });
                         });
                     }
                 });

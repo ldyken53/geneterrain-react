@@ -212,7 +212,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
     // context.fillStyle = "white";
 
-    d3.json("./sample_test_data/sample_data10000_200000.json").then(
+    d3.json("./sample_test_data/sample_data2000_40000.json").then(
       (data: any) => {
         console.log(data);
         let timeToFormatData = 0;
@@ -231,7 +231,10 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           simulation.on("tick", simulationUpdate);
           simulation.on("end", async () => {
             let extraTime = performance.now();
-            await self.props.setNodeEdgeData(self.state.nodeData, self.state.edgeData);
+            await self.props.setNodeEdgeData(
+              self.state.nodeData,
+              self.state.edgeData
+            );
             let extraEnd = performance.now();
             let currentTime2 = performance.now();
             totalTime = currentTime2 - startTime;
@@ -245,7 +248,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
               "averageTimetoRender",
               renderAverageTime
             );
-            console.log("totalTime", totalTime);
+            console.log("totalTime", totalTime - timeToFormatData);
           });
         }
 
@@ -319,10 +322,10 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
           let endTime = performance.now();
           // lastTime = currentTime;
-          let dt = endTime - currentTime;
+          let dt = endTime - currentTime - localtimeToFormatData;
           iterationCount++;
           console.log(iterationCount, dt);
-          iterationMeasure[iterationCount] = dt;          
+          iterationMeasure[iterationCount] = dt;
           self.setState({
             d3timing: [
               ...self.state.d3timing,
@@ -334,7 +337,6 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             ],
           });
         }
-
       }
     );
   }
