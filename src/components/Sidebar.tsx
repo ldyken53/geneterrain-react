@@ -21,7 +21,7 @@ const headerForLayout = [
 ];
 
 type SidebarProps = {
-  setNodeEdgeData: (nodeData: Array<number>, edgeData: Array<number>) => void;
+  setNodeEdgeData: (nodeData: Array<number>, edgeData: Array<number>) => Promise<void>;
   setWidthFactor: (widthFactor: number) => void;
   setPeakValue: (value: number) => void;
   setValleyValue: (value: number) => void;
@@ -229,9 +229,12 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
         function initGraph(data) {
           simulation.on("tick", simulationUpdate);
-          simulation.on("end", () => {
+          simulation.on("end", async () => {
+            let extraTime = performance.now();
+            await self.props.setNodeEdgeData(self.state.nodeData, self.state.edgeData);
+            let extraEnd = performance.now();
             let currentTime2 = performance.now();
-            totalTime = currentTime2 - startTime - timeToFormatData;
+            totalTime = currentTime2 - startTime;
             const [totalAverageTime, layoutAverageTime, renderAverageTime] =
               findAverage(self.state.d3timing);
             console.log(
@@ -300,7 +303,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           return [totalAverageTime, layoutAverageTime, renderAvergaeTime];
         }
 
-        function simulationUpdate() {
+        async function simulationUpdate() {
           let currentTime = performance.now();
 
           let formatStartTime = performance.now();
@@ -310,13 +313,13 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           timeToFormatData += localtimeToFormatData;
 
           self.setState({ nodeData: newData.nodes });
-          self.props.setNodeEdgeData(newData.nodes, newData.edges);
+          await self.props.setNodeEdgeData(newData.nodes, newData.edges);
 
           let renderTime = 0;
 
           let endTime = performance.now();
           // lastTime = currentTime;
-          let dt = endTime - currentTime - localtimeToFormatData;
+          let dt = endTime - currentTime;
           iterationCount++;
           console.log(iterationCount, dt);
           iterationMeasure[iterationCount] = dt;          

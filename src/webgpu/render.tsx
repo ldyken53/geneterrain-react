@@ -14,6 +14,7 @@ class Renderer {
   public edgeBindGroup: GPUBindGroup | null = null;
   public nodeDataBuffer: GPUBuffer | null = null;
   public edgeDataBuffer: GPUBuffer | null = null;
+  public testFrame: (() => Promise<void>) | null = null;
   public colorTexture: GPUTexture | null = null;
   public viewBoxBuffer: GPUBuffer | null = null;
   public nodePipeline: GPURenderPipeline | null = null;
@@ -540,10 +541,42 @@ class Renderer {
       requestAnimationFrame(frame);
     }
 
-    requestAnimationFrame(frame);
+    this.testFrame = async () => {
+      const commandEncoder = this.device.createCommandEncoder();
+
+      const renderPassDescriptor: GPURenderPassDescriptor = {
+        colorAttachments: [
+          {
+            view,
+            resolveTarget: context.getCurrentTexture().createView(),
+            loadValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
+            storeOp: "discard" as GPUStoreOp,
+          },
+        ],
+      };
+      const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+      passEncoder.setPipeline(this.edgePipeline!);
+      passEncoder.setVertexBuffer(0, edgePositionBuffer);
+      passEncoder.setBindGroup(0, this.edgeBindGroup!);
+      passEncoder.draw(2, this.edgeLength);
+      passEncoder.setPipeline(this.nodePipeline!);
+      passEncoder.setVertexBuffer(0, nodePositionBuffer);
+      passEncoder.setBindGroup(0, this.nodeBindGroup!);
+      passEncoder.draw(6, this.nodeLength);
+      passEncoder.endPass();
+
+      device.queue.submit([commandEncoder.finish()]);
+
+      await device.queue.onSubmittedWorkDone();
+      // await device.queue.onSubmittedWorkDone();
+    }
+
+    // requestAnimationFrame(frame);
   }
 
-  setNodeEdgeData(nodeData: Array<number>, edgeData: Array<number>) {
+  
+
+  async setNodeEdgeData(nodeData: Array<number>, edgeData: Array<number>) {
     this.nodeDataBuffer!.destroy();
     this.edgeDataBuffer!.destroy();
     this.nodeDataBuffer = this.device.createBuffer({
@@ -602,6 +635,7 @@ class Renderer {
     });
     this.edgeLength = edgeData.length;
     this.nodeLength = nodeData.length / 4;
+    await this.testFrame!();
     // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
   }
 

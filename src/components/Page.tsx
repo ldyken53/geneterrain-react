@@ -67,8 +67,8 @@ class Page extends React.Component<{}, PageState> {
         });
     }
 
-    setNodeEdgeData(nodeData : Array<number>, edgeData : Array<number>) {
-        this.state.renderer!.setNodeEdgeData(nodeData, edgeData);
+    async setNodeEdgeData(nodeData : Array<number>, edgeData : Array<number>) {
+        await this.state.renderer!.setNodeEdgeData(nodeData, edgeData);
     }
 
     setWidthFactor(widthFactor : number) {
