@@ -1,16 +1,16 @@
 // normalize terrain wgsl
 struct Uniforms {
-  image_width : u32;
-  image_height : u32;
-  nodes_length : u32;
-  width_factor : f32;
+  image_width : u32,
+  image_height : u32,
+  nodes_length : u32,
+  width_factor : f32,
 };
 struct Pixels {
-    pixels : array<f32>;
+    pixels : array<f32>,
 };
 struct Range {
-    x : i32;
-    y : i32;
+    x : i32,
+    y : i32,
 };
 
 @group(0) @binding(0) var<storage, write> pixels : Pixels;

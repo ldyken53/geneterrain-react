@@ -1,34 +1,34 @@
 struct Node {
-    value : f32;
-    x : f32;
-    y : f32;
-    size : f32;
+    value : f32,
+    x : f32,
+    y : f32,
+    size : f32,
 };
 struct Nodes {
-    nodes : array<Node>;
+    nodes : array<Node>,
 };
 struct Rectangle {
-    x : f32;
-    y : f32;
-    w : f32;
-    h : f32;
+    x : f32,
+    y : f32,
+    w : f32,
+    h : f32,
 };
 struct QuadTree {
-    boundary : Rectangle;
+    boundary : Rectangle,
     // In order NW, NE, SW, SE
-    pointers : vec4<f32>;
-    CoM : vec2<f32>;
-    mass : f32;
-    test : f32;
+    pointers : vec4<f32>,
+    CoM : vec2<f32>,
+    mass : f32,
+    test : f32,
 };
 struct Uniforms {
-    nodes_length : u32;
-    edges_length : u32;
-    cooling_factor : f32;
-    ideal_length : f32;
+    nodes_length : u32,
+    edges_length : u32,
+    cooling_factor : f32,
+    ideal_length : f32,
 };
 struct QuadTrees {
-    quads : array<QuadTree>;
+    quads : array<QuadTree>,
 }
 
 @group(0) @binding(0) var<storage, read> nodes : Nodes;

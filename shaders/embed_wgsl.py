@@ -15,7 +15,10 @@ shaders = [
     "compute_attract_forces.wgsl",
     "apply_forces.wgsl",
     "create_adjacency_matrix.wgsl",
-    "create_quadtree.wgsl"
+    "create_quadtree.wgsl",
+    "create_sourcelist.wgsl",
+    "create_targetlist.wgsl",
+    "compute_attractive_new.wgsl"
 ]
 compiled_shaders = ""
 

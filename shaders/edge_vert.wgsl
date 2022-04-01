@@ -1,28 +1,22 @@
 //this builtin(position) clip_position tells that clip_position is the value we want to use for our vertex position or clip position
 //it's not needed to create a struct, we could just do [[builtin(position)]] clipPosition
 struct VertexOutput{
-    @builtin(position) clip_position: vec4<f32>;
+    @builtin(position) clip_position: vec4<f32>,
 };
 struct Uniforms {
-  view_box : vec4<f32>;
+  view_box : vec4<f32>,
 };
 struct Node {
-    value : f32;
-    x : f32;
-    y : f32;
-    size : f32;
+    value : f32,
+    x : f32,
+    y : f32,
+    size : f32,
 };
 struct Nodes {
-    nodes : array<Node>;
+    nodes : array<Node>,
 };
-// struct Edge {
-//     source: u32;
-//     target: u32;
-//     padding1: u32;
-//     padding2: u32;
-// };
 struct Edges {
-    edges : array<u32>;
+    edges : array<u32>,
 };
 
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;

@@ -1,14 +1,14 @@
 // Fragment shader
 struct Pixels {
-    pixels : array<f32>;
+    pixels : array<f32>,
 };
 struct Uniforms {
-    peak_value : f32;
-    valley_value : f32;
+    peak_value : f32,
+    valley_value : f32,
 };
 struct Image {
-    width : u32;
-    height : u32;
+    width : u32,
+    height : u32,
 };
 
 @group(0) @binding(0) var myTexture: texture_2d<f32>;
