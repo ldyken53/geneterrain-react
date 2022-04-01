@@ -5,7 +5,7 @@ import { Matrix, matrix, subtract, eigs, column, min, max, index, sparse } from 
 import XMLWriter from 'xml-writer';
 
 type SidebarProps = {
-  setNodeEdgeData: (nodeData : Array<number>, edgeData : Array<number>) => void,
+  setNodeEdgeData: (nodeData : Array<number>, edgeData : Array<number>, sourceEdges : Array<number>, targetEdges : Array<number>) => void,
   setWidthFactor: (widthFactor : number) => void,
   setPeakValue: (value : number) => void,
   setValleyValue: (value : number) => void,
@@ -24,6 +24,8 @@ type SidebarProps = {
 type SidebarState = {
   nodeData: Array<number>,
   edgeData: Array<number>,
+  sourceEdges: Array<number>,
+  targetEdges: Array<number>,
   laplacian: Matrix,
   adjacencyMatrix: Array<Array<number>>,
   e: {},
@@ -45,7 +47,7 @@ type Graph = {
 class Sidebar extends React.Component<SidebarProps, SidebarState> {
     constructor(props) {
       super(props);
-      this.state = {nodeData: [], edgeData: [], laplacian: sparse([]), adjacencyMatrix: [], e: {}, jsonFormat: true};
+      this.state = {nodeData: [], edgeData: [], sourceEdges: [], targetEdges: [], laplacian: sparse([]), adjacencyMatrix: [], e: {}, jsonFormat: true};
   
       this.handleSubmit = this.handleSubmit.bind(this);
       this.readFiles = this.readFiles.bind(this);
@@ -53,7 +55,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
   
     handleSubmit(event) {
       event.preventDefault();
-      this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
+      this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData, this.state.sourceEdges, this.state.targetEdges);
     }
 
     readFiles(event : React.ChangeEvent<HTMLInputElement>) {
@@ -128,6 +130,8 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       const jsonReader = new FileReader();
       var nodeData : Array<number> = [];
       var edgeData : Array<number> = [];
+      var sourceEdges : Array<number> = [];
+      var targetEdges : Array<number> = [];
       jsonReader.onload = (event) => {
         var graph : Graph = JSON.parse(jsonReader.result as string);
         console.log(graph);
@@ -143,28 +147,42 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           var target = graph.edges[i].target;
           edgeData.push(source, target);
         }
-        this.setState({nodeData: nodeData, edgeData: edgeData});
+        graph.edges.sort(function(a,b) {return (a.source > b.source) ? 1 : ((b.source > a.source) ? -1 : 0);} );
+        for (var i = 0; i < graph.edges.length; i++) {
+          var source = graph.edges[i].source;
+          var target = graph.edges[i].target;
+          sourceEdges.push(source, target);
+        }
+        console.log(sourceEdges);
+        graph.edges.sort(function(a,b) {return (a.target > b.target) ? 1 : ((b.target > a.target) ? -1 : 0);} );
+        for (var i = 0; i < graph.edges.length; i++) {
+          var source = graph.edges[i].source;
+          var target = graph.edges[i].target;
+          targetEdges.push(source, target);
+        }
+        console.log(graph.edges);
+        this.setState({nodeData: nodeData, edgeData: edgeData, sourceEdges: sourceEdges, targetEdges: targetEdges});
       };
       jsonReader.readAsText(files[0]);
     }
 
-    applySpectral() {
-      var e = eigs(this.state.laplacian);
-      console.log(e);
-      var nodeData = this.state.nodeData;
-      var x = column(e.vectors, 1) as Matrix;
-      var y = column(e.vectors, 2) as Matrix;
-      var x_max = max(x);
-      var y_max = max(y);
-      var x_min = min(x);
-      var y_min = min(y);
-      for (var i = 0; i < nodeData.length / 4; i++) {
-        nodeData[i * 4 + 1] = (x.get([i, 0]) - x_min) / (x_max - x_min);
-        nodeData[i * 4 + 2] = (y.get([i, 0]) - y_min) / (y_max - y_min);
-      }
-      this.setState({nodeData: nodeData});
-      this.props.setNodeEdgeData(nodeData, this.state.edgeData);
-    }
+    // applySpectral() {
+    //   var e = eigs(this.state.laplacian);
+    //   console.log(e);
+    //   var nodeData = this.state.nodeData;
+    //   var x = column(e.vectors, 1) as Matrix;
+    //   var y = column(e.vectors, 2) as Matrix;
+    //   var x_max = max(x);
+    //   var y_max = max(y);
+    //   var x_min = min(x);
+    //   var y_min = min(y);
+    //   for (var i = 0; i < nodeData.length / 4; i++) {
+    //     nodeData[i * 4 + 1] = (x.get([i, 0]) - x_min) / (x_max - x_min);
+    //     nodeData[i * 4 + 2] = (y.get([i, 0]) - y_min) / (y_max - y_min);
+    //   }
+    //   this.setState({nodeData: nodeData});
+    //   this.props.setNodeEdgeData(nodeData, this.state.edgeData);
+    // }
 
     onSaveXML() {
       var xw = new XMLWriter(true);
@@ -253,9 +271,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             Save Terrain
           </Button>
           <br/>
-          <Button onClick={(e) => this.applySpectral()}>
+          {/* <Button onClick={(e) => this.applySpectral()}>
             Apply Spectral Layout
-          </Button>
+          </Button> */}
           <br/>
           <Button onClick={(e) => this.props.runForceDirected()}>
             Run Force Directed Layout

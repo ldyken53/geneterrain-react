@@ -15,6 +15,8 @@ class Renderer {
   public edgeBindGroup : GPUBindGroup | null = null;
   public nodeDataBuffer : GPUBuffer | null = null;
   public edgeDataBuffer : GPUBuffer | null = null;
+  public sourceEdgeDataBuffer : GPUBuffer | null = null;
+  public targetEdgeDataBuffer : GPUBuffer | null = null;
   public colorTexture : GPUTexture | null = null;
   public viewBoxBuffer : GPUBuffer | null = null;
   public nodePipeline : GPURenderPipeline | null = null;
@@ -457,7 +459,7 @@ class Renderer {
 
   }
 
-  setNodeEdgeData(nodeData : Array<number>, edgeData : Array<number>) {
+  setNodeEdgeData(nodeData : Array<number>, edgeData : Array<number>, sourceEdges : Array<number>, targetEdges : Array<number>) {
     // function randn_bm(mean, sigma) {
     //   var u = 0, v = 0;
     //   while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
@@ -542,6 +544,20 @@ class Renderer {
     this.edgeLength = edgeData.length;
     console.log(this.edgeLength);
     this.nodeLength = nodeData.length / 4;
+    this.sourceEdgeDataBuffer = this.device.createBuffer({
+      size: edgeData.length * 4,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
+      mappedAtCreation: true
+    });
+    new Uint32Array(this.sourceEdgeDataBuffer.getMappedRange()).set(sourceEdges);
+    this.sourceEdgeDataBuffer.unmap();
+    this.targetEdgeDataBuffer = this.device.createBuffer({
+      size: edgeData.length * 4,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
+      mappedAtCreation: true
+    });
+    new Uint32Array(this.targetEdgeDataBuffer.getMappedRange()).set(targetEdges);
+    this.targetEdgeDataBuffer.unmap();
     // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
   }
 
@@ -577,7 +593,11 @@ class Renderer {
   }
 
   async runForceDirected() {
-    this.forceDirected!.runForces(this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 10000, 100, this.iterRef);
+    this.forceDirected!.runForces(
+      this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, 
+      this.coolingFactor, this.idealLength, 10000, 100, this.iterRef,
+      this.sourceEdgeDataBuffer, this.targetEdgeDataBuffer
+    );
   }
 
   toggleTerrainLayer() {

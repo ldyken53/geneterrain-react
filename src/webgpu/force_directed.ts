@@ -6,6 +6,9 @@ import {
     create_quadtree,
     compute_attract_forces,
     compute_forcesBH,
+    compute_attractive_new,
+    create_targetlist,
+    create_sourcelist,
 } from './wgsl';
 
 class ForceDirected {
@@ -20,6 +23,9 @@ class ForceDirected {
     public device: GPUDevice;
     public createMatrixPipeline : GPUComputePipeline;
     public createQuadTreePipeline : GPUComputePipeline;
+    public createSourceListPipeline : GPUComputePipeline;
+    public createTargetListPipeline : GPUComputePipeline;
+    public computeAttractiveNewPipeline : GPUComputePipeline;
     public computeForcesPipeline: GPUComputePipeline;
     public computeForcesBHPipeline: GPUComputePipeline;
     public computeAttractForcesPipeline: GPUComputePipeline;
@@ -79,6 +85,33 @@ class ForceDirected {
             },
         });
 
+        this.createSourceListPipeline = device.createComputePipeline({
+            compute: {
+                module: device.createShaderModule({
+                    code: create_sourcelist
+                }),
+                entryPoint: "main",
+            },
+        });
+
+        this.createTargetListPipeline = device.createComputePipeline({
+            compute: {
+                module: device.createShaderModule({
+                    code: create_targetlist
+                }),
+                entryPoint: "main",
+            },
+        });
+
+        this.computeAttractiveNewPipeline = device.createComputePipeline({
+            compute: {
+                module: device.createShaderModule({
+                    code: compute_attractive_new
+                }),
+                entryPoint: "main",
+            },
+        });
+
         this.computeForcesPipeline = device.createComputePipeline({
             compute: {
                 module: device.createShaderModule({
@@ -129,7 +162,8 @@ class ForceDirected {
         coolingFactor = this.coolingFactor, l = 0.03, 
         iterationCount = this.iterationCount, 
         threshold = this.threshold,
-        iterRef
+        iterRef,
+        sourceEdgeBuffer, targetEdgeBuffer
     ) {
         if (nodeLength == 0 || edgeLength == 0) {
             return;
@@ -241,6 +275,105 @@ class ForceDirected {
         //     size: quadTreeLength,
         //     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         // });
+        var sourceListBuffer = this.device.createBuffer({
+            size: edgeLength * 2,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+        });
+        var targetListBuffer = this.device.createBuffer({
+            size: edgeLength * 2,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+        });
+        var edgeInfoBuffer = this.device.createBuffer({
+            size: nodeLength * 4 * 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+        });
+        var createSourceListBindGroup = this.device.createBindGroup({
+            layout: this.createSourceListPipeline.getBindGroupLayout(0),
+            entries: [
+                {
+                    binding: 0,
+                    resource: {
+                        buffer: sourceEdgeBuffer,
+                    }
+                },
+                {
+                    binding: 1,
+                    resource: {
+                        buffer: edgeInfoBuffer,
+                    }
+                },
+                {
+                    binding: 2,
+                    resource: {
+                        buffer: sourceListBuffer,
+                    },
+                },
+                {
+                    binding: 3,
+                    resource: {
+                        buffer: this.paramsBuffer
+                    }
+                }
+            ]
+        });
+        var createTargetListBindGroup = this.device.createBindGroup({
+            layout: this.createTargetListPipeline.getBindGroupLayout(0),
+            entries: [
+                {
+                    binding: 0,
+                    resource: {
+                        buffer: targetEdgeBuffer,
+                    }
+                },
+                {
+                    binding: 1,
+                    resource: {
+                        buffer: edgeInfoBuffer,
+                    }
+                },
+                {
+                    binding: 2,
+                    resource: {
+                        buffer: targetListBuffer,
+                    },
+                },
+                {
+                    binding: 3,
+                    resource: {
+                        buffer: this.paramsBuffer
+                    }
+                }
+            ]
+        });
+        this.device.queue.submit([commandEncoder.finish()]);
+        var commandEncoder = this.device.createCommandEncoder();
+        // Run create source and target lists pass
+        var pass = commandEncoder.beginComputePass();
+        pass.setBindGroup(0, createSourceListBindGroup);
+        pass.setPipeline(this.createSourceListPipeline);
+        pass.dispatch(1, 1, 1);
+        pass.setBindGroup(0, createTargetListBindGroup);
+        pass.setPipeline(this.createTargetListPipeline);
+        pass.dispatch(1, 1, 1);
+        pass.endPass();
+        const gpuReadBuffer = this.device.createBuffer({
+            size: nodeLength * 4 * 4,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+        });
+        commandEncoder.copyBufferToBuffer(
+            edgeInfoBuffer /* source buffer */ ,
+            0 /* source offset */ ,
+            gpuReadBuffer /* destination buffer */ ,
+            0 /* destination offset */ ,
+            nodeLength * 4 * 4 /* size */
+        );
+        this.device.queue.submit([commandEncoder.finish()]);
+        // await this.device.queue.onSubmittedWorkDone();
+        // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
+        // const arrayBuffer = gpuReadBuffer.getMappedRange();
+        // var list = new Uint32Array(arrayBuffer);
+        // console.log(list);
+        // return;
 
         var iterationTimes : Array<number> = [];
         var totalStart = performance.now();
@@ -407,28 +540,77 @@ class ForceDirected {
                 ],
             });
 
+            // var attractBindGroup = this.device.createBindGroup({
+            //     layout: this.computeAttractForcesPipeline.getBindGroupLayout(0),
+            //     entries: [{
+            //             binding: 0,
+            //             resource: {
+            //                 buffer: this.nodeDataBuffer,
+            //             },
+            //         },
+            //         {
+            //             binding: 1,
+            //             resource: {
+            //                 buffer: this.edgeDataBuffer,
+            //             }
+            //         },
+            //         {
+            //             binding: 2,
+            //             resource: {
+            //                 buffer: this.forceDataBuffer,
+            //             }
+            //         },
+            //         {
+            //             binding: 3,
+            //             resource: {
+            //                 buffer: this.paramsBuffer,
+            //             },
+            //         },
+            //     ],
+            // });
+            // // Run attract forces pass
+            // var pass = commandEncoder.beginComputePass();
+            // pass.setBindGroup(0, attractBindGroup);
+            // pass.setPipeline(this.computeAttractForcesPipeline);
+            // pass.dispatch(1, 1, 1);      
+            // pass.endPass();
+
+            // Run attract forces pass
             var attractBindGroup = this.device.createBindGroup({
-                layout: this.computeAttractForcesPipeline.getBindGroupLayout(0),
-                entries: [{
+                layout: this.computeAttractiveNewPipeline.getBindGroupLayout(0),
+                entries: [
+                    {
                         binding: 0,
                         resource: {
-                            buffer: this.nodeDataBuffer,
+                            buffer: edgeInfoBuffer,
                         },
                     },
                     {
                         binding: 1,
                         resource: {
-                            buffer: this.edgeDataBuffer,
-                        }
+                            buffer: sourceListBuffer,
+                        },
                     },
                     {
                         binding: 2,
+                        resource: {
+                            buffer: targetListBuffer,
+                        },
+                    },
+                    {
+                        binding: 3,
                         resource: {
                             buffer: this.forceDataBuffer,
                         }
                     },
                     {
-                        binding: 3,
+                        binding: 4,
+                        resource: {
+                            buffer: this.nodeDataBuffer,
+                        }
+                    },
+                    {
+                        binding: 5,
                         resource: {
                             buffer: this.paramsBuffer,
                         },
@@ -439,9 +621,10 @@ class ForceDirected {
             // Run attract forces pass
             var pass = commandEncoder.beginComputePass();
             pass.setBindGroup(0, attractBindGroup);
-            pass.setPipeline(this.computeAttractForcesPipeline);
-            pass.dispatch(1, 1, 1);      
+            pass.setPipeline(this.computeAttractiveNewPipeline);
+            pass.dispatch(nodeLength, 1, 1);      
             pass.endPass();
+
             // this.device.queue.submit([commandEncoder.finish()]);
             // var start : number = performance.now();
             // await this.device.queue.onSubmittedWorkDone();
