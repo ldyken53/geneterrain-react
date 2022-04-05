@@ -3,7 +3,7 @@ import TerrainGenerator from './terrain_generator';
 import { display_2d_vert, display_2d_frag, node_vert, node_frag, edge_vert, edge_frag } from './wgsl';
 import { saveAs } from 'file-saver'; 
 import ForceDirected from './force_directed';
-import * as d3 from "d3";
+import axios from 'axios';
 
 class Renderer {
   public uniform2DBuffer : GPUBuffer | null = null;
@@ -558,7 +558,7 @@ class Renderer {
     });
     new Uint32Array(this.targetEdgeDataBuffer.getMappedRange()).set(targetEdges);
     this.targetEdgeDataBuffer.unmap();
-    // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
+    this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
   }
 
   setWidthFactor(widthFactor : number) {
@@ -621,7 +621,7 @@ class Renderer {
     this.colormapImage = colormapImage;
   }
 
-  async onSave() {
+  async onSave(post: boolean, id: number | null, name: string | null) {
     var height = this.outCanvasRef.current!.height;
     var width = this.outCanvasRef.current!.width;
     const gpuReadBuffer = this.device.createBuffer({
@@ -662,7 +662,22 @@ class Renderer {
       }
     }
     context!.putImageData(imgData, 0, 0);
-    this.outCanvasRef.current!.toBlob(function (b) { saveAs(b!, `terrain.png`); }, "image/png");
+    if (post) {
+      this.outCanvasRef.current!.toBlob(function (b) {
+
+          axios.post('https://discovery.informatics.uab.edu/apex/aimed/geneterrain/images', b!, {
+            headers: {
+              'p_id': id!,
+              'p_name': name!,
+              'Content-Type': "image/png"
+            }
+          }).then(function (r) {console.log(r)}).catch(function (e) {console.log(e)});
+
+
+      });
+    } else {
+      this.outCanvasRef.current!.toBlob(function (b) { saveAs(b!, `terrain.png`); console.log(b!); }, "image/png");
+    }
   }
 }
 export default Renderer;

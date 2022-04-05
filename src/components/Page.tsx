@@ -51,7 +51,8 @@ class Page extends React.Component<{}, PageState> {
         console.log(adapter);
         const device = await adapter.requestDevice({
             requiredLimits: {
-                "maxStorageBufferBindingSize": adapter.limits.maxStorageBufferBindingSize
+                "maxStorageBufferBindingSize": adapter.limits.maxStorageBufferBindingSize,
+                "maxComputeWorkgroupsPerDimension": adapter.limits.maxComputeWorkgroupsPerDimension
             }
         }); 
         var colormapImage = new Image();
@@ -171,8 +172,8 @@ class Page extends React.Component<{}, PageState> {
         this.state.renderer!.runForceDirected();
     }
 
-    onSave() {
-        this.state.renderer!.onSave();
+    onSave(post: boolean, id: number | null, name: string | null) {
+        this.state.renderer!.onSave(post, id, name);
     }
   
     render() {

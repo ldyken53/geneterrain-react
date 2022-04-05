@@ -19,7 +19,7 @@ type SidebarProps = {
   toggleTerrainLayer: () => void,
   toggleEdgeLayer: () => void,
   runForceDirected: () => void,
-  onSave: () => void,
+  onSave: (post : boolean, id: number | null, name: string | null) => void,
 }
 type SidebarState = {
   nodeData: Array<number>,
@@ -30,6 +30,8 @@ type SidebarState = {
   adjacencyMatrix: Array<Array<number>>,
   e: {},
   jsonFormat: boolean,
+  terrainID: number,
+  terrainName: string
 }
 type edge = {
   source: number,
@@ -47,15 +49,25 @@ type Graph = {
 class Sidebar extends React.Component<SidebarProps, SidebarState> {
     constructor(props) {
       super(props);
-      this.state = {nodeData: [], edgeData: [], sourceEdges: [], targetEdges: [], laplacian: sparse([]), adjacencyMatrix: [], e: {}, jsonFormat: true};
+      this.state = {
+        nodeData: [], edgeData: [], sourceEdges: [], targetEdges: [], laplacian: sparse([]), 
+        adjacencyMatrix: [], e: {}, jsonFormat: true, terrainID: 0, terrainName: "" 
+      };
   
       this.handleSubmit = this.handleSubmit.bind(this);
+      this.postImage = this.postImage.bind(this);
       this.readFiles = this.readFiles.bind(this);
     }
   
     handleSubmit(event) {
       event.preventDefault();
       this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData, this.state.sourceEdges, this.state.targetEdges);
+    }
+
+    postImage(event) {
+      event.preventDefault();
+      console.log(`name ${this.state.terrainName} id ${this.state.terrainID}`);
+      this.props.onSave(true, this.state.terrainID, this.state.terrainName);
     }
 
     readFiles(event : React.ChangeEvent<HTMLInputElement>) {
@@ -267,7 +279,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             <input type="range" defaultValue={0.03} min={0.001} max={0.1} step={0.001} onChange={(e) => this.props.setIdealLength(parseFloat(e.target.value))} />
             <input type="range" defaultValue={0.9} min={0.75} max={0.999} step={0.001} onChange={(e) => this.props.setCoolingFactor(parseFloat(e.target.value))} />
           </Collapsible>
-          <Button onClick={(e) => this.props.onSave()}>
+          <Button onClick={(e) => this.props.onSave(false, null, null)}>
             Save Terrain
           </Button>
           <br/>
@@ -282,6 +294,18 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           <Button onClick={(e) => this.onSaveXML()}>
             Save Terrain to XML
           </Button>
+        </Form>
+        <Form style={{color: 'white'}} onSubmit={this.postImage}>
+          <Form.Group controlId="formPost" className="mt-3 mb-3">
+            <Form.Label className="mr-3">
+              Name:
+              <input required type="text" value={this.state.terrainName} onChange={(e) => this.setState({terrainName: e.target.value})}/>
+              <br/>
+              ID:
+              <input required type="text" value={this.state.terrainID} onChange={(e) => this.setState({terrainID: parseInt(e.target.value)})}/>
+            </Form.Label>
+            <Button className="mt-2" type="submit" variant="secondary" value="Submit">Post Terrain to Database</ Button>
+          </Form.Group>
         </Form>
         </ div>
       );
