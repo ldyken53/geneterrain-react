@@ -8,6 +8,7 @@ class TerrainGenerator {
     public device : GPUDevice;
     public width : number;
     public height : number;
+    public widthFactor : number;
     public computeTerrainPipeline : GPUComputePipeline;
     public normalizeTerrainPipeline : GPUComputePipeline;
     public computeTerrainBGLayout : GPUBindGroupLayout;
@@ -17,6 +18,7 @@ class TerrainGenerator {
         this.device = device;
         this.width = width;
         this.height = height;
+        this.widthFactor = 1000;
 
         this.nodeDataBuffer = this.device.createBuffer({
             size: 16,
@@ -124,11 +126,14 @@ class TerrainGenerator {
         });
     }
 
-    computeTerrain(nodeDataBuffer = this.nodeDataBuffer, widthFactor = 1000, translation = [0, 0, 1, 1], globalRange : null | GPUBuffer = null, nodeLength : number = 0) {
+    computeTerrain(nodeDataBuffer = this.nodeDataBuffer, widthFactor, translation = [0, 0, 1, 1], globalRange : null | GPUBuffer = null, nodeLength : number = 0) {
         if (nodeLength == 0) {
             return;
         }
         this.nodeDataBuffer = nodeDataBuffer;
+        if (widthFactor) {
+            this.widthFactor = widthFactor;
+        }
 
         // Have to reset range buffer unless global range checked
         if (!globalRange) {
@@ -148,7 +153,7 @@ class TerrainGenerator {
         });
         var mapping = upload.getMappedRange();
         new Uint32Array(mapping).set([this.width, this.height, nodeLength]);
-        new Float32Array(mapping).set([widthFactor, translation[0], translation[1], translation[2], translation[3]], 3);
+        new Float32Array(mapping).set([this.widthFactor, translation[0], translation[1], translation[2], translation[3]], 3);
         upload.unmap();
         //this.device.createQuerySet({})
         var commandEncoder = this.device.createCommandEncoder();

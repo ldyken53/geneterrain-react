@@ -558,7 +558,7 @@ class Renderer {
     });
     new Uint32Array(this.targetEdgeDataBuffer.getMappedRange()).set(targetEdges);
     this.targetEdgeDataBuffer.unmap();
-    this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
+    // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
   }
 
   setWidthFactor(widthFactor : number) {
@@ -664,16 +664,13 @@ class Renderer {
     context!.putImageData(imgData, 0, 0);
     if (post) {
       this.outCanvasRef.current!.toBlob(function (b) {
-
-          axios.post('https://discovery.informatics.uab.edu/apex/aimed/geneterrain/images', b!, {
-            headers: {
-              'p_id': id!,
-              'p_name': name!,
-              'Content-Type': "image/png"
-            }
-          }).then(function (r) {console.log(r)}).catch(function (e) {console.log(e)});
-
-
+        axios.post('https://discovery.informatics.uab.edu/apex/aimed/geneterrain/images', b!, {
+          headers: {
+            'p_id': id!,
+            'p_name': name!,
+            'Content-Type': "image/png"
+          }
+        }).then(function (r) {console.log(r); alert("Success!");}).catch(function (e) {console.log(e)});
       });
     } else {
       this.outCanvasRef.current!.toBlob(function (b) { saveAs(b!, `terrain.png`); console.log(b!); }, "image/png");
