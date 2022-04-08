@@ -1,4 +1,4 @@
-export const  compute_terrain = `// compute terrain wgsl
+export const compute_terrain = `// compute terrain wgsl
 struct Node {
     value : f32;
     x : f32;
@@ -41,6 +41,7 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
         var sqrDistance : f32 = (x - nodes.nodes[i].x) * (x - nodes.nodes[i].x) + (y - nodes.nodes[i].y) * (y - nodes.nodes[i].y);
         value = value + nodes.nodes[i].value / (sqrDistance * uniforms.width_factor + 1.0);
     }
+    
     value = value * 100.0;
     atomicMin(&range.x, i32(floor(value)));
     atomicMax(&range.y, i32(ceil(value)));

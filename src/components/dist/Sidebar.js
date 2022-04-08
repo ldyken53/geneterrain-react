@@ -189,7 +189,7 @@ var Sidebar = /** @class */ (function (_super) {
                 //   return;
                 // }
                 // context.fillStyle = "white";
-                d3.json("./sample_test_data/sample_data2000_40000.json").then(function (data) {
+                d3.json("./sample_test_data/test_small_spec.json").then(function (data) {
                     console.log(data);
                     var timeToFormatData = 0;
                     startTime = performance.now();

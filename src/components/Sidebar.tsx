@@ -212,133 +212,131 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
     // context.fillStyle = "white";
 
-    d3.json("./sample_test_data/sample_data2000_40000.json").then(
-      (data: any) => {
-        console.log(data);
-        let timeToFormatData = 0;
-        startTime = performance.now();
-        lastTime = startTime;
-        const simulation = d3
-          .forceSimulation(data.nodes)
-          .force("charge", d3.forceManyBody().strength(-40))
-          .force("center", d3.forceCenter(width / 2, height / 2))
-          .force("link", d3.forceLink(data.edges).distance(400).strength(2.0))
-          .alphaDecay(0.077);
+    d3.json("./sample_test_data/test_small_spec.json").then((data: any) => {
+      console.log(data);
+      let timeToFormatData = 0;
+      startTime = performance.now();
+      lastTime = startTime;
+      const simulation = d3
+        .forceSimulation(data.nodes)
+        .force("charge", d3.forceManyBody().strength(-40))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0))
+        .alphaDecay(0.077);
 
-        initGraph(data);
+      initGraph(data);
 
-        function initGraph(data) {
-          simulation.on("tick", simulationUpdate);
-          simulation.on("end", async () => {
-            let extraTime = performance.now();
-            await self.props.setNodeEdgeData(
-              self.state.nodeData,
-              self.state.edgeData
-            );
-            let extraEnd = performance.now();
-            let currentTime2 = performance.now();
-            totalTime = currentTime2 - startTime;
-            const [totalAverageTime, layoutAverageTime, renderAverageTime] =
-              findAverage(self.state.d3timing);
-            console.log(
-              "totalAverageTime",
-              totalAverageTime,
-              "layoutAverageTime",
-              layoutAverageTime,
-              "averageTimetoRender",
-              renderAverageTime
-            );
-            console.log("totalTime", totalTime - timeToFormatData);
-          });
-        }
-
-        function formatData(nodesList, edgesList) {
-          var nodes: Array<number> = [];
-          var edges: Array<number> = [];
-          const data = {
-            nodes: nodes,
-            edges: edges,
-          };
-
-          let nodeCount = nodesList.length;
-          data.nodes = Array(4 * nodeCount).fill(0);
-
-          let maxX = 0;
-          let maxY = 0;
-
-          for (let i = 0; i < 4 * nodeCount; i = i + 4) {
-            data.nodes[i] = 0;
-            let nodeX = Math.abs(nodesList[i / 4].x);
-            let nodeY = Math.abs(nodesList[i / 4].y);
-            if (nodeX > maxX) {
-              maxX = nodeX;
-            }
-            if (nodeY > maxY) {
-              maxY = nodeY;
-            }
-            data.nodes[i + 3] = 1;
-          }
-
-          for (let i = 0; i < 4 * nodeCount; i = i + 4) {
-            data.nodes[i + 1] = nodesList[i / 4].x / maxX;
-            data.nodes[i + 2] = nodesList[i / 4].y / maxY;
-          }
-
-          data.edges = Array(2 * nodeCount * 20).fill(0);
-          for (let i = 0; i < 2 * 20 * nodeCount; i = i + 2) {
-            data.edges[i] = parseInt(edgesList[i / 2].source.name);
-            data.edges[i + 1] = parseInt(edgesList[i / 2].target.name);
-          }
-          return data;
-        }
-
-        function findAverage(d3timing) {
-          let totalAverageTime =
-            d3timing.reduce((a, b) => {
-              return a + b.totalTime;
-            }, 0) / d3timing.length;
-          let renderAvergaeTime =
-            d3timing.reduce((a, b) => a + b.renderingTime, 0) / d3timing.length;
-          let layoutAverageTime =
-            d3timing.reduce((a, b) => a + (b.totalTime - b.renderingTime), 0) /
-            d3timing.length;
-
-          return [totalAverageTime, layoutAverageTime, renderAvergaeTime];
-        }
-
-        async function simulationUpdate() {
-          let currentTime = performance.now();
-
-          let formatStartTime = performance.now();
-          let newData = formatData(data.nodes, data.edges);
-          let formatStopTime = performance.now();
-          let localtimeToFormatData = formatStopTime - formatStartTime;
-          timeToFormatData += localtimeToFormatData;
-
-          self.setState({ nodeData: newData.nodes });
-          await self.props.setNodeEdgeData(newData.nodes, newData.edges);
-
-          let renderTime = 0;
-
-          let endTime = performance.now();
-          // lastTime = currentTime;
-          let dt = endTime - currentTime - localtimeToFormatData;
-          iterationCount++;
-          console.log(iterationCount, dt);
-          iterationMeasure[iterationCount] = dt;
-          self.setState({
-            d3timing: [
-              ...self.state.d3timing,
-              {
-                iterationCount: iterationCount,
-                totalTime: dt,
-                renderingTime: renderTime,
-              },
-            ],
-          });
-        }
+      function initGraph(data) {
+        simulation.on("tick", simulationUpdate);
+        simulation.on("end", async () => {
+          let extraTime = performance.now();
+          await self.props.setNodeEdgeData(
+            self.state.nodeData,
+            self.state.edgeData
+          );
+          let extraEnd = performance.now();
+          let currentTime2 = performance.now();
+          totalTime = currentTime2 - startTime;
+          const [totalAverageTime, layoutAverageTime, renderAverageTime] =
+            findAverage(self.state.d3timing);
+          console.log(
+            "totalAverageTime",
+            totalAverageTime,
+            "layoutAverageTime",
+            layoutAverageTime,
+            "averageTimetoRender",
+            renderAverageTime
+          );
+          console.log("totalTime", totalTime - timeToFormatData);
+        });
       }
-    );
+
+      function formatData(nodesList, edgesList) {
+        var nodes: Array<number> = [];
+        var edges: Array<number> = [];
+        const data = {
+          nodes: nodes,
+          edges: edges,
+        };
+
+        let nodeCount = nodesList.length;
+        data.nodes = Array(4 * nodeCount).fill(0);
+
+        let maxX = 0;
+        let maxY = 0;
+
+        for (let i = 0; i < 4 * nodeCount; i = i + 4) {
+          data.nodes[i] = 0;
+          let nodeX = Math.abs(nodesList[i / 4].x);
+          let nodeY = Math.abs(nodesList[i / 4].y);
+          if (nodeX > maxX) {
+            maxX = nodeX;
+          }
+          if (nodeY > maxY) {
+            maxY = nodeY;
+          }
+          data.nodes[i + 3] = 1;
+        }
+
+        for (let i = 0; i < 4 * nodeCount; i = i + 4) {
+          data.nodes[i + 1] = nodesList[i / 4].x / maxX;
+          data.nodes[i + 2] = nodesList[i / 4].y / maxY;
+        }
+
+        data.edges = Array(2 * nodeCount * 20).fill(0);
+        for (let i = 0; i < 2 * 20 * nodeCount; i = i + 2) {
+          data.edges[i] = parseInt(edgesList[i / 2].source.name);
+          data.edges[i + 1] = parseInt(edgesList[i / 2].target.name);
+        }
+        return data;
+      }
+
+      function findAverage(d3timing) {
+        let totalAverageTime =
+          d3timing.reduce((a, b) => {
+            return a + b.totalTime;
+          }, 0) / d3timing.length;
+        let renderAvergaeTime =
+          d3timing.reduce((a, b) => a + b.renderingTime, 0) / d3timing.length;
+        let layoutAverageTime =
+          d3timing.reduce((a, b) => a + (b.totalTime - b.renderingTime), 0) /
+          d3timing.length;
+
+        return [totalAverageTime, layoutAverageTime, renderAvergaeTime];
+      }
+
+      async function simulationUpdate() {
+        let currentTime = performance.now();
+
+        let formatStartTime = performance.now();
+        let newData = formatData(data.nodes, data.edges);
+        let formatStopTime = performance.now();
+        let localtimeToFormatData = formatStopTime - formatStartTime;
+        timeToFormatData += localtimeToFormatData;
+
+        self.setState({ nodeData: newData.nodes });
+        await self.props.setNodeEdgeData(newData.nodes, newData.edges);
+
+        let renderTime = 0;
+
+        let endTime = performance.now();
+        // lastTime = currentTime;
+        let dt = endTime - currentTime - localtimeToFormatData;
+        iterationCount++;
+        console.log(iterationCount, dt);
+        iterationMeasure[iterationCount] = dt;
+        self.setState({
+          d3timing: [
+            ...self.state.d3timing,
+            {
+              iterationCount: iterationCount,
+              totalTime: dt,
+              renderingTime: renderTime,
+            },
+          ],
+        });
+      }
+    });
   }
 
   async runBenchmark(event: React.MouseEvent) {

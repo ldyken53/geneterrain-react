@@ -134,6 +134,7 @@ class Renderer {
       usage: GPUBufferUsage.VERTEX,
       mappedAtCreation: true,
     });
+
     new Float32Array(nodePositionBuffer.getMappedRange()).set([
       1, -1, -1, -1, -1, 1, 1, -1, -1, 1, 1, 1,
     ]);
@@ -569,7 +570,7 @@ class Renderer {
 
       await device.queue.onSubmittedWorkDone();
       // await device.queue.onSubmittedWorkDone();
-    }
+    };
 
     // requestAnimationFrame(frame);
   }
