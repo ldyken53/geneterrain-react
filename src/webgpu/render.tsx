@@ -33,6 +33,7 @@ class Renderer {
   public idealLength : number = 0.03;
   public coolingFactor : number = 0.9;
   public iterRef : React.RefObject<HTMLLabelElement>;
+  public frame : (() => void) | undefined;
 
   constructor(
     adapter : GPUAdapter, device : GPUDevice, 
@@ -402,7 +403,7 @@ class Renderer {
     var render = this;
     var frameCount = 0;
     var timeToSecond = 1000;
-    async function frame() {
+    this.frame = async function frame() {
         var start = performance.now();
         // Sample is no longer the active page.
         if (!canvasRef.current) return;
@@ -455,7 +456,7 @@ class Renderer {
         requestAnimationFrame(frame);
     }
 
-    requestAnimationFrame(frame);
+    requestAnimationFrame(this.frame);
 
   }
 
@@ -558,7 +559,9 @@ class Renderer {
     });
     new Uint32Array(this.targetEdgeDataBuffer.getMappedRange()).set(targetEdges);
     this.targetEdgeDataBuffer.unmap();
-    // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
+    if (this.terrainToggle) {
+      this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
+    }
   }
 
   setWidthFactor(widthFactor : number) {
@@ -596,7 +599,7 @@ class Renderer {
     this.forceDirected!.runForces(
       this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, 
       this.coolingFactor, this.idealLength, 10000, 100, this.iterRef,
-      this.sourceEdgeDataBuffer, this.targetEdgeDataBuffer
+      this.sourceEdgeDataBuffer, this.targetEdgeDataBuffer, this.frame!
     );
   }
 

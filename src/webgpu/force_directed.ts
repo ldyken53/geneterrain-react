@@ -163,7 +163,7 @@ class ForceDirected {
         iterationCount = this.iterationCount, 
         threshold = this.threshold,
         iterRef,
-        sourceEdgeBuffer, targetEdgeBuffer
+        sourceEdgeBuffer, targetEdgeBuffer, frame
     ) {
         if (nodeLength == 0 || edgeLength == 0) {
             return;
@@ -768,6 +768,7 @@ class ForceDirected {
         var totalEnd = performance.now();
         var iterAvg : number = iterationTimes.reduce(function(a, b) {return a + b}) / iterationTimes.length;
         iterRef.current!.innerText = `Completed in ${iterationTimes.length} iterations with total time ${totalEnd - totalStart} and average iteration time ${iterAvg}`;
+        // requestAnimationFrame(frame);
     }
 }
 
