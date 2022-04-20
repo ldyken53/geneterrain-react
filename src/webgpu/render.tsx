@@ -31,6 +31,7 @@ class Renderer {
   public idealLength: number = 0.05;
   public coolingFactor: number = 0.9;
   public iterRef: React.RefObject<HTMLLabelElement>;
+  public edgeList: Array<number> = [0];
 
   constructor(
     adapter: GPUAdapter,
@@ -46,6 +47,7 @@ class Renderer {
     this.colormapImage = colormapImage;
     this.outCanvasRef = outCanvasRef;
     this.device = device;
+
     // Check that canvas is active
     if (canvasRef.current === null) return;
     const context = canvasRef.current.getContext("webgpu")!;
@@ -61,8 +63,11 @@ class Renderer {
     context.configure({
       device,
       format: presentationFormat,
+      compositingAlphaMode: "premultiplied",
       size: presentationSize,
     });
+
+    this.edgeList = [0];
 
     this.edgeDataBuffer = device.createBuffer({
       size: 4 * 4,
@@ -149,7 +154,10 @@ class Renderer {
 
     this.nodeDataBuffer = device.createBuffer({
       size: 4 * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      usage:
+        GPUBufferUsage.STORAGE |
+        GPUBufferUsage.COPY_DST |
+        GPUBufferUsage.COPY_SRC,
       mappedAtCreation: true,
     });
     new Float32Array(this.nodeDataBuffer.getMappedRange()).set([
@@ -488,6 +496,7 @@ class Renderer {
     var render = this;
     var frameCount = 0;
     var timeToSecond = 1000;
+
     async function frame() {
       var start = performance.now();
       // Sample is no longer the active page.
@@ -572,17 +581,19 @@ class Renderer {
       // await device.queue.onSubmittedWorkDone();
     };
 
-    // requestAnimationFrame(frame);
+    requestAnimationFrame(frame);
   }
 
-  
-
   async setNodeEdgeData(nodeData: Array<number>, edgeData: Array<number>) {
+    this.edgeList = edgeData;
     this.nodeDataBuffer!.destroy();
     this.edgeDataBuffer!.destroy();
     this.nodeDataBuffer = this.device.createBuffer({
       size: nodeData.length * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      usage:
+        GPUBufferUsage.STORAGE |
+        GPUBufferUsage.COPY_DST |
+        GPUBufferUsage.COPY_SRC,
       mappedAtCreation: true,
     });
     new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
@@ -697,9 +708,10 @@ class Renderer {
       this.edgeLength,
       this.coolingFactor,
       this.idealLength,
-      10000,
+      87,
       100,
-      this.iterRef
+      this.iterRef,
+      this.edgeList
     );
   }
 

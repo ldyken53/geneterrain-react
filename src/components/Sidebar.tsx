@@ -7,6 +7,7 @@ import * as Constant from "../constant";
 import { CSVLink } from "react-csv";
 import XMLWriter from "xml-writer";
 import * as d3 from "d3";
+import { greadability } from "../greadibility.js";
 
 const headers = [
   { label: "Node", key: "Node" },
@@ -21,7 +22,10 @@ const headerForLayout = [
 ];
 
 type SidebarProps = {
-  setNodeEdgeData: (nodeData: Array<number>, edgeData: Array<number>) => Promise<void>;
+  setNodeEdgeData: (
+    nodeData: Array<number>,
+    edgeData: Array<number>
+  ) => Promise<void>;
   setWidthFactor: (widthFactor: number) => void;
   setPeakValue: (value: number) => void;
   setValleyValue: (value: number) => void;
@@ -49,6 +53,8 @@ type SidebarState = {
   jsonFormat: boolean;
   FPSData: Array<Array<string>>;
   d3timing: Array<timing>;
+  mouseCapture: boolean;
+  mouseEvents: mouseStateType;
 
   // canvasAdded: boolean;
 };
@@ -80,6 +86,12 @@ interface timing {
   renderingTime: number;
 }
 
+interface mouseStateType {
+  mouseDown: any[];
+  mouseMove: any[];
+  mouseUp: any[];
+}
+
 class Sidebar extends React.Component<SidebarProps, SidebarState> {
   constructor(props) {
     super(props);
@@ -95,6 +107,13 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       runBenchmark: false,
       FPSData: [],
       d3timing: [],
+      mouseCapture: false,
+      mouseEvents: {
+        mouseDown: [],
+        mouseMove: [],
+        mouseUp: [],
+      },
+
       // canvasAdded: false,
     };
 
@@ -113,6 +132,82 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     // =========================================================
     this.d3TimingStudy = this.d3TimingStudy.bind(this);
     // this.randomDataGen_Computation = this.randomDataGen_Computation.bind(this);
+    //---------------------------------------------------------------------
+    this.handleMouseDown = this.handleMouseDown.bind(this);
+    this.handleMouseMove = this.handleMouseMove.bind(this);
+    this.handleMouseUp = this.handleMouseUp.bind(this);
+
+    this.mouseDown = this.mouseDown.bind(this);
+    this.mouseMove = this.mouseMove.bind(this);
+    this.mouseUp = this.mouseUp.bind(this);
+  }
+
+  mouseDown(event) {
+    console.log("i am down");
+    this.setState({
+      mouseEvents: {
+        ...this.state.mouseEvents,
+        mouseDown: [...this.state.mouseEvents.mouseDown, event],
+      },
+    });
+  }
+
+  mouseUp(event) {
+    console.log(...this.state.mouseEvents.mouseUp);
+    this.setState({
+      mouseEvents: {
+        ...this.state.mouseEvents,
+        mouseUp: [...this.state.mouseEvents.mouseUp, event],
+      },
+    });
+  }
+
+  mouseMove(event) {
+    this.setState({
+      mouseEvents: {
+        ...this.state.mouseEvents,
+        mouseMove: [...this.state.mouseEvents.mouseMove, event],
+      },
+    });
+  }
+
+  handleMouseUp(event) {
+    event.stopPropogation();
+    this.setState({ mouseCapture: false });
+  }
+
+  handleMouseDown(event) {
+    event.stopPropogation();
+    let positionX = event.clientX;
+    let positionY = event.clientY;
+    console.log(positionX, positionY);
+    this.setState({ mouseCapture: true });
+  }
+
+  handleMouseMove(event) {
+    if (this.state.mouseCapture) {
+      let positionX = event.clientX;
+      let positionY = event.clientY;
+      console.log(positionX, positionY);
+    }
+  }
+
+  async componentDidMount() {
+    let canvasElement: any = document.getElementsByTagName("canvas")[0];
+    if (canvasElement) {
+      canvasElement.addEventListener("mousedown", this.mouseDown);
+      canvasElement.addEventListener("mousemove", this.mouseMove);
+      canvasElement.addEventListener("mouseup", this.mouseUp);
+    }
+  }
+
+  componentWillUnmount() {
+    let canvasElement: any = document.getElementsByTagName("canvas")[0];
+    if (canvasElement) {
+      canvasElement.removeEventListener("mousedown", this.mouseDown);
+      canvasElement.removeEventListener("mousemove", this.mouseMove);
+      canvasElement.removeEventListener("mouseup", this.mouseUp);
+    }
   }
 
   handleSubmit(event) {
@@ -192,27 +287,29 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     let lastTime;
     let totalTime;
 
-    // var layoutCanvas = d3
-    //   .select("#graphDiv")
-    //   .append("canvas")
-    //   .attr("width", width + "px")
-    //   .attr("height", height + "px")
-    //   .node();
+    var layoutCanvas = d3
+      .select("#graphDiv")
+      .append("canvas")
+      .attr("width", width + "px")
+      .attr("height", height + "px")
+      .node();
 
-    // let layoutDiv = document.getElementById("#graphDiv");
-    // if (layoutDiv) {
-    //   layoutDiv.style.color = "white";
-    // }
+    let layoutDiv = document.getElementById("#graphDiv");
+    if (layoutDiv) {
+      layoutDiv.style.color = "white";
+    }
 
-    // let context = layoutCanvas!.getContext("2d")!;
-    // if (!context) {
-    //   console.log("no 2d context found");
-    //   return;
-    // }
+    let context = layoutCanvas!.getContext("2d")!;
+    if (!context) {
+      console.log("no 2d context found");
+      return;
+    }
 
-    // context.fillStyle = "white";
+    context.fillStyle = "white";
 
-    d3.json("./sample_test_data/test_small_spec.json").then((data: any) => {
+    function createLinks(edges, nodes) {}
+
+    d3.json("./sample_test_data/sample_data100_2000.json").then((data: any) => {
       console.log(data);
       let timeToFormatData = 0;
       startTime = performance.now();
@@ -221,14 +318,16 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         .forceSimulation(data.nodes)
         .force("charge", d3.forceManyBody().strength(-40))
         .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0))
-        .alphaDecay(0.077);
+        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0));
+      // .alphaDecay(0.3);
 
       initGraph(data);
 
       function initGraph(data) {
         simulation.on("tick", simulationUpdate);
         simulation.on("end", async () => {
+          let nodesFinal = simulation.nodes();
+          // console.log(greadability(data.nodes, data.edges));
           let extraTime = performance.now();
           await self.props.setNodeEdgeData(
             self.state.nodeData,
@@ -304,27 +403,38 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
         return [totalAverageTime, layoutAverageTime, renderAvergaeTime];
       }
-
-      async function simulationUpdate() {
+      function simulationUpdate() {
         let currentTime = performance.now();
-
-        let formatStartTime = performance.now();
-        let newData = formatData(data.nodes, data.edges);
-        let formatStopTime = performance.now();
-        let localtimeToFormatData = formatStopTime - formatStartTime;
-        timeToFormatData += localtimeToFormatData;
-
-        self.setState({ nodeData: newData.nodes });
-        await self.props.setNodeEdgeData(newData.nodes, newData.edges);
-
-        let renderTime = 0;
-
-        let endTime = performance.now();
-        // lastTime = currentTime;
-        let dt = endTime - currentTime - localtimeToFormatData;
+        let dt = currentTime - lastTime;
         iterationCount++;
-        console.log(iterationCount, dt);
         iterationMeasure[iterationCount] = dt;
+        lastTime = currentTime;
+
+        let renderingStartTime = performance.now();
+        context.save();
+        // context.strokeStyle = "#aaa";
+        context.clearRect(0, 0, width, height);
+
+        data.edges.forEach(function (d, index) {
+          if (index == 0) {
+            console.log(d.source.x);
+          }
+          context.beginPath();
+          context.strokeStyle = "rgba(0.0, 0.0, 0.0, 0.08)";
+          context.moveTo(d.source.x, d.source.y);
+          context.lineTo(d.target.x, d.target.y);
+          context.stroke();
+        });
+
+        data.nodes.forEach(function (d) {
+          context.beginPath();
+          context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
+          context.fillStyle = d.col ? "red" : "black";
+          context.fill();
+        });
+        context.restore();
+        let renderingEndTime = performance.now();
+        let renderTime = renderingEndTime - renderingStartTime;
         self.setState({
           d3timing: [
             ...self.state.d3timing,
@@ -336,6 +446,37 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           ],
         });
       }
+
+      // async function simulationUpdate() {
+      //   let currentTime = performance.now();
+
+      //   let formatStartTime = performance.now();
+      //   let newData = formatData(data.nodes, data.edges);
+      //   let formatStopTime = performance.now();
+      //   let localtimeToFormatData = formatStopTime - formatStartTime;
+      //   timeToFormatData += localtimeToFormatData;
+      //   self.setState({ nodeData: newData.nodes });
+      //   await self.props.setNodeEdgeData(newData.nodes, newData.edges);
+
+      //   let renderTime = 0;
+
+      //   let endTime = performance.now();
+      //   // lastTime = currentTime;
+      //   let dt = endTime - currentTime - localtimeToFormatData;
+      //   iterationCount++;
+      //   console.log(iterationCount, dt);
+      //   iterationMeasure[iterationCount] = dt;
+      //   self.setState({
+      //     d3timing: [
+      //       ...self.state.d3timing,
+      //       {
+      //         iterationCount: iterationCount,
+      //         totalTime: dt,
+      //         renderingTime: renderTime,
+      //       },
+      //     ],
+      //   });
+      // }
     });
   }
 
@@ -409,7 +550,6 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     return generatedData;
   }
 
-  
   generateRandomGraph(nodeCount, edgeCount) {
     var nodes: Array<number> = [];
     var edges: Array<number> = [];
@@ -522,6 +662,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           ] += 1;
         }
       }
+      console.log(edgeData);
       this.setState({ edgeData: edgeData });
       var laplacian: Matrix = subtract(
         sparse(degreeMatrix),
@@ -575,6 +716,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     const files: FileList = event.target.files!;
     const jsonReader = new FileReader();
     var nodeData: Array<number> = [];
+    var nodeDataFormat2: Array<Array<number>> = [];
     var edgeData: Array<number> = [];
     jsonReader.onload = (event) => {
       var graph: Graph = JSON.parse(jsonReader.result as string);
@@ -582,8 +724,12 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       for (var i = 0; i < graph.nodes.length; i++) {
         if (graph.nodes[i].x) {
           nodeData.push(0.0, graph.nodes[i].x, graph.nodes[i].y, 1.0);
+          nodeDataFormat2.push([graph.nodes[i].x, graph.nodes[i].y, i]);
         } else {
-          nodeData.push(0.0, Math.random(), Math.random(), 1.0);
+          let positionX = Math.random();
+          let positionY = Math.random();
+          nodeData.push(0.0, positionX, positionY, 1.0);
+          nodeDataFormat2.push([positionX, positionY, i]);
         }
       }
       for (var i = 0; i < graph.edges.length; i++) {
@@ -592,6 +738,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         edgeData.push(source, target);
       }
       this.setState({ nodeData: nodeData, edgeData: edgeData });
+      console.log(edgeData);
     };
     jsonReader.readAsText(files[0]);
   }
@@ -837,6 +984,13 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             Apply Spectral Layout
           </Button>
           <br />
+          <Button
+            onClick={(e) => {
+              console.log(this.state.mouseEvents);
+            }}
+          >
+            Show Event
+          </Button>
           <Button onClick={(e) => this.props.runForceDirected()}>
             Run Force Directed Layout
           </Button>

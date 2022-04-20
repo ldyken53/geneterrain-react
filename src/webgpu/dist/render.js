@@ -66,6 +66,7 @@ var Renderer = /** @class */ (function () {
         this.canvasSize = null;
         this.idealLength = 0.05;
         this.coolingFactor = 0.9;
+        this.edgeList = [0];
         this.iterRef = iterRef;
         this.colormapImage = colormapImage;
         this.outCanvasRef = outCanvasRef;
@@ -84,8 +85,10 @@ var Renderer = /** @class */ (function () {
         context.configure({
             device: device,
             format: presentationFormat,
+            compositingAlphaMode: "premultiplied",
             size: presentationSize
         });
+        this.edgeList = [0];
         this.edgeDataBuffer = device.createBuffer({
             size: 4 * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
@@ -164,7 +167,9 @@ var Renderer = /** @class */ (function () {
         edgePositionBuffer.unmap();
         this.nodeDataBuffer = device.createBuffer({
             size: 4 * 4,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+            usage: GPUBufferUsage.STORAGE |
+                GPUBufferUsage.COPY_DST |
+                GPUBufferUsage.COPY_SRC,
             mappedAtCreation: true
         });
         new Float32Array(this.nodeDataBuffer.getMappedRange()).set([
@@ -541,18 +546,21 @@ var Renderer = /** @class */ (function () {
                 }
             });
         }); };
-        // requestAnimationFrame(frame);
+        requestAnimationFrame(frame);
     }
     Renderer.prototype.setNodeEdgeData = function (nodeData, edgeData) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        this.edgeList = edgeData;
                         this.nodeDataBuffer.destroy();
                         this.edgeDataBuffer.destroy();
                         this.nodeDataBuffer = this.device.createBuffer({
                             size: nodeData.length * 4,
-                            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+                            usage: GPUBufferUsage.STORAGE |
+                                GPUBufferUsage.COPY_DST |
+                                GPUBufferUsage.COPY_SRC,
                             mappedAtCreation: true
                         });
                         new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
@@ -643,7 +651,7 @@ var Renderer = /** @class */ (function () {
     Renderer.prototype.runForceDirected = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                this.forceDirected.runForces(this.nodeDataBuffer, this.edgeDataBuffer, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 10000, 100, this.iterRef);
+                this.forceDirected.runForces(this.nodeDataBuffer, this.edgeDataBuffer, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 87, 100, this.iterRef, this.edgeList);
                 return [2 /*return*/];
             });
         });

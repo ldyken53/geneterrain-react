@@ -59,12 +59,181 @@ var react_bootstrap_1 = require("react-bootstrap");
 var react_select_1 = require("react-select");
 function importAll(r) {
     var images = {};
-    r.keys().map(function (item, index) { images[item.replace('./', '').replace('.png', '')] = r(item); });
+    r.keys().map(function (item, index) {
+        images[item.replace("./", "").replace(".png", "")] = r(item);
+    });
     return images;
 }
-var colormaps = importAll(require.context('../colormaps', false, /\.(png|jpe?g|svg)$/));
-var colormap_list = ['magma', 'inferno', 'plasma', 'viridis', 'cividis', 'twilight', 'twilight_shifted', 'turbo', 'Blues', 'BrBG', 'BuGn', 'BuPu', 'CMRmap', 'GnBu', 'Greens', 'Greys', 'OrRd', 'Oranges', 'PRGn', 'PiYG', 'PuBu', 'PuBuGn', 'PuOr', 'PuRd', 'Purples', 'RdBu', 'RdGy', 'RdPu', 'RdYlBu', 'RdYlGn', 'Reds', 'Spectral', 'Wistia', 'YlGn', 'YlGnBu', 'YlOrBr', 'YlOrRd', 'afmhot', 'autumn', 'binary', 'bone', 'brg', 'bwr', 'cool', 'coolwarm', 'copper', 'cubehelix', 'flag', 'gist_earth', 'gist_gray', 'gist_heat', 'gist_ncar', 'gist_rainbow', 'gist_stern', 'gist_yarg', 'gnuplot', 'gnuplot2', 'gray', 'hot', 'hsv', 'jet', 'nipy_spectral', 'ocean', 'pink', 'prism', 'rainbow', 'seismic', 'spring', 'summer', 'terrain', 'winter', 'Accent', 'Dark2', 'Paired', 'Pastel1', 'Pastel2', 'Set1', 'Set2', 'Set3', 'tab10', 'tab20', 'tab20b', 'tab20c', 'magma_r', 'inferno_r', 'plasma_r', 'viridis_r', 'cividis_r', 'twilight_r', 'twilight_shifted_r', 'turbo_r', 'Blues_r', 'BrBG_r', 'BuGn_r', 'BuPu_r', 'CMRmap_r', 'GnBu_r', 'Greens_r', 'Greys_r', 'OrRd_r', 'Oranges_r', 'PRGn_r', 'PiYG_r', 'PuBu_r', 'PuBuGn_r', 'PuOr_r', 'PuRd_r', 'Purples_r', 'RdBu_r', 'RdGy_r', 'RdPu_r', 'RdYlBu_r', 'RdYlGn_r', 'Reds_r', 'Spectral_r', 'Wistia_r', 'YlGn_r', 'YlGnBu_r', 'YlOrBr_r', 'YlOrRd_r', 'afmhot_r', 'autumn_r', 'binary_r', 'bone_r', 'brg_r', 'bwr_r', 'cool_r', 'coolwarm_r', 'copper_r', 'cubehelix_r', 'flag_r', 'gist_earth_r', 'gist_gray_r', 'gist_heat_r', 'gist_ncar_r', 'gist_rainbow_r', 'gist_stern_r', 'gist_yarg_r', 'gnuplot_r', 'gnuplot2_r', 'gray_r', 'hot_r', 'hsv_r', 'jet_r', 'nipy_spectral_r', 'ocean_r', 'pink_r', 'prism_r', 'rainbow_r', 'seismic_r', 'spring_r', 'summer_r', 'terrain_r', 'winter_r', 'Accent_r', 'Dark2_r', 'Paired_r', 'Pastel1_r', 'Pastel2_r', 'Set1_r', 'Set2_r', 'Set3_r', 'tab10_r', 'tab20_r', 'tab20b_r', 'tab20c_r'];
-console.log(colormaps['magma']["default"]);
+var colormaps = importAll(require.context("../colormaps", false, /\.(png|jpe?g|svg)$/));
+var colormap_list = [
+    "magma",
+    "inferno",
+    "plasma",
+    "viridis",
+    "cividis",
+    "twilight",
+    "twilight_shifted",
+    "turbo",
+    "Blues",
+    "BrBG",
+    "BuGn",
+    "BuPu",
+    "CMRmap",
+    "GnBu",
+    "Greens",
+    "Greys",
+    "OrRd",
+    "Oranges",
+    "PRGn",
+    "PiYG",
+    "PuBu",
+    "PuBuGn",
+    "PuOr",
+    "PuRd",
+    "Purples",
+    "RdBu",
+    "RdGy",
+    "RdPu",
+    "RdYlBu",
+    "RdYlGn",
+    "Reds",
+    "Spectral",
+    "Wistia",
+    "YlGn",
+    "YlGnBu",
+    "YlOrBr",
+    "YlOrRd",
+    "afmhot",
+    "autumn",
+    "binary",
+    "bone",
+    "brg",
+    "bwr",
+    "cool",
+    "coolwarm",
+    "copper",
+    "cubehelix",
+    "flag",
+    "gist_earth",
+    "gist_gray",
+    "gist_heat",
+    "gist_ncar",
+    "gist_rainbow",
+    "gist_stern",
+    "gist_yarg",
+    "gnuplot",
+    "gnuplot2",
+    "gray",
+    "hot",
+    "hsv",
+    "jet",
+    "nipy_spectral",
+    "ocean",
+    "pink",
+    "prism",
+    "rainbow",
+    "seismic",
+    "spring",
+    "summer",
+    "terrain",
+    "winter",
+    "Accent",
+    "Dark2",
+    "Paired",
+    "Pastel1",
+    "Pastel2",
+    "Set1",
+    "Set2",
+    "Set3",
+    "tab10",
+    "tab20",
+    "tab20b",
+    "tab20c",
+    "magma_r",
+    "inferno_r",
+    "plasma_r",
+    "viridis_r",
+    "cividis_r",
+    "twilight_r",
+    "twilight_shifted_r",
+    "turbo_r",
+    "Blues_r",
+    "BrBG_r",
+    "BuGn_r",
+    "BuPu_r",
+    "CMRmap_r",
+    "GnBu_r",
+    "Greens_r",
+    "Greys_r",
+    "OrRd_r",
+    "Oranges_r",
+    "PRGn_r",
+    "PiYG_r",
+    "PuBu_r",
+    "PuBuGn_r",
+    "PuOr_r",
+    "PuRd_r",
+    "Purples_r",
+    "RdBu_r",
+    "RdGy_r",
+    "RdPu_r",
+    "RdYlBu_r",
+    "RdYlGn_r",
+    "Reds_r",
+    "Spectral_r",
+    "Wistia_r",
+    "YlGn_r",
+    "YlGnBu_r",
+    "YlOrBr_r",
+    "YlOrRd_r",
+    "afmhot_r",
+    "autumn_r",
+    "binary_r",
+    "bone_r",
+    "brg_r",
+    "bwr_r",
+    "cool_r",
+    "coolwarm_r",
+    "copper_r",
+    "cubehelix_r",
+    "flag_r",
+    "gist_earth_r",
+    "gist_gray_r",
+    "gist_heat_r",
+    "gist_ncar_r",
+    "gist_rainbow_r",
+    "gist_stern_r",
+    "gist_yarg_r",
+    "gnuplot_r",
+    "gnuplot2_r",
+    "gray_r",
+    "hot_r",
+    "hsv_r",
+    "jet_r",
+    "nipy_spectral_r",
+    "ocean_r",
+    "pink_r",
+    "prism_r",
+    "rainbow_r",
+    "seismic_r",
+    "spring_r",
+    "summer_r",
+    "terrain_r",
+    "winter_r",
+    "Accent_r",
+    "Dark2_r",
+    "Paired_r",
+    "Pastel1_r",
+    "Pastel2_r",
+    "Set1_r",
+    "Set2_r",
+    "Set3_r",
+    "tab10_r",
+    "tab20_r",
+    "tab20b_r",
+    "tab20c_r",
+];
+console.log(colormaps["magma"]["default"]);
 console.log(rainbow_png_1["default"]);
 var Page = /** @class */ (function (_super) {
     __extends(Page, _super);
@@ -80,7 +249,8 @@ var Page = /** @class */ (function (_super) {
             colorValley: 45,
             colorHill: 90,
             colorMountain: 135,
-            renderer: null
+            renderer: null,
+            moved: false
         };
         return _this;
     }
@@ -94,10 +264,9 @@ var Page = /** @class */ (function (_super) {
                         })];
                     case 1:
                         adapter = (_a.sent());
-                        console.log(adapter);
                         return [4 /*yield*/, adapter.requestDevice({
                                 requiredLimits: {
-                                    "maxStorageBufferBindingSize": adapter.limits.maxStorageBufferBindingSize
+                                    maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize
                                 }
                             })];
                     case 2:
@@ -110,7 +279,8 @@ var Page = /** @class */ (function (_super) {
                         return [4 /*yield*/, createImageBitmap(colormapImage)];
                     case 4:
                         imageBitmap = _a.sent();
-                        this.setState({ renderer: new render_1["default"](adapter, device, this.state.canvasRef, imageBitmap, colormapImage, this.state.outCanvasRef, this.state.fpsRef, this.state.iterRef)
+                        this.setState({
+                            renderer: new render_1["default"](adapter, device, this.state.canvasRef, imageBitmap, colormapImage, this.state.outCanvasRef, this.state.fpsRef, this.state.iterRef)
                         });
                         return [2 /*return*/];
                 }
@@ -118,7 +288,16 @@ var Page = /** @class */ (function (_super) {
         });
     };
     Page.prototype.setNodeEdgeData = function (nodeData, edgeData) {
-        this.state.renderer.setNodeEdgeData(nodeData, edgeData);
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.state.renderer.setNodeEdgeData(nodeData, edgeData)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
     };
     Page.prototype.setWidthFactor = function (widthFactor) {
         this.state.renderer.setWidthFactor(widthFactor);
@@ -171,7 +350,7 @@ var Page = /** @class */ (function (_super) {
                     case 1:
                         _a.sent();
                         colorCanvas = this.state.colorCanvasRef.current;
-                        context = colorCanvas.getContext('2d');
+                        context = colorCanvas.getContext("2d");
                         context.drawImage(colormapImage, 0, 0);
                         data = context.getImageData(0, 0, 180, 1);
                         for (i = 0; i < this.state.colorValley; i++) {
@@ -183,18 +362,27 @@ var Page = /** @class */ (function (_super) {
                         for (i = this.state.colorValley; i < this.state.colorHill; i++) {
                             data.data[i * 4] = 0;
                             data.data[i * 4 + 1] = 255;
-                            data.data[i * 4 + 2] = 255 - (255 / (this.state.colorHill - this.state.colorValley)) * (i - this.state.colorValley);
+                            data.data[i * 4 + 2] =
+                                255 -
+                                    (255 / (this.state.colorHill - this.state.colorValley)) *
+                                        (i - this.state.colorValley);
                             data.data[i * 4 + 3] = 255;
                         }
                         for (i = this.state.colorHill; i < this.state.colorMountain; i++) {
-                            data.data[i * 4] = 0 + (255 / (this.state.colorMountain - this.state.colorHill)) * (i - this.state.colorHill);
+                            data.data[i * 4] =
+                                0 +
+                                    (255 / (this.state.colorMountain - this.state.colorHill)) *
+                                        (i - this.state.colorHill);
                             data.data[i * 4 + 1] = 255;
                             data.data[i * 4 + 2] = 0;
                             data.data[i * 4 + 3] = 255;
                         }
                         for (i = this.state.colorMountain; i < 180; i++) {
                             data.data[i * 4] = 255;
-                            data.data[i * 4 + 1] = 255 - (255 / (180 - this.state.colorMountain)) * (i - this.state.colorMountain);
+                            data.data[i * 4 + 1] =
+                                255 -
+                                    (255 / (180 - this.state.colorMountain)) *
+                                        (i - this.state.colorMountain);
                             data.data[i * 4 + 2] = 0;
                             data.data[i * 4 + 3] = 255;
                         }
