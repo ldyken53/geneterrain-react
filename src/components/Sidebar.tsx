@@ -309,17 +309,17 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
     function createLinks(edges, nodes) {}
 
-    d3.json("./sample_test_data/sample_data100_2000.json").then((data: any) => {
+    d3.json("./sf_ba6000.json").then((data: any) => {
       console.log(data);
       let timeToFormatData = 0;
       startTime = performance.now();
       lastTime = startTime;
       const simulation = d3
         .forceSimulation(data.nodes)
-        .force("charge", d3.forceManyBody().strength(-40))
+        .force("charge", d3.forceManyBody().strength(-0.3))
         .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0));
-      // .alphaDecay(0.3);
+        .force("link", d3.forceLink(data.edges).distance(5).strength(2.0))
+       .alphaDecay(0.02);
 
       initGraph(data);
 
@@ -327,7 +327,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         simulation.on("tick", simulationUpdate);
         simulation.on("end", async () => {
           let nodesFinal = simulation.nodes();
-          // console.log(greadability(data.nodes, data.edges));
+          console.log(greadability(data.nodes, data.edges));
           let extraTime = performance.now();
           await self.props.setNodeEdgeData(
             self.state.nodeData,
@@ -429,7 +429,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         data.nodes.forEach(function (d) {
           context.beginPath();
           context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
-          context.fillStyle = d.col ? "red" : "black";
+          context.fillStyle = d.col ? "red" : "gray";
           context.fill();
         });
         context.restore();

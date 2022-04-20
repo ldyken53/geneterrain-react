@@ -416,7 +416,7 @@ class ForceDirected {
     let formattedEdgeList = d3Format.edgeArray;
 
     console.log(formattednodeList, formattedEdgeList);
-    // console.log(greadability(formattednodeList, formattedEdgeList));
+    console.log(greadability(formattednodeList, formattedEdgeList));
 
     var totalEnd = performance.now();
     var iterAvg: number =

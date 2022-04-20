@@ -708,7 +708,7 @@ class Renderer {
       this.edgeLength,
       this.coolingFactor,
       this.idealLength,
-      87,
+      1000,
       100,
       this.iterRef,
       this.edgeList
