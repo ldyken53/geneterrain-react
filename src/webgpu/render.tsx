@@ -34,6 +34,7 @@ class Renderer {
   public coolingFactor : number = 0.9;
   public iterRef : React.RefObject<HTMLLabelElement>;
   public frame : (() => void) | undefined;
+  public edgeList : Array<number> = [];
 
   constructor(
     adapter : GPUAdapter, device : GPUDevice, 
@@ -456,7 +457,7 @@ class Renderer {
         requestAnimationFrame(frame);
     }
 
-    requestAnimationFrame(this.frame);
+    // requestAnimationFrame(this.frame);
 
   }
 
@@ -488,6 +489,7 @@ class Renderer {
     // }
     // console.log("nodes length" + nodeData.length / 4);
     // console.log("edges_length" + edgeData.length / 2);
+    this.edgeList = edgeData;
     this.nodeDataBuffer = this.device.createBuffer({
       size: nodeData.length * 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
@@ -599,7 +601,7 @@ class Renderer {
     this.forceDirected!.runForces(
       this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, 
       this.coolingFactor, this.idealLength, 10000, 100, this.iterRef,
-      this.sourceEdgeDataBuffer, this.targetEdgeDataBuffer, this.frame!
+      this.sourceEdgeDataBuffer, this.targetEdgeDataBuffer, this.frame!, this.edgeList
     );
   }
 
