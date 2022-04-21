@@ -336,7 +336,7 @@ struct Edges {
 @stage(vertex)
 fn main(@builtin(instance_index) index : u32, @location(0) position: vec2<f32>)-> VertexOutput {
     var out : VertexOutput;
-    var node : Node = nodes.nodes[edges.edges[index + u32(position.x)]];
+    var node : Node = nodes.nodes[edges.edges[2u * index + u32(position.x)]];
     var inv_zoom : f32 = uniforms.view_box.z - uniforms.view_box.x;
     var expected_x : f32 = 0.5 * (1.0 - inv_zoom); 
     var expected_y : f32 = 0.5 * (1.0 - inv_zoom);
@@ -348,7 +348,7 @@ fn main(@builtin(instance_index) index : u32, @location(0) position: vec2<f32>)-
 }`;
 export const  edge_frag = `@stage(fragment)
 fn main()->@location(0) vec4<f32>{
-    return vec4<f32>(0.0, 0.0, 0.0, 0.03);
+    return vec4<f32>(0.0, 0.0, 0.0, 0.06);
 }`;
 export const  compute_forces = `struct Node {
     value : f32,

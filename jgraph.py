@@ -4,8 +4,8 @@ import numpy as np
 from scipy.sparse.linalg import eigs
 
 nodes = []
-N = 100000
-clusters = 10
+N = 5
+clusters = 2
 edges = []
 nodes = {}
 for i in range(clusters):
@@ -21,7 +21,13 @@ for i in range(clusters):
         #     laplacian_matrix[target, target] += 1
         if not nodes.get(source):
             nodes[source] = {
-                "name": str(i), 
+                "name": str(source), 
+                "x": random.gauss((i + 1) / (clusters + 1), 0.025), 
+                "y": random.gauss((i % 2 + 0.6) / 2, 0.025)
+            }
+        if not nodes.get(target):
+            nodes[target] = {
+                "name": str(target), 
                 "x": random.gauss((i + 1) / (clusters + 1), 0.025), 
                 "y": random.gauss((i % 2 + 0.6) / 2, 0.025)
             }
@@ -82,7 +88,7 @@ graph = {
     "nodes": nodes,
     "edges": edges
 }
-f = open("test_huge.json", "w")
+f = open("test_tiny2.json", "w")
 f.write(json.dumps(graph))
 
 
