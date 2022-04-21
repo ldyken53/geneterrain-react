@@ -105,16 +105,16 @@ var Renderer = /** @class */ (function () {
                 }),
                 entryPoint: "main",
                 buffers: [
-                    {
-                        arrayStride: 2 * 4 * 1,
-                        attributes: [
-                            {
-                                format: "float32x2",
-                                offset: 0,
-                                shaderLocation: 0
-                            },
-                        ]
-                    },
+                // {
+                //   arrayStride: 2 * 4 * 1,
+                //   attributes: [
+                //     {
+                //       format: "float32x2" as GPUVertexFormat,
+                //       offset: 0,
+                //       shaderLocation: 0,
+                //     },
+                //   ],
+                // },
                 ]
             },
             fragment: {
@@ -474,18 +474,21 @@ var Renderer = /** @class */ (function () {
                             };
                             passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
                             if (render.terrainToggle) {
+                                // console.log(" terrain toggle");
                                 passEncoder.setPipeline(pipeline);
                                 passEncoder.setVertexBuffer(0, dataBuf2D);
                                 passEncoder.setBindGroup(0, render.bindGroup2D);
                                 passEncoder.draw(6, 1, 0, 0);
                             }
                             if (render.edgeToggle) {
+                                // console.log(" edge toggle");
                                 passEncoder.setPipeline(render.edgePipeline);
-                                passEncoder.setVertexBuffer(0, edgePositionBuffer);
+                                // passEncoder.setVertexBuffer(0, edgePositionBuffer);
                                 passEncoder.setBindGroup(0, render.edgeBindGroup);
-                                passEncoder.draw(2, render.edgeLength, 0, 0);
+                                passEncoder.draw(2, render.edgeLength / 2, 0, 0);
                             }
                             if (render.nodeToggle) {
+                                // console.log(" node toggle");
                                 passEncoder.setPipeline(render.nodePipeline);
                                 passEncoder.setVertexBuffer(0, nodePositionBuffer);
                                 passEncoder.setBindGroup(0, render.nodeBindGroup);
@@ -532,7 +535,7 @@ var Renderer = /** @class */ (function () {
                         passEncoder.setPipeline(this.edgePipeline);
                         passEncoder.setVertexBuffer(0, edgePositionBuffer);
                         passEncoder.setBindGroup(0, this.edgeBindGroup);
-                        passEncoder.draw(2, this.edgeLength);
+                        passEncoder.draw(2, this.edgeLength / 2);
                         passEncoder.setPipeline(this.nodePipeline);
                         passEncoder.setVertexBuffer(0, nodePositionBuffer);
                         passEncoder.setBindGroup(0, this.nodeBindGroup);
@@ -541,6 +544,9 @@ var Renderer = /** @class */ (function () {
                         device.queue.submit([commandEncoder.finish()]);
                         return [4 /*yield*/, device.queue.onSubmittedWorkDone()];
                     case 1:
+                        _a.sent();
+                        return [4 /*yield*/, device.queue.onSubmittedWorkDone()];
+                    case 2:
                         _a.sent();
                         return [2 /*return*/];
                 }
@@ -651,7 +657,7 @@ var Renderer = /** @class */ (function () {
     Renderer.prototype.runForceDirected = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                this.forceDirected.runForces(this.nodeDataBuffer, this.edgeDataBuffer, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 87, 100, this.iterRef, this.edgeList);
+                this.forceDirected.runForces(this.nodeDataBuffer, this.edgeDataBuffer, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 1000, 300, this.iterRef, this.edgeList);
                 return [2 /*return*/];
             });
         });

@@ -76,6 +76,7 @@ var Constant = require("../constant");
 var react_csv_1 = require("react-csv");
 var xml_writer_1 = require("xml-writer");
 var d3 = require("d3");
+var greadibility_js_1 = require("../greadibility.js");
 var headers = [
     { label: "Node", key: "Node" },
     { label: "Edge", key: "Edge" },
@@ -278,10 +279,10 @@ var Sidebar = /** @class */ (function (_super) {
                     lastTime = startTime;
                     var simulation = d3
                         .forceSimulation(data.nodes)
-                        .force("charge", d3.forceManyBody().strength(-40))
+                        .force("charge", d3.forceManyBody().strength(-0.3))
                         .force("center", d3.forceCenter(width / 2, height / 2))
-                        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0));
-                    // .alphaDecay(0.3);
+                        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0))
+                        .alphaDecay(0.02);
                     initGraph(data);
                     function initGraph(data) {
                         var _this = this;
@@ -292,6 +293,7 @@ var Sidebar = /** @class */ (function (_super) {
                                 switch (_b.label) {
                                     case 0:
                                         nodesFinal = simulation.nodes();
+                                        console.log(greadibility_js_1.greadability(data.nodes, data.edges));
                                         extraTime = performance.now();
                                         return [4 /*yield*/, self.props.setNodeEdgeData(self.state.nodeData, self.state.edgeData)];
                                     case 1:
@@ -365,7 +367,7 @@ var Sidebar = /** @class */ (function (_super) {
                                 console.log(d.source.x);
                             }
                             context.beginPath();
-                            context.strokeStyle = "rgba(0.0, 0.0, 0.0, 0.08)";
+                            context.strokeStyle = "rgba(255, 0.0, 0.0, 0.4)";
                             context.moveTo(d.source.x, d.source.y);
                             context.lineTo(d.target.x, d.target.y);
                             context.stroke();
@@ -373,7 +375,7 @@ var Sidebar = /** @class */ (function (_super) {
                         data.nodes.forEach(function (d) {
                             context.beginPath();
                             context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
-                            context.fillStyle = d.col ? "red" : "black";
+                            context.fillStyle = d.col ? "black" : "rgba(100, 100.0, 100.0, 0.4)";
                             context.fill();
                         });
                         context.restore();

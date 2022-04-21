@@ -37,6 +37,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 exports.__esModule = true;
 var wgsl_1 = require("./wgsl");
+var greadibility_js_1 = require("../greadibility.js");
 var ForceDirected = /** @class */ (function () {
     function ForceDirected(device) {
         this.coolingFactor = 0.9;
@@ -349,7 +350,10 @@ var ForceDirected = /** @class */ (function () {
                         d3Format = this.formatToD3Format(positionList, edgeList, nodeLength, edgeLength);
                         formattednodeList = d3Format.nodeArray;
                         formattedEdgeList = d3Format.edgeArray;
+                        console.log(formattedEdgeList.length);
                         console.log(formattednodeList, formattedEdgeList);
+                        // console.log(formattednodeList, formattedEdgeList);
+                        console.log(greadibility_js_1.greadability(formattednodeList, formattedEdgeList));
                         totalEnd = performance.now();
                         iterAvg = iterationTimes.reduce(function (a, b) {
                             return a + b;

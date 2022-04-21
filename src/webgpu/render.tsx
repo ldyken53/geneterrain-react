@@ -88,16 +88,16 @@ class Renderer {
         }),
         entryPoint: "main",
         buffers: [
-          {
-            arrayStride: 2 * 4 * 1,
-            attributes: [
-              {
-                format: "float32x2" as GPUVertexFormat,
-                offset: 0,
-                shaderLocation: 0,
-              },
-            ],
-          },
+          // {
+          //   arrayStride: 2 * 4 * 1,
+          //   attributes: [
+          //     {
+          //       format: "float32x2" as GPUVertexFormat,
+          //       offset: 0,
+          //       shaderLocation: 0,
+          //     },
+          //   ],
+          // },
         ],
       },
       fragment: {
@@ -517,18 +517,21 @@ class Renderer {
 
       const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
       if (render.terrainToggle) {
+        // console.log(" terrain toggle");
         passEncoder.setPipeline(pipeline);
         passEncoder.setVertexBuffer(0, dataBuf2D);
         passEncoder.setBindGroup(0, render.bindGroup2D!);
         passEncoder.draw(6, 1, 0, 0);
       }
       if (render.edgeToggle) {
+        // console.log(" edge toggle");
         passEncoder.setPipeline(render.edgePipeline!);
-        passEncoder.setVertexBuffer(0, edgePositionBuffer);
+        // passEncoder.setVertexBuffer(0, edgePositionBuffer);
         passEncoder.setBindGroup(0, render.edgeBindGroup!);
-        passEncoder.draw(2, render.edgeLength, 0, 0);
+        passEncoder.draw(2, render.edgeLength / 2, 0, 0);
       }
       if (render.nodeToggle) {
+        // console.log(" node toggle");
         passEncoder.setPipeline(render.nodePipeline!);
         passEncoder.setVertexBuffer(0, nodePositionBuffer);
         passEncoder.setBindGroup(0, render.nodeBindGroup!);
@@ -553,7 +556,6 @@ class Renderer {
 
     this.testFrame = async () => {
       const commandEncoder = this.device.createCommandEncoder();
-
       const renderPassDescriptor: GPURenderPassDescriptor = {
         colorAttachments: [
           {
@@ -568,17 +570,15 @@ class Renderer {
       passEncoder.setPipeline(this.edgePipeline!);
       passEncoder.setVertexBuffer(0, edgePositionBuffer);
       passEncoder.setBindGroup(0, this.edgeBindGroup!);
-      passEncoder.draw(2, this.edgeLength);
+      passEncoder.draw(2, this.edgeLength / 2);
       passEncoder.setPipeline(this.nodePipeline!);
       passEncoder.setVertexBuffer(0, nodePositionBuffer);
       passEncoder.setBindGroup(0, this.nodeBindGroup!);
       passEncoder.draw(6, this.nodeLength);
       passEncoder.endPass();
-
       device.queue.submit([commandEncoder.finish()]);
-
       await device.queue.onSubmittedWorkDone();
-      // await device.queue.onSubmittedWorkDone();
+      await device.queue.onSubmittedWorkDone();
     };
 
     requestAnimationFrame(frame);
@@ -709,7 +709,7 @@ class Renderer {
       this.coolingFactor,
       this.idealLength,
       1000,
-      100,
+      300,
       this.iterRef,
       this.edgeList
     );

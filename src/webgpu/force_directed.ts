@@ -414,8 +414,10 @@ class ForceDirected {
     );
     let formattednodeList = d3Format.nodeArray;
     let formattedEdgeList = d3Format.edgeArray;
+    console.log(formattedEdgeList.length);
 
     console.log(formattednodeList, formattedEdgeList);
+    // console.log(formattednodeList, formattedEdgeList);
     console.log(greadability(formattednodeList, formattedEdgeList));
 
     var totalEnd = performance.now();
