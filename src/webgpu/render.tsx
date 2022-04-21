@@ -429,7 +429,7 @@ class Renderer {
           passEncoder.setPipeline(render.edgePipeline!);
           passEncoder.setVertexBuffer(0, edgePositionBuffer);
           passEncoder.setBindGroup(0, render.edgeBindGroup!);
-          passEncoder.draw(2, render.edgeLength, 0, 0);
+          passEncoder.draw(2, render.edgeLength / 2, 0, 0);
         }
         if (render.nodeToggle) {
           passEncoder.setPipeline(render.nodePipeline!);
