@@ -425,7 +425,7 @@ class ForceDirected {
         });
         // iterationCount = 2;
         var numIterations = 0;
-        while (iterationCount > 0 && this.coolingFactor > 0.0001 && this.force >= 0) {
+        while (iterationCount > 0 && this.coolingFactor > 0.001 && this.force >= 0) {
             numIterations++;
             iterationCount--;
             // Set up params (node length, edge length)
@@ -572,7 +572,7 @@ class ForceDirected {
             // pass.endPass();
 
             // Run compute forces BH pass
-            for (var i = 0; i < 10; i++) {
+            for (var i = 0; i < 2; i++) {
                 var upload = this.device.createBuffer({
                     size: 4,
                     usage: GPUBufferUsage.COPY_SRC,
@@ -585,7 +585,7 @@ class ForceDirected {
                 var pass = commandEncoder.beginComputePass();
                 pass.setBindGroup(0, bindGroup);
                 pass.setPipeline(this.computeForcesBHPipeline);
-                pass.dispatch(Math.ceil(nodeLength / 10), 1, 1);
+                pass.dispatch(Math.ceil(nodeLength / 2), 1, 1);
                 pass.endPass();
                 this.device.queue.submit([commandEncoder.finish()]);
                 // await this.device.queue.onSubmittedWorkDone();
@@ -671,10 +671,10 @@ class ForceDirected {
 
             // this.maxForceResultBuffer.unmap();
             // Read all of the forces applied.
-            // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
-            // const arrayBuffer = gpuReadBuffer.getMappedRange();
-            // var output = new Int32Array(arrayBuffer);
-            // console.log(output);
+            await gpuReadBuffer.mapAsync(GPUMapMode.READ);
+            const arrayBuffer = gpuReadBuffer.getMappedRange();
+            var output = new Int32Array(arrayBuffer);
+            console.log(output);
 
             // console.log(output[23]);
             // await gpuReadBuffer3.mapAsync(GPUMapMode.READ);
