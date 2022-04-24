@@ -30,15 +30,26 @@ struct Uniforms {
 struct QuadTrees {
     quads : array<QuadTree>,
 }
+struct Range {
+    x_min : i32,
+    x_max : i32,
+    y_min : i32,
+    y_max : i32
+};
 
 @group(0) @binding(0) var<storage, read> nodes : Nodes;
 @group(0) @binding(1) var<storage, read_write> quads : QuadTrees;
 @group(0) @binding(2) var<uniform> uniforms : Uniforms;
+@group(0) @binding(3) var<storage, read_write> bounding : Range;
 
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main() {
+    let x_min : f32 = f32(bounding.x_min) / 1000.0;
+    let y_min : f32 = f32(bounding.y_min) / 1000.0;
+    let width : f32 = f32(bounding.x_max - bounding.x_min) / 1000.0;
+    let height : f32 = f32(bounding.y_max - bounding.y_min) / 1000.0;
     quads.quads[0] = QuadTree(
-        Rectangle(0.0, 0.0, 1.0, 1.0),
+        Rectangle(x_min, y_min, width, height),
         // Can use 0 as null pointer for indexing because 0 is always root
         vec4<f32>(0.0, 0.0, 0.0, 0.0),
         vec2<f32>(-1.0, -1.0),

@@ -213,6 +213,21 @@ class ForceDirected {
         this.edgeDataBuffer = edgeDataBuffer;
         this.threshold = threshold;
         this.force = 100000;
+        const rangeBuffer = this.device.createBuffer({
+            size: 4 * 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
+        });
+        var bounding = this.device.createBuffer({
+            size: 4 * 4,
+            usage: GPUBufferUsage.COPY_SRC,
+            mappedAtCreation: true,
+        });
+        var mapping = bounding.getMappedRange();
+        new Int32Array(mapping).set([0, 1000, 0, 1000]);
+        bounding.unmap();
+        var commandEncoder = this.device.createCommandEncoder();
+        commandEncoder.copyBufferToBuffer(bounding, 0, rangeBuffer, 0, 4 * 4);
+        this.device.queue.submit([commandEncoder.finish()]);
 
         // Set up params (node length, edge length) for creating adjacency matrix
         var upload = this.device.createBuffer({
@@ -362,6 +377,12 @@ class ForceDirected {
                     resource: {
                         buffer: this.paramsBuffer
                     }
+                },
+                {
+                    binding: 3,
+                    resource: {
+                        buffer: rangeBuffer
+                    }
                 }
             ],
         });
@@ -385,6 +406,12 @@ class ForceDirected {
                     resource: {
                         buffer: this.paramsBuffer,
                     }
+                },
+                {
+                    binding: 3,
+                    resource: {
+                        buffer: rangeBuffer,
+                    }
                 }
             ]
         });
@@ -397,7 +424,9 @@ class ForceDirected {
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
         });
         // iterationCount = 2;
+        var numIterations = 0;
         while (iterationCount > 0 && this.coolingFactor > 0.0001 && this.force >= 0) {
+            numIterations++;
             iterationCount--;
             // Set up params (node length, edge length)
             var upload = this.device.createBuffer({
@@ -578,7 +607,7 @@ class ForceDirected {
             // var commandEncoder = this.device.createCommandEncoder();
 
             const gpuReadBuffer = this.device.createBuffer({
-                size: quadTreeLength,
+                size: 4 * 4,
                 usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
             });
             const gpuReadBuffer3 = this.device.createBuffer({
@@ -590,13 +619,6 @@ class ForceDirected {
             //     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
             // });
             // Encode commands for copying buffer to buffer.
-            commandEncoder.copyBufferToBuffer(
-                this.quadTreeBuffer /* source buffer */ ,
-                0 /* source offset */ ,
-                gpuReadBuffer /* destination buffer */ ,
-                0 /* destination offset */ ,
-                quadTreeLength /* size */
-            );
             commandEncoder.copyBufferToBuffer(
                 this.forceDataBuffer /* source buffer */ ,
                 0 /* source offset */ ,
@@ -612,8 +634,9 @@ class ForceDirected {
             //     0 /* destination offset */ ,
             //     nodeLength * 200 * 4 /* size */
             // );
-            var pass = commandEncoder.beginComputePass();
+            commandEncoder.copyBufferToBuffer(bounding, 0, rangeBuffer, 0, 4 * 4);
 
+            var pass = commandEncoder.beginComputePass();
             //commandEncoder.writeTimestamp();
 
 
@@ -622,6 +645,14 @@ class ForceDirected {
             pass.setPipeline(this.applyForcesPipeline);
             pass.dispatch(Math.ceil(nodeLength / 2), 1, 1);
             pass.endPass();
+
+            commandEncoder.copyBufferToBuffer(
+                rangeBuffer /* source buffer */ ,
+                0 /* source offset */ ,
+                gpuReadBuffer /* destination buffer */ ,
+                0 /* destination offset */ ,
+                4 * 4 /* size */
+            );
     
             commandEncoder.copyBufferToBuffer(
                 this.nodeDataBuffer,
@@ -635,24 +666,21 @@ class ForceDirected {
             var start : number = performance.now();
             await this.device.queue.onSubmittedWorkDone();
             var end : number = performance.now();
-            console.log(`iteration time ${end - start}`)
-            iterationTimes.push(end - start);
+            // console.log(`iteration time ${end - start}`)
+            // iterationTimes.push(end - start);
 
             // this.maxForceResultBuffer.unmap();
             // Read all of the forces applied.
-            await gpuReadBuffer.mapAsync(GPUMapMode.READ);
-            const arrayBuffer = gpuReadBuffer.getMappedRange();
-            var output = new Float32Array(arrayBuffer);
-            console.log(output);
-            console.log(output[10]);
-            console.log(output[11]);
+            // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
+            // const arrayBuffer = gpuReadBuffer.getMappedRange();
+            // var output = new Int32Array(arrayBuffer);
+            // console.log(output);
 
             // console.log(output[23]);
-            console.log(output[35]);
-            await gpuReadBuffer3.mapAsync(GPUMapMode.READ);
-            const arrayBuffer3 = gpuReadBuffer3.getMappedRange();
-            var output3 = new Float32Array(arrayBuffer3);
-            console.log(output3);
+            // await gpuReadBuffer3.mapAsync(GPUMapMode.READ);
+            // const arrayBuffer3 = gpuReadBuffer3.getMappedRange();
+            // var output3 = new Float32Array(arrayBuffer3);
+            // console.log(output3);
             // await gpuReadBuffer2.mapAsync(GPUMapMode.READ);
             // const arrayBuffer2 = gpuReadBuffer2.getMappedRange();
             // var output2 = new Uint32Array(arrayBuffer2);
@@ -679,10 +707,12 @@ class ForceDirected {
         await positionReadBuffer.mapAsync(GPUMapMode.READ);
         let positionArrayBuffer = positionReadBuffer.getMappedRange();
         let positionList = new Float32Array(positionArrayBuffer);
+        await this.device.queue.onSubmittedWorkDone();
 
         var totalEnd = performance.now();
-        var iterAvg : number = iterationTimes.reduce(function(a, b) {return a + b}) / iterationTimes.length;
-        iterRef.current!.innerText = `Completed in ${iterationTimes.length} iterations with total time ${totalEnd - totalStart} and average iteration time ${iterAvg}`;
+        // var iterAvg : number = iterationTimes.reduce(function(a, b) {return a + b}) / iterationTimes.length;
+        var iterAvg = (totalEnd - totalStart) / numIterations;
+        iterRef.current!.innerText = `Completed in ${numIterations} iterations with total time ${totalEnd - totalStart} and average iteration time ${iterAvg}`;
         let d3Format = this.formatToD3Format(
             positionList,
             edgeList,

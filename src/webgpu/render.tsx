@@ -457,7 +457,7 @@ class Renderer {
         requestAnimationFrame(frame);
     }
 
-    // requestAnimationFrame(this.frame);
+    requestAnimationFrame(this.frame);
 
   }
 
