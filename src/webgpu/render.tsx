@@ -31,6 +31,7 @@ class Renderer {
   public idealLength : number = 0.05;
   public coolingFactor : number = 0.9;
   public iterRef : React.RefObject<HTMLLabelElement>;
+  public edgeList : Array<number> = [];
 
   constructor(
     adapter : GPUAdapter, device : GPUDevice, 
@@ -458,9 +459,10 @@ class Renderer {
   }
 
   setNodeEdgeData(nodeData : Array<number>, edgeData : Array<number>) {
+    this.edgeList = edgeData;
     this.nodeDataBuffer = this.device.createBuffer({
       size: nodeData.length * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
       mappedAtCreation: true,
     });
     new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
@@ -550,7 +552,7 @@ class Renderer {
   }
 
   async runForceDirected() {
-    this.forceDirected!.runForces(this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 10000, 100, this.iterRef);
+    this.forceDirected!.runForces(this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 10000, 100, this.iterRef, this.edgeList);
   }
 
   toggleTerrainLayer() {

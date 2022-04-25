@@ -28,6 +28,7 @@ struct Batch {
 @group(0) @binding(2) var<storage, write> forces : Forces;
 @group(0) @binding(3) var<uniform> uniforms : Uniforms;
 @group(0) @binding(4) var<uniform> batch : Batch;
+@group(0) @binding(5) var<storage, read> random : Edges;
 
 fn get_bit_selector(bit_index : u32) -> u32 {
     return 1u << bit_index;
@@ -40,11 +41,20 @@ fn get_nth_bit(packed : u32, bit_index : u32) -> u32 {
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     let l : f32 = uniforms.ideal_length;
-    var index : u32 = global_id.x + batch.batch_id * (uniforms.nodes_length / 10u);
+    var index : u32 = global_id.x;
     let node : Node = nodes.nodes[index];
     var r_force : vec2<f32> = vec2<f32>(0.0, 0.0);
     var a_force : vec2<f32> = vec2<f32>(0.0, 0.0);
-    for (var i : u32 = 0u; i < uniforms.nodes_length; i = i + 1u) {
+    var k : u32 = 0u;
+    var i : u32 = 0u;
+    for (var j : u32 = random.edges[index]; j < batch.batch_id + random.edges[index]; j = j + 1u) {
+    // for (var i : u32 = 0u; i < uniforms.nodes_length; i = i + 1u) {
+        if (j > uniforms.nodes_length) {
+            i = random.edges[k];            
+            k = k + 1u;
+        } else {
+            i = random.edges[j];            
+        }
         if (i == index) {
             continue;
         }

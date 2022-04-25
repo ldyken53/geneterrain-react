@@ -94,6 +94,44 @@ class ForceDirected {
         });
     }
 
+    formatToD3Format(positionList, edgeList, nLength, eLength) {
+        let nodeArray1 = new Array(nLength);
+        let edgeArray1 = new Array(eLength / 2);
+    
+        for (let i = 0; i < 4 * nLength; i = i + 4) {
+          nodeArray1[i / 4] = {};
+          nodeArray1[i / 4].index = i / 4;
+          nodeArray1[i / 4].name = (i / 4).toString();
+          nodeArray1[i / 4].x = positionList[i + 1];
+          nodeArray1[i / 4].y = positionList[i + 2];
+        }
+    
+        for (let i = 0; i < eLength; i = i + 2) {
+          edgeArray1[i / 2] = {};
+          let sourceIndex = edgeList[i];
+          let targetIndex = edgeList[i + 1];
+    
+          edgeArray1[i / 2].index = i / 2;
+          edgeArray1[i / 2].source = {};
+          edgeArray1[i / 2].source.index = sourceIndex;
+          edgeArray1[i / 2].source.name = sourceIndex.toString();
+          edgeArray1[i / 2].source.x = nodeArray1[sourceIndex].x;
+          edgeArray1[i / 2].source.y = nodeArray1[sourceIndex].y;
+    
+          edgeArray1[i / 2].target = {};
+          edgeArray1[i / 2].target.index = targetIndex;
+          edgeArray1[i / 2].target.name = targetIndex.toString();
+          edgeArray1[i / 2].target.x = nodeArray1[targetIndex].x;
+          edgeArray1[i / 2].target.y = nodeArray1[targetIndex].y;
+        }
+    
+        return {
+          nodeArray: nodeArray1,
+          edgeArray: edgeArray1,
+        };
+      }
+
+
     async runForces(
         nodeDataBuffer = this.nodeDataBuffer, 
         edgeDataBuffer = this.edgeDataBuffer, 
@@ -101,14 +139,17 @@ class ForceDirected {
         coolingFactor = this.coolingFactor, l = 0.05, 
         iterationCount = this.iterationCount, 
         threshold = this.threshold,
-        iterRef
+        iterRef, edgeList
     ) {
+        iterationCount = 2000;
+        l = 0.01;
+        coolingFactor = 0.9975;
         if (nodeLength == 0 || edgeLength == 0) {
             return;
         }
         console.log(l);
         console.log(coolingFactor);
-        this.coolingFactor = coolingFactor;
+        this.coolingFactor = 2.0;
         this.nodeDataBuffer = nodeDataBuffer;
         this.edgeDataBuffer = edgeDataBuffer;
         this.threshold = threshold;
@@ -197,9 +238,9 @@ class ForceDirected {
         // for (var i = 0; i < output.length; i++) {
         //     count+=output[i];
         // }
-        console.log(output);
-        console.log(count);
-        console.log(output.length);
+        // console.log(output);
+        // console.log(count);
+        // console.log(output.length);
 
         this.forceDataBuffer = this.device.createBuffer({
             size: nodeLength * 2 * 4,
@@ -234,9 +275,33 @@ class ForceDirected {
             size: 4,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
+        let positionReadBuffer = this.device.createBuffer({
+            size: nodeLength * 4 * 4,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+        const shuffleArray = array => {
+            for (let i = array.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              const temp = array[i];
+              array[i] = array[j];
+              array[j] = temp;
+            }
+          }
         // iterationCount = 1;
         while (iterationCount > 0 && this.coolingFactor > 0.0001 && this.force >= 0) {
-
+            var randomStart = performance.now();
+            const randomBuffer = this.device.createBuffer({
+                size: nodeLength * 4,
+                usage: GPUBufferUsage.STORAGE,
+                mappedAtCreation: true 
+            });
+            let randomArray = Array.from(Array(nodeLength),(x,i)=>i);
+            shuffleArray(randomArray);
+            var mapping = randomBuffer.getMappedRange();
+            new Uint32Array(mapping).set(randomArray);
+            randomBuffer.unmap();
+            var randomEnd = performance.now();
+            console.log("random time", randomEnd - randomStart);
             iterationCount--;
             // Set up params (node length, edge length)
             var upload = this.device.createBuffer({
@@ -285,6 +350,12 @@ class ForceDirected {
                         resource: {
                             buffer: batchBuffer
                         }
+                    },
+                    {
+                        binding: 5,
+                        resource: {
+                            buffer: randomBuffer,
+                        }
                     }
                     
                 ],
@@ -304,20 +375,20 @@ class ForceDirected {
             // var commandEncoder = this.device.createCommandEncoder();
 
             // Run compute forces pass
-            for (var i = 0; i < 10; i++) {
+            for (var i = 0; i < 1; i++) {
                 var upload = this.device.createBuffer({
                     size: 4,
                     usage: GPUBufferUsage.COPY_SRC,
                     mappedAtCreation: true,
                 });
                 var mapping = upload.getMappedRange();
-                new Uint32Array(mapping).set([i]);
+                new Uint32Array(mapping).set([Math.ceil(nodeLength / 4)]);
                 upload.unmap();
                 commandEncoder.copyBufferToBuffer(upload, 0, batchBuffer, 0, 4);
                 var pass = commandEncoder.beginComputePass();
                 pass.setBindGroup(0, bindGroup);
                 pass.setPipeline(this.computeForcesPipeline);
-                pass.dispatch(Math.ceil(nodeLength / 10), 1, 1);
+                pass.dispatch(nodeLength, 1, 1);
                 pass.endPass();
                 this.device.queue.submit([commandEncoder.finish()]);
                 // await this.device.queue.onSubmittedWorkDone();
@@ -343,13 +414,13 @@ class ForceDirected {
                 usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
             });
             // Encode commands for copying buffer to buffer.
-            commandEncoder.copyBufferToBuffer(
-                this.forceDataBuffer /* source buffer */ ,
-                0 /* source offset */ ,
-                gpuReadBuffer /* destination buffer */ ,
-                0 /* destination offset */ ,
-                nodeLength * 2 * 4 /* size */
-            );
+            // commandEncoder.copyBufferToBuffer(
+            //     this.forceDataBuffer /* source buffer */ ,
+            //     0 /* source offset */ ,
+            //     gpuReadBuffer /* destination buffer */ ,
+            //     0 /* destination offset */ ,
+            //     nodeLength * 2 * 4 /* size */
+            // );
             var pass = commandEncoder.beginComputePass();
 
             //commandEncoder.writeTimestamp();
@@ -361,30 +432,63 @@ class ForceDirected {
             pass.dispatch(nodeLength, 1, 1);
             pass.endPass();
 
+            commandEncoder.copyBufferToBuffer(
+                this.nodeDataBuffer,
+                0,
+                positionReadBuffer,
+                0,
+                nodeLength * 4 * 4
+            );
+
             this.device.queue.submit([commandEncoder.finish()]);
             var start : number = performance.now();
             await this.device.queue.onSubmittedWorkDone();
             var end : number = performance.now();
             console.log(`iteration time ${end - start}`)
-            iterationTimes.push(end - start);
+            // iterationTimes.push(end - start);
 
             // this.maxForceResultBuffer.unmap();
             // Read all of the forces applied.
-            await gpuReadBuffer.mapAsync(GPUMapMode.READ);
-            const arrayBuffer = gpuReadBuffer.getMappedRange();
-            var output2 = new Float32Array(arrayBuffer);
-            console.log(output2);
+            // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
+            // const arrayBuffer = gpuReadBuffer.getMappedRange();
+            // var output2 = new Float32Array(arrayBuffer);
+            // console.log(output2);
             this.coolingFactor = this.coolingFactor * coolingFactor;
             
         }
+        await positionReadBuffer.mapAsync(GPUMapMode.READ);
+        let positionArrayBuffer = positionReadBuffer.getMappedRange();
+        let positionList = new Float32Array(positionArrayBuffer);
+
         await this.device.queue.onSubmittedWorkDone();
         var totalEnd = performance.now();
         if (iterationTimes.length > 0) {
             var iterAvg : number = iterationTimes.reduce(function(a, b) {return a + b}) / iterationTimes.length;
         } else {
-            var iterAvg : number = (totalEnd - totalStart) / 87;
+            var iterAvg : number = (totalEnd - totalStart) / 2000;
         }
-        iterRef.current!.innerText = `Completed in ${iterationTimes.length} iterations with total time ${totalEnd - totalStart} and average iteration time ${iterAvg}`;
+        iterRef.current!.innerText = `Completed in ${2000} iterations with total time ${totalEnd - totalStart} and average iteration time ${iterAvg}`;
+        let d3Format = this.formatToD3Format(
+            positionList,
+            edgeList,
+            nodeLength,
+            edgeLength
+          );
+        let formattedNodeList = d3Format.nodeArray;
+        let formattedEdgeList = d3Format.edgeArray;
+        console.log(formattedNodeList, formattedEdgeList);
+        const element = document.createElement("a");
+        const textFile = new Blob([JSON.stringify(formattedEdgeList)], {type: 'application/json'});
+        element.href = URL.createObjectURL(textFile);
+        element.download = "FR_edges.json";
+        document.body.appendChild(element); 
+        element.click();
+        const element2 = document.createElement("a");
+        const textFile2 = new Blob([JSON.stringify(formattedNodeList)], {type: 'application/json'});
+        element.href = URL.createObjectURL(textFile2);
+        element.download = "FR_nodes.json";
+        document.body.appendChild(element2); 
+        element.click();
     }
 }
 
