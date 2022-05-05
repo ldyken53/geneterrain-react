@@ -348,7 +348,7 @@ fn main(@builtin(instance_index) index : u32, @location(0) position: vec2<f32>)-
 }`;
 export const  edge_frag = `@stage(fragment)
 fn main()->@location(0) vec4<f32>{
-    return vec4<f32>(0.0, 0.0, 0.0, 0.08);
+    return vec4<f32>(0.0, 0.0, 0.0, 0.1);
 }`;
 export const  compute_forces = `struct Node {
     value : f32,
@@ -477,10 +477,10 @@ struct Batch {
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     let l : f32 = uniforms.ideal_length;
-    var batch_index : u32 = global_id.x + batch.batch_id * (uniforms.nodes_length / 2u);
+    var batch_index : u32 = global_id.x + batch.batch_id * (uniforms.nodes_length / 1u);
     // for (var iter = 0u; iter < 10u; iter = iter + 1u) {
     let node : Node = nodes.nodes[batch_index];
-    var theta : f32 = 0.8;
+    var theta : f32 = 10000.0;
     var r_force : vec2<f32> = vec2<f32>(0.0, 0.0);
     var a_force : vec2<f32> = vec2<f32>(forces.forces[batch_index * 2u], forces.forces[batch_index * 2u + 1u]);
     var index : u32 = 0u;
@@ -489,13 +489,13 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     var out : u32 = 0u;
     loop {
         out = out + 1u;
-        if (out == 1000u) {
+        if (out == 100000u) {
             break;
         }
         var quad : QuadTree = quads.quads[index];
         let dist : f32 = distance(vec2<f32>(node.x, node.y), quad.CoM);
         let s : f32 = 2.0 * quad.boundary.w;
-        if (theta > s / dist) {
+        if (0 == 0) {
             var dir : vec2<f32> = normalize(vec2<f32>(node.x, node.y) - quad.CoM);
             r_force = r_force + quad.mass * ((l * l) / dist) * dir;
         } else {
@@ -634,8 +634,8 @@ struct Range {
 
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
-    var high : f32 = 5.0;
-    var low : f32 = -4.0;
+    var high : f32 = 8.0;
+    var low : f32 = -7.0;
     var batch_index : u32 = global_id.x;
     for (var iter = 0u; iter < 2u; iter = iter + 1u) {
         // nodes.nodes[batch_index].x = nodes.nodes[batch_index].x + forces.forces[batch_index * 2u];

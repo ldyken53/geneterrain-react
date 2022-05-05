@@ -55,10 +55,10 @@ struct Batch {
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     let l : f32 = uniforms.ideal_length;
-    var batch_index : u32 = global_id.x + batch.batch_id * (uniforms.nodes_length / 2u);
+    var batch_index : u32 = global_id.x + batch.batch_id * (uniforms.nodes_length / 1u);
     // for (var iter = 0u; iter < 10u; iter = iter + 1u) {
     let node : Node = nodes.nodes[batch_index];
-    var theta : f32 = 0.8;
+    var theta : f32 = 10000.0;
     var r_force : vec2<f32> = vec2<f32>(0.0, 0.0);
     var a_force : vec2<f32> = vec2<f32>(forces.forces[batch_index * 2u], forces.forces[batch_index * 2u + 1u]);
     var index : u32 = 0u;
@@ -73,7 +73,7 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
         var quad : QuadTree = quads.quads[index];
         let dist : f32 = distance(vec2<f32>(node.x, node.y), quad.CoM);
         let s : f32 = 2.0 * quad.boundary.w;
-        if (theta > s / dist) {
+        if (0 == 0) {
             var dir : vec2<f32> = normalize(vec2<f32>(node.x, node.y) - quad.CoM);
             r_force = r_force + quad.mass * ((l * l) / dist) * dir;
         } else {

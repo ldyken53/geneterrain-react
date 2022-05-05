@@ -203,6 +203,8 @@ class ForceDirected {
         iterRef,
         sourceEdgeBuffer, targetEdgeBuffer, frame, edgeList
     ) {
+        coolingFactor = 0.995;
+        l = 0.01;
         if (nodeLength == 0 || edgeLength == 0) {
             return;
         }
@@ -225,6 +227,7 @@ class ForceDirected {
         var mapping = bounding.getMappedRange();
         new Int32Array(mapping).set([0, 1000, 0, 1000]);
         bounding.unmap();
+        this.coolingFactor = 2.0;
         var commandEncoder = this.device.createCommandEncoder();
         commandEncoder.copyBufferToBuffer(bounding, 0, rangeBuffer, 0, 4 * 4);
         this.device.queue.submit([commandEncoder.finish()]);
@@ -423,9 +426,21 @@ class ForceDirected {
             size: nodeLength * 4 * 4,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
         });
-        // iterationCount = 2;
+        iterationCount = 2000;
         var numIterations = 0;
-        while (iterationCount > 0 && this.coolingFactor > 0.001 && this.force >= 0) {
+        // var querySet = this.device.createQuerySet({
+        //     type: "timestamp",
+        //     count: 10,
+        // });
+        // var queryBuffer = this.device.createBuffer({
+        //     size: 8,
+        //     usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
+        // });
+        // var readQueryBuffer = this.device.createBuffer({
+        //     size: 8,
+        //     usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+        // });
+        while (iterationCount > 0 && this.coolingFactor > 0.0001 && this.force >= 0) {
             numIterations++;
             iterationCount--;
             // Set up params (node length, edge length)
@@ -451,7 +466,22 @@ class ForceDirected {
             pass.setPipeline(this.createQuadTreePipeline);
             pass.dispatch(1, 1, 1);
             pass.endPass();
+            // commandEncoder.writeTimestamp(querySet, 0);
+            // commandEncoder.resolveQuerySet(querySet, 0, 1, queryBuffer, 0);
+            // commandEncoder.copyBufferToBuffer(
+            //     queryBuffer /* source buffer */ ,
+            //     0 /* source offset */ ,
+            //     readQueryBuffer /* destination buffer */ ,
+            //     0 /* destination offset */ ,
+            //     8 /* size */
+            // );           
             this.device.queue.submit([commandEncoder.finish()]);
+
+            // await readQueryBuffer.mapAsync(GPUMapMode.READ);
+            // let queryArray = readQueryBuffer.getMappedRange();
+            // let output = new Float32Array(queryArray); 
+            // console.log(output);
+
             var commandEncoder = this.device.createCommandEncoder();
             // this.device.queue.submit([commandEncoder.finish()]);
             // var start : number = performance.now();
@@ -572,7 +602,7 @@ class ForceDirected {
             // pass.endPass();
 
             // Run compute forces BH pass
-            for (var i = 0; i < 2; i++) {
+            for (var i = 0; i < 1; i++) {
                 var upload = this.device.createBuffer({
                     size: 4,
                     usage: GPUBufferUsage.COPY_SRC,
@@ -585,7 +615,7 @@ class ForceDirected {
                 var pass = commandEncoder.beginComputePass();
                 pass.setBindGroup(0, bindGroup);
                 pass.setPipeline(this.computeForcesBHPipeline);
-                pass.dispatch(Math.ceil(nodeLength / 2), 1, 1);
+                pass.dispatch(Math.ceil(nodeLength / 1), 1, 1);
                 pass.endPass();
                 this.device.queue.submit([commandEncoder.finish()]);
                 // await this.device.queue.onSubmittedWorkDone();
@@ -666,15 +696,15 @@ class ForceDirected {
             var start : number = performance.now();
             await this.device.queue.onSubmittedWorkDone();
             var end : number = performance.now();
-            // console.log(`iteration time ${end - start}`)
+            console.log(`iteration time ${end - start}`)
             // iterationTimes.push(end - start);
 
             // this.maxForceResultBuffer.unmap();
             // Read all of the forces applied.
-            await gpuReadBuffer.mapAsync(GPUMapMode.READ);
-            const arrayBuffer = gpuReadBuffer.getMappedRange();
-            var output = new Int32Array(arrayBuffer);
-            console.log(output);
+            // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
+            // const arrayBuffer = gpuReadBuffer.getMappedRange();
+            // var output = new Int32Array(arrayBuffer);
+            // console.log(output);
 
             // console.log(output[23]);
             // await gpuReadBuffer3.mapAsync(GPUMapMode.READ);

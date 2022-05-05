@@ -33,8 +33,8 @@ struct Range {
 
 @stage(compute) @workgroup_size(1, 1, 1)
 fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
-    var high : f32 = 5.0;
-    var low : f32 = -4.0;
+    var high : f32 = 8.0;
+    var low : f32 = -7.0;
     var batch_index : u32 = global_id.x;
     for (var iter = 0u; iter < 2u; iter = iter + 1u) {
         // nodes.nodes[batch_index].x = nodes.nodes[batch_index].x + forces.forces[batch_index * 2u];
