@@ -20,7 +20,7 @@ class ForceDirected {
     public laplacianBuffer: GPUBuffer;
     public quadTreeBuffer: GPUBuffer;
     public forceDataBuffer: GPUBuffer;
-    public coolingFactor: number = 0.9;
+    public coolingFactor: number = 0.975;
     public device: GPUDevice;
     public createMatrixPipeline : GPUComputePipeline;
     public createQuadTreePipeline : GPUComputePipeline;
@@ -197,14 +197,14 @@ class ForceDirected {
         nodeDataBuffer = this.nodeDataBuffer, 
         edgeDataBuffer = this.edgeDataBuffer, 
         nodeLength: number = 0, edgeLength: number = 0, 
-        coolingFactor = this.coolingFactor, l = 0.03, 
+        coolingFactor = this.coolingFactor, l = 0.01, 
         iterationCount = this.iterationCount, 
         threshold = this.threshold,
         iterRef,
         sourceEdgeBuffer, targetEdgeBuffer, frame, edgeList
     ) {
-        coolingFactor = 0.995;
-        l = 0.01;
+        // coolingFactor = 0.995;
+        // l = 0.01;
         if (nodeLength == 0 || edgeLength == 0) {
             return;
         }
@@ -227,7 +227,7 @@ class ForceDirected {
         var mapping = bounding.getMappedRange();
         new Int32Array(mapping).set([0, 1000, 0, 1000]);
         bounding.unmap();
-        this.coolingFactor = 2.0;
+        // this.coolingFactor = 2.0;
         var commandEncoder = this.device.createCommandEncoder();
         commandEncoder.copyBufferToBuffer(bounding, 0, rangeBuffer, 0, 4 * 4);
         this.device.queue.submit([commandEncoder.finish()]);
@@ -743,28 +743,28 @@ class ForceDirected {
         // var iterAvg : number = iterationTimes.reduce(function(a, b) {return a + b}) / iterationTimes.length;
         var iterAvg = (totalEnd - totalStart) / numIterations;
         iterRef.current!.innerText = `Completed in ${numIterations} iterations with total time ${totalEnd - totalStart} and average iteration time ${iterAvg}`;
-        let d3Format = this.formatToD3Format(
-            positionList,
-            edgeList,
-            nodeLength,
-            edgeLength
-          );
-        let formattedNodeList = d3Format.nodeArray;
-        let formattedEdgeList = d3Format.edgeArray;
+        // let d3Format = this.formatToD3Format(
+        //     positionList,
+        //     edgeList,
+        //     nodeLength,
+        //     edgeLength
+        //   );
+        // let formattedNodeList = d3Format.nodeArray;
+        // let formattedEdgeList = d3Format.edgeArray;
     
-        console.log(formattedNodeList, formattedEdgeList);
-        const element = document.createElement("a");
-        const textFile = new Blob([JSON.stringify(formattedEdgeList)], {type: 'application/json'});
-        element.href = URL.createObjectURL(textFile);
-        element.download = "BH_edges.json";
-        document.body.appendChild(element); 
-        element.click();
-        const element2 = document.createElement("a");
-        const textFile2 = new Blob([JSON.stringify(formattedNodeList)], {type: 'application/json'});
-        element.href = URL.createObjectURL(textFile2);
-        element.download = "BH_nodes.json";
-        document.body.appendChild(element2); 
-        element.click();
+        // console.log(formattedNodeList, formattedEdgeList);
+        // const element = document.createElement("a");
+        // const textFile = new Blob([JSON.stringify(formattedEdgeList)], {type: 'application/json'});
+        // element.href = URL.createObjectURL(textFile);
+        // element.download = "BH_edges.json";
+        // document.body.appendChild(element); 
+        // element.click();
+        // const element2 = document.createElement("a");
+        // const textFile2 = new Blob([JSON.stringify(formattedNodeList)], {type: 'application/json'});
+        // element.href = URL.createObjectURL(textFile2);
+        // element.download = "BH_nodes.json";
+        // document.body.appendChild(element2); 
+        // element.click();
 
 
         requestAnimationFrame(frame);

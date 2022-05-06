@@ -1,37 +1,28 @@
 import { Controller } from './ez_canvas_controller';
-import TerrainGenerator from './terrain_generator';
-import { display_2d_vert, display_2d_frag, node_vert, node_frag, edge_vert, edge_frag } from './wgsl';
-import { saveAs } from 'file-saver'; 
+import { node_vert, node_frag, edge_vert, edge_frag } from './wgsl';
 import ForceDirected from './force_directed';
-import axios from 'axios';
 
 class Renderer {
   public uniform2DBuffer : GPUBuffer | null = null;
-  public terrainGenerator : TerrainGenerator | null = null;
   public forceDirected : ForceDirected | null = null;
   public device : GPUDevice;
-  public bindGroup2D : GPUBindGroup | null = null;
   public nodeBindGroup : GPUBindGroup | null = null;
   public edgeBindGroup : GPUBindGroup | null = null;
   public nodeDataBuffer : GPUBuffer | null = null;
   public edgeDataBuffer : GPUBuffer | null = null;
   public sourceEdgeDataBuffer : GPUBuffer | null = null;
   public targetEdgeDataBuffer : GPUBuffer | null = null;
-  public colorTexture : GPUTexture | null = null;
   public viewBoxBuffer : GPUBuffer | null = null;
   public nodePipeline : GPURenderPipeline | null = null;
   public edgePipeline : GPURenderPipeline | null = null;
   public nodeLength : number = 1;
   public edgeLength : number = 1;
-  public rangeBuffer : GPUBuffer | null = null;
   public nodeToggle : boolean = true;
-  public terrainToggle : boolean = false;
   public edgeToggle : boolean = true;
-  public colormapImage : HTMLImageElement;
   public outCanvasRef : React.RefObject<HTMLCanvasElement>;
   public canvasSize : [number, number] | null = null;
-  public idealLength : number = 0.03;
-  public coolingFactor : number = 0.9;
+  public idealLength : number = 0.01;
+  public coolingFactor : number = 0.975;
   public iterRef : React.RefObject<HTMLLabelElement>;
   public frame : (() => void) | undefined;
   public edgeList : Array<number> = [];
@@ -39,13 +30,10 @@ class Renderer {
   constructor(
     adapter : GPUAdapter, device : GPUDevice, 
     canvasRef : React.RefObject<HTMLCanvasElement>, 
-    colormap : ImageBitmap, colormapImage : HTMLImageElement,
     outCanvasRef : React.RefObject<HTMLCanvasElement>, 
-    fpsRef : React.RefObject<HTMLLabelElement>,
     iterRef : React.RefObject<HTMLLabelElement>,
   ) {
     this.iterRef = iterRef;
-    this.colormapImage = colormapImage;
     this.outCanvasRef = outCanvasRef
     this.device = device;
     // Check that canvas is active
@@ -120,11 +108,6 @@ class Renderer {
       multisample: {
         count: 4
       }
-    });
-
-    this.rangeBuffer = this.device.createBuffer({
-      size: 2 * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
     });
 
     var nodePositionBuffer = device.createBuffer({
@@ -204,117 +187,9 @@ class Renderer {
         count: 4
       }
     });
-  
-    const pipeline = device.createRenderPipeline({
-      vertex: {
-        module: device.createShaderModule({
-          code: display_2d_vert,
-        }),
-        entryPoint: 'main',
-        buffers: [
-          {
-            arrayStride: 4 * 4,
-            attributes: [
-              {
-                format: "float32x4" as GPUVertexFormat,
-                offset: 0,
-                shaderLocation: 0,
-              }
-            ],
-          },
-        ],
-      },
-      fragment: {
-        module: device.createShaderModule({
-          code: display_2d_frag,
-        }),
-        entryPoint: 'main',
-        targets: [
-          {
-            format: presentationFormat,
-          },
-        ],
-      },
-      primitive: {
-        topology: 'triangle-list',
-      },
-      multisample: {
-        count: 4
-      }
-    });
 
-    // Vertices to render
-    var dataBuf2D = device.createBuffer({
-      size: 6 * 4 * 4,
-      usage: GPUBufferUsage.VERTEX,
-      mappedAtCreation: true
-    });
-    new Float32Array(dataBuf2D.getMappedRange()).set([
-      1, -1, 0, 1,  // position
-      -1, -1, 0, 1, // position
-      -1, 1, 0, 1,   // position
-      1, -1, 0, 1,  // position
-      -1, 1, 0, 1, // position
-      1, 1, 0, 1,   // position
-    ]);
-    dataBuf2D.unmap();
-
-    // Set up uniform buffers for bind group
-    this.uniform2DBuffer = device.createBuffer({
-      size: 2 * 4,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-    device.queue.writeBuffer(this.uniform2DBuffer, 0, new Float32Array([0.8, 0.2]), 0, 2);
-    const imageSizeBuffer = device.createBuffer({
-      size: 2 * 4,
-      usage: GPUBufferUsage.UNIFORM,
-      mappedAtCreation: true
-    });
-    new Uint32Array(imageSizeBuffer.getMappedRange()).set(this.canvasSize!);
-    imageSizeBuffer.unmap();
-
-    // Load colormap texture
-    this.colorTexture = device.createTexture({
-      size: [colormap.width, colormap.height, 1],
-      format: "rgba8unorm",
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-    device.queue.copyExternalImageToTexture(
-      { source: colormap },
-      { texture: this.colorTexture },
-      [colormap.width, colormap.height, 1]
-    );
-
-    this.terrainGenerator = new TerrainGenerator(device, this.canvasSize![0], this.canvasSize![1]);
     this.forceDirected = new ForceDirected(device);
 
-    this.bindGroup2D = device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(0),
-      entries: [
-        {
-          binding: 0,
-          resource: this.colorTexture.createView(),
-        },
-        {
-          binding: 1,
-          resource: {
-            buffer: this.terrainGenerator.pixelValueBuffer,
-          }
-        },
-        {
-          binding: 2,
-          resource: {
-            buffer: this.uniform2DBuffer,
-          },
-        },
-        {
-          binding: 3,
-          resource: {
-            buffer: imageSizeBuffer,
-          }
-        }
-      ],
-    });
     this.viewBoxBuffer = device.createBuffer({
       size: 4 * 4,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -323,7 +198,6 @@ class Renderer {
     var translation = [0, 0, 1, 1];
     var newTranslation = [0, 0, 1, 1];
     var controller = new Controller();
-    var terrainGenerator = this.terrainGenerator;
     var render = this;
     controller.mousemove = function (prev, cur, evt) {
       if (evt.buttons == 1) {
@@ -331,9 +205,6 @@ class Renderer {
         newTranslation = [newTranslation[0] - change[0], newTranslation[1] - change[1], newTranslation[2] - change[0], newTranslation[3] - change[1]]
         if (Math.abs(newTranslation[0] - translation[0]) > 0.03 * (translation[2] - translation[0]) || Math.abs(newTranslation[1] - translation[1]) > 0.03 * (translation[3] - translation[1])) {
           translation = newTranslation;
-          if (render.terrainToggle) {
-            terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer, render.nodeLength);
-          }
           device.queue.writeBuffer(render.viewBoxBuffer!, 0, new Float32Array(translation), 0, 4);
         }
       }
@@ -343,9 +214,6 @@ class Renderer {
       newTranslation = [newTranslation[0] + change[0], newTranslation[1] + change[1], newTranslation[2] - change[0], newTranslation[3] - change[1]];
       if (newTranslation[2] - newTranslation[0] > 0.01 && newTranslation[3] - newTranslation[1] > 0.01) {
         translation = newTranslation;
-        if (render.terrainToggle) {
-          terrainGenerator!.computeTerrain(undefined, undefined, translation, render.rangeBuffer, render.nodeLength);
-        }
         device.queue.writeBuffer(render.viewBoxBuffer!, 0, new Float32Array(translation), 0, 4);
       } else {
         newTranslation = translation;
@@ -402,8 +270,6 @@ class Renderer {
     const view = texture.createView();
 
     var render = this;
-    var frameCount = 0;
-    var timeToSecond = 1000;
     this.frame = async function frame() {
         var start = performance.now();
         // Sample is no longer the active page.
@@ -423,12 +289,6 @@ class Renderer {
         };
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-        if (render.terrainToggle) {
-          passEncoder.setPipeline(pipeline);
-          passEncoder.setVertexBuffer(0, dataBuf2D);
-          passEncoder.setBindGroup(0, render.bindGroup2D!);
-          passEncoder.draw(6, 1, 0, 0);
-        }
         if (render.edgeToggle) {
           passEncoder.setPipeline(render.edgePipeline!);
           passEncoder.setVertexBuffer(0, edgePositionBuffer);
@@ -446,14 +306,6 @@ class Renderer {
         device.queue.submit([commandEncoder.finish()]);
         await device.queue.onSubmittedWorkDone();
         var end = performance.now();
-        if (timeToSecond - (end - start) < 0) {
-          fpsRef.current!.innerText = `FPS: ${frameCount}`;
-          timeToSecond = 1000 + (timeToSecond - (end - start));
-          frameCount = 0;
-        } else {
-          timeToSecond -= end - start;
-        }
-        frameCount += 1;
         requestAnimationFrame(frame);
     }
 
@@ -561,21 +413,6 @@ class Renderer {
     });
     new Uint32Array(this.targetEdgeDataBuffer.getMappedRange()).set(targetEdges);
     this.targetEdgeDataBuffer.unmap();
-    if (this.terrainToggle) {
-      this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
-    }
-  }
-
-  setWidthFactor(widthFactor : number) {
-    this.terrainGenerator!.computeTerrain(undefined, widthFactor, undefined, this.rangeBuffer, this.nodeLength);
-  }
-
-  setPeakValue(value : number) {
-    this.device.queue.writeBuffer(this.uniform2DBuffer!, 0, new Float32Array([value]), 0, 1);
-  }
-
-  setValleyValue(value : number) {
-    this.device.queue.writeBuffer(this.uniform2DBuffer!, 4, new Float32Array([value]), 0, 1);
   }
 
   setCoolingFactor(value : number) {
@@ -586,17 +423,6 @@ class Renderer {
     this.idealLength = value;
   }
 
-  setGlobalRange() {
-    if (this.rangeBuffer) {
-      this.rangeBuffer = null;
-    } else {
-      this.rangeBuffer = this.device.createBuffer({
-        size: 2 * 4,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
-      });    
-    }
-  }
-
   async runForceDirected() {
     this.forceDirected!.runForces(
       this.nodeDataBuffer!, this.edgeDataBuffer!, this.nodeLength, this.edgeLength, 
@@ -605,81 +431,12 @@ class Renderer {
     );
   }
 
-  toggleTerrainLayer() {
-    this.terrainToggle = !this.terrainToggle;
-  }
-
   toggleNodeLayer() {
     this.nodeToggle = !this.nodeToggle;
   }
 
   toggleEdgeLayer() {
     this.edgeToggle = !this.edgeToggle;
-  }
-
-  setColormap(colormap, colormapImage) {
-    this.device.queue.copyExternalImageToTexture(
-      { source: colormap },
-      { texture: this.colorTexture! },
-      [colormap.width, colormap.height, 1]
-    );
-    this.colormapImage = colormapImage;
-  }
-
-  async onSave(post: boolean, id: number | null, name: string | null) {
-    var height = this.outCanvasRef.current!.height;
-    var width = this.outCanvasRef.current!.width;
-    const gpuReadBuffer = this.device.createBuffer({
-      size: width * height * 4,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-    });
-    console.log(width, height);
-    var commandEncoder = this.device.createCommandEncoder();
-    // Encode commands for copying buffer to buffer.
-    commandEncoder.copyBufferToBuffer(
-      this.terrainGenerator!.pixelValueBuffer /* source buffer */,
-      0 /* source offset */,
-      gpuReadBuffer /* destination buffer */,
-      0 /* destination offset */,
-      width * height * 4 /* size */
-    );
-
-    // Submit GPU commands.
-    const gpuCommands = commandEncoder.finish();
-    this.device.queue.submit([gpuCommands]);
-
-    // Read buffer.
-    await gpuReadBuffer.mapAsync(GPUMapMode.READ);
-    const arrayBuffer = gpuReadBuffer.getMappedRange();
-    var output = new Float32Array(arrayBuffer);
-    var context = this.outCanvasRef.current!.getContext('2d');
-    context!.drawImage(this.colormapImage, 0, 0);
-    var colorData = context!.getImageData(0, 0, 180, 1).data;
-    var imgData = context!.createImageData(width, height);
-    for (var i = 0; i < height; i++) {
-      for (var j = 0; j < width; j++) {
-        var index = j + i * width;
-        var colorIndex = Math.trunc(output[j + (height - 1 - i) * width] * 180) * 4;
-        imgData.data[index * 4] = colorData[colorIndex];
-        imgData.data[index * 4 + 1] = colorData[colorIndex + 1];
-        imgData.data[index * 4 + 2] = colorData[colorIndex + 2];
-        imgData.data[index * 4 + 3] = colorData[colorIndex + 3];
-      }
-    }
-    context!.putImageData(imgData, 0, 0);
-    if (post) {
-      this.outCanvasRef.current!.toBlob(function (b) {
-        axios.post('https://discovery.informatics.uab.edu/apex/aimed/geneterrain/images', b!, {
-          headers: {
-            'p_id': id!,
-            'p_name': name!,
-            'Content-Type': "image/png"
-          }
-        }).then(function (r) {console.log(r); alert("Success!");}).catch(function (e) {console.log(e)});
-      });
-    } else {
-      this.outCanvasRef.current!.toBlob(function (b) { saveAs(b!, `terrain.png`); console.log(b!); }, "image/png");
-    }
   }
 }
 export default Renderer;
