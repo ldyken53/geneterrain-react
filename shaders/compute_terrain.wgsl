@@ -1,26 +1,26 @@
 // compute terrain wgsl
 struct Node {
-    value : f32,
-    x : f32,
-    y : f32,
-    size : f32,
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
 };
 struct Nodes {
-    nodes : array<Node>,
+    nodes : array<Node>;
 };
 struct Uniforms {
-  image_width : u32,
-  image_height : u32,
-  nodes_length : u32,
-  width_factor : f32,
-  view_box : vec4<f32>,
+  image_width : u32;
+  image_height : u32;
+  nodes_length : u32;
+  width_factor : f32;
+  view_box : vec4<f32>;
 };
 struct Pixels {
-    pixels : array<f32>,
+    pixels : array<f32>;
 };
 struct Range {
-    x : atomic<i32>,
-    y : atomic<i32>,
+    x : atomic<i32>;
+    y : atomic<i32>;
 };
 
 @group(0) @binding(0) var<storage, read_write> nodes : Nodes;

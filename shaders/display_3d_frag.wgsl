@@ -1,10 +1,10 @@
 // Fragment shader
 struct Pixels {
-    pixels : array<f32>,
+    pixels : array<f32>;
 };
 struct Image {
-    width : u32,
-    height : u32,
+    width : u32;
+    height : u32;
 };
 
 @group(0) @binding(1) var colormap: texture_2d<f32>;

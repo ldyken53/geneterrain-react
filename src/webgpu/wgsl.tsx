@@ -1,26 +1,26 @@
 export const  compute_terrain = `// compute terrain wgsl
 struct Node {
-    value : f32,
-    x : f32,
-    y : f32,
-    size : f32,
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
 };
 struct Nodes {
-    nodes : array<Node>,
+    nodes : array<Node>;
 };
 struct Uniforms {
-  image_width : u32,
-  image_height : u32,
-  nodes_length : u32,
-  width_factor : f32,
-  view_box : vec4<f32>,
+  image_width : u32;
+  image_height : u32;
+  nodes_length : u32;
+  width_factor : f32;
+  view_box : vec4<f32>;
 };
 struct Pixels {
-    pixels : array<f32>,
+    pixels : array<f32>;
 };
 struct Range {
-    x : atomic<i32>,
-    y : atomic<i32>,
+    x : atomic<i32>;
+    y : atomic<i32>;
 };
 
 @group(0) @binding(0) var<storage, read_write> nodes : Nodes;
@@ -48,17 +48,17 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
 }`;
 export const  normalize_terrain = `// normalize terrain wgsl
 struct Uniforms {
-  image_width : u32,
-  image_height : u32,
-  nodes_length : u32,
-  width_factor : f32,
+  image_width : u32;
+  image_height : u32;
+  nodes_length : u32;
+  width_factor : f32;
 };
 struct Pixels {
-    pixels : array<f32>,
+    pixels : array<f32>;
 };
 struct Range {
-    x : i32,
-    y : i32,
+    x : i32;
+    y : i32;
 };
 
 @group(0) @binding(0) var<storage, write> pixels : Pixels;
@@ -72,8 +72,8 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
 }`;
 export const  display_2d_vert = `// Vertex shader
 struct VertexOutput {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) fragPosition: vec4<f32>,
+  @builtin(position) Position : vec4<f32>;
+  @location(0) fragPosition: vec4<f32>;
 };
 
 @stage(vertex)
@@ -89,15 +89,15 @@ fn main(@location(0) position : vec4<f32>)
 `;
 export const  display_2d_frag = `// Fragment shader
 struct Pixels {
-    pixels : array<f32>,
+    pixels : array<f32>;
 };
 struct Uniforms {
-    peak_value : f32,
-    valley_value : f32,
+    peak_value : f32;
+    valley_value : f32;
 };
 struct Image {
-    width : u32,
-    height : u32,
+    width : u32;
+    height : u32;
 };
 
 @group(0) @binding(0) var myTexture: texture_2d<f32>;
@@ -139,13 +139,13 @@ fn main(@location(0) fragPosition: vec4<f32>) -> @location(0) vec4<f32> {
 }`;
 export const  display_3d_vert = `// Vertex shader
 struct VertexOutput {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) vray_dir: vec3<f32>,
-  @location(1) @interpolate(flat) transformed_eye: vec3<f32>,
+  @builtin(position) Position : vec4<f32>;
+  @location(0) vray_dir: vec3<f32>;
+  @location(1) @interpolate(flat) transformed_eye: vec3<f32>;
 };
 struct Uniforms {
-  proj_view : mat4x4<f32>,
-  eye_pos : vec4<f32>,
+  proj_view : mat4x4<f32>;
+  eye_pos : vec4<f32>;
 };
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
@@ -161,11 +161,11 @@ fn main(@location(0) position : vec3<f32>)
 }`;
 export const  display_3d_frag = `// Fragment shader
 struct Pixels {
-    pixels : array<f32>,
+    pixels : array<f32>;
 };
 struct Image {
-    width : u32,
-    height : u32,
+    width : u32;
+    height : u32;
 };
 
 @group(0) @binding(1) var colormap: texture_2d<f32>;
@@ -255,24 +255,24 @@ fn main(
 
 `;
 export const  node_vert = `struct Node {
-    value : f32,
-    x : f32,
-    y : f32,
-    size : f32,
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
 };
 struct Nodes {
-    nodes : array<Node>,
+    nodes : array<Node>;
 };
 struct VertexOutput {
-    @builtin(position) Position : vec4<f32>,
-    @location(0) position: vec2<f32>,
-    @location(1) @interpolate(flat) center : vec2<f32>,
+    @builtin(position) Position : vec4<f32>;
+    @location(0) position: vec2<f32>;
+    @location(1) @interpolate(flat) center : vec2<f32>;
 };
 struct Uniforms {
-  view_box : vec4<f32>,
+  view_box : vec4<f32>;
 };
 struct Edges {
-    edges : array<u32>,
+    edges : array<u32>;
 };
 
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
@@ -310,24 +310,24 @@ fn main(@location(0) position: vec2<f32>, @location(1) @interpolate(flat) center
 }
 `;
 export const  edge_vert = `//this builtin(position) clip_position tells that clip_position is the value we want to use for our vertex position or clip position
-//it's not needed to create a struct, we could just do [[builtin(position)]] clipPosition
+//it's not needed to create a struct; we could just do [[builtin(position)]] clipPosition
 struct VertexOutput{
-    @builtin(position) clip_position: vec4<f32>,
+    @builtin(position) clip_position: vec4<f32>;
 };
 struct Uniforms {
-  view_box : vec4<f32>,
+  view_box : vec4<f32>;
 };
 struct Node {
-    value : f32,
-    x : f32,
-    y : f32,
-    size : f32,
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
 };
 struct Nodes {
-    nodes : array<Node>,
+    nodes : array<Node>;
 };
 struct Edges {
-    edges : array<u32>,
+    edges : array<u32>;
 };
 
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
@@ -351,25 +351,25 @@ fn main()->@location(0) vec4<f32>{
     return vec4<f32>(0.0, 0.0, 0.0, 0.1);
 }`;
 export const  compute_forces = `struct Node {
-    value : f32,
-    x : f32,
-    y : f32,
-    size : f32,
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
 };
 struct Nodes {
-    nodes : array<Node>,
+    nodes : array<Node>;
 };
 struct Edges {
-    edges : array<u32>,
+    edges : array<u32>;
 };
 struct Forces {
-    forces : array<f32>,
+    forces : array<f32>;
 };
 struct Uniforms {
-    nodes_length : u32,
-    edges_length : u32,
-    cooling_factor : f32,
-    ideal_length : f32,
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
 };
 
 @group(0) @binding(0) var<storage, read> nodes : Nodes;
@@ -421,50 +421,50 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
 }
 `;
 export const  compute_forcesBH = `struct Node {
-    value : f32,
-    x : f32,
-    y : f32,
-    size : f32,
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
 };
 struct Nodes {
-    nodes : array<Node>,
+    nodes : array<Node>;
 };
 struct Edges {
-    edges : array<u32>,
+    edges : array<u32>;
 };
 struct Stack {
-    a : array<u32>,
+    a : array<u32>;
 }
 struct Forces {
-    forces : array<f32>,
+    forces : array<f32>;
 };
 struct Uniforms {
-    nodes_length : u32,
-    edges_length : u32,
-    cooling_factor : f32,
-    ideal_length : f32,
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
 };
 struct Rectangle {
-    x : f32,
-    y : f32,
-    w : f32,
-    h : f32,
+    x : f32;
+    y : f32;
+    w : f32;
+    h : f32;
 };
 struct QuadTree {
-    boundary : Rectangle,
-    NW : f32,
-    NE : f32,
-    SW : f32,
-    SE : f32,
-    CoM : vec2<f32>,
-    mass : f32,
-    test : f32,
+    boundary : Rectangle;
+    NW : f32;
+    NE : f32;
+    SW : f32;
+    SE : f32;
+    CoM : vec2<f32>;
+    mass : f32;
+    test : f32;
 };
 struct QuadTrees {
-    quads : array<QuadTree>,
+    quads : array<QuadTree>;
 }
 struct Batch {
-    batch_id : u32,
+    batch_id : u32;
 }
 
 @group(0) @binding(0) var<storage, read> nodes : Nodes;
@@ -489,7 +489,7 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     var out : u32 = 0u;
     loop {
         out = out + 1u;
-        if (out == 100000u) {
+        if (out == 1000u) {
             break;
         }
         var quad : QuadTree = quads.quads[index];
@@ -554,25 +554,25 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
 }
 `;
 export const  compute_attract_forces = `struct Node {
-    value : f32,
-    x : f32,
-    y : f32,
-    size : f32,
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
 };
 struct Nodes {
-    nodes : array<Node>,
+    nodes : array<Node>;
 };
 struct Edges {
-    edges : array<u32>,
+    edges : array<u32>;
 };
 struct Forces {
-    forces : array<f32>,
+    forces : array<f32>;
 };
 struct Uniforms {
-    nodes_length : u32,
-    edges_length : u32,
-    cooling_factor : f32,
-    ideal_length : f32,
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
 };
 
 @group(0) @binding(0) var<storage, read> nodes : Nodes;
@@ -600,31 +600,31 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     }
 }`;
 export const  apply_forces = `struct Node {
-    value : f32,
-    x : f32,
-    y : f32,
-    size : f32,
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
 };
 struct Nodes {
-    nodes : array<Node>,
+    nodes : array<Node>;
 };
 struct Forces {
-    forces : array<f32>,
+    forces : array<f32>;
 };
 struct Batch {
-    batch_id : u32,
+    batch_id : u32;
 };
 struct Uniforms {
-    nodes_length : u32,
-    edges_length : u32,
-    cooling_factor : f32,
-    ideal_length : f32,
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
 };
 struct Range {
-    x_min : atomic<i32>,
-    x_max : atomic<i32>,
-    y_min : atomic<i32>,
-    y_max : atomic<i32>
+    x_min : atomic<i32>;
+    x_max : atomic<i32>;
+    y_min : atomic<i32>;
+    y_max : atomic<i32>;
 };
 @group(0) @binding(0) var<storage, read_write> nodes : Nodes;
 @group(0) @binding(1) var<storage, read_write> forces : Forces;
@@ -685,19 +685,19 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
 }
 `;
 export const  create_adjacency_matrix = `struct Edges {
-    edges : array<u32>,
+    edges : array<u32>;
 };
 struct BoolArray {
-    matrix : array<u32>,
+    matrix : array<u32>;
 };
 struct Uniforms {
-    nodes_length : u32,
-    edges_length : u32,
-    cooling_factor : f32,
-    ideal_length : f32,
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
 };
 struct IntArray {
-    matrix : array<i32>,
+    matrix : array<i32>;
 };
 
 @group(0) @binding(0) var<storage, read> edges : Edges;
@@ -730,42 +730,42 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
 }
 `;
 export const  create_quadtree = `struct Node {
-    value : f32,
-    x : f32,
-    y : f32,
-    size : f32,
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
 };
 struct Nodes {
-    nodes : array<Node>,
+    nodes : array<Node>;
 };
 struct Rectangle {
-    x : f32,
-    y : f32,
-    w : f32,
-    h : f32,
+    x : f32;
+    y : f32;
+    w : f32;
+    h : f32;
 };
 struct QuadTree {
-    boundary : Rectangle,
-    // In order NW, NE, SW, SE
-    pointers : vec4<f32>,
-    CoM : vec2<f32>,
-    mass : f32,
-    test : f32,
+    boundary : Rectangle;
+    // In order NW; NE; SW; SE
+    pointers : vec4<f32>;
+    CoM : vec2<f32>;
+    mass : f32;
+    test : f32;
 };
 struct Uniforms {
-    nodes_length : u32,
-    edges_length : u32,
-    cooling_factor : f32,
-    ideal_length : f32,
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
 };
 struct QuadTrees {
-    quads : array<QuadTree>,
+    quads : array<QuadTree>;
 }
 struct Range {
-    x_min : i32,
-    x_max : i32,
-    y_min : i32,
-    y_max : i32
+    x_min : i32;
+    x_max : i32;
+    y_min : i32;
+    y_max : i32;
 };
 
 @group(0) @binding(0) var<storage, read> nodes : Nodes;
@@ -885,25 +885,25 @@ fn main() {
 }
 `;
 export const  create_sourcelist = `struct Edges {
-    edges : array<u32>,
+    edges : array<u32>;
 };
 struct UintArray {
-    a : array<u32>,
+    a : array<u32>;
 };
 struct EdgeInfo {
-    source_start : u32,
-    source_degree : u32,
-    target_start : u32,
-    target_degree : u32,
+    source_start : u32;
+    source_degree : u32;
+    target_start : u32;
+    target_degree : u32;
 }
 struct EdgeInfoArray {
-    a : array<EdgeInfo>,
+    a : array<EdgeInfo>;
 };
 struct Uniforms {
-    nodes_length : u32,
-    edges_length : u32,
-    cooling_factor : f32,
-    ideal_length : f32,
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
 };
 
 @group(0) @binding(0) var<storage, read_write> edges : Edges;
@@ -929,25 +929,25 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     }
 }`;
 export const  create_targetlist = `struct Edges {
-    edges : array<u32>,
+    edges : array<u32>;
 };
 struct UintArray {
-    a : array<u32>,
+    a : array<u32>;
 };
 struct EdgeInfo {
-    source_start : u32,
-    source_degree : u32,
-    target_start : u32,
-    target_degree : u32,
+    source_start : u32;
+    source_degree : u32;
+    target_start : u32;
+    target_degree : u32;
 }
 struct EdgeInfoArray {
-    a : array<EdgeInfo>,
+    a : array<EdgeInfo>;
 };
 struct Uniforms {
-    nodes_length : u32,
-    edges_length : u32,
-    cooling_factor : f32,
-    ideal_length : f32,
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
 };
 
 @group(0) @binding(0) var<storage, read_write> edges : Edges;
@@ -973,34 +973,34 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     }
 }`;
 export const  compute_attractive_new = `struct Node {
-    value : f32,
-    x : f32,
-    y : f32,
-    size : f32,
+    value : f32;
+    x : f32;
+    y : f32;
+    size : f32;
 };
 struct Nodes {
-    nodes : array<Node>,
+    nodes : array<Node>;
 };
 struct Forces {
-    forces : array<f32>,
+    forces : array<f32>;
 };
 struct UintArray {
-    a : array<u32>,
+    a : array<u32>;
 };
 struct EdgeInfo {
-    source_start : u32,
-    source_degree : u32,
-    target_start : u32,
-    target_degree : u32,
+    source_start : u32;
+    source_degree : u32;
+    target_start : u32;
+    target_degree : u32;
 }
 struct EdgeInfoArray {
-    a : array<EdgeInfo>,
+    a : array<EdgeInfo>;
 };
 struct Uniforms {
-    nodes_length : u32,
-    edges_length : u32,
-    cooling_factor : f32,
-    ideal_length : f32,
+    nodes_length : u32;
+    edges_length : u32;
+    cooling_factor : f32;
+    ideal_length : f32;
 };
 
 @group(0) @binding(0) var<storage, read_write> edge_info : EdgeInfoArray;
