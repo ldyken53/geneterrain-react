@@ -26,9 +26,6 @@ type SidebarState = {
   edgeData: Array<number>,
   sourceEdges: Array<number>,
   targetEdges: Array<number>,
-  laplacian: Matrix,
-  adjacencyMatrix: Array<Array<number>>,
-  e: {},
   jsonFormat: boolean,
   terrainID: number,
   terrainName: string
@@ -40,7 +37,8 @@ type edge = {
 type node = {
   name: string,
   x: number,
-  y: number
+  y: number,
+  value: number
 }
 type Graph = {
   nodes: Array<node>,
@@ -50,13 +48,13 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     constructor(props) {
       super(props);
       this.state = {
-        nodeData: [], edgeData: [], sourceEdges: [], targetEdges: [], laplacian: sparse([]), 
-        adjacencyMatrix: [], e: {}, jsonFormat: false, terrainID: 0, terrainName: "" 
+        nodeData: [], edgeData: [], sourceEdges: [], targetEdges: [], jsonFormat: false, terrainID: 0, terrainName: "" 
       };
   
       this.handleSubmit = this.handleSubmit.bind(this);
       this.postImage = this.postImage.bind(this);
       this.readFiles = this.readFiles.bind(this);
+      this.readGraph = this.readGraph.bind(this);
     }
   
     handleSubmit(event) {
@@ -70,37 +68,64 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       this.props.onSave(true, this.state.terrainID, this.state.terrainName);
     }
 
+    readGraph(graph : Graph) {
+      var nodeData : Array<number> = [];
+      var edgeData : Array<number> = [];
+      var sourceEdges : Array<number> = [];
+      var targetEdges : Array<number> = [];
+      console.log(graph);
+      for (var i = 0; i < graph.nodes.length; i++) {
+        var value = 0.0;
+        if (graph.nodes[i].value) {
+          value = graph.nodes[i].value;
+        }
+        if (graph.nodes[i].x) {
+          nodeData.push(value, graph.nodes[i].x, graph.nodes[i].y, 1.0);
+        } else {
+          nodeData.push(value, Math.random(), Math.random(), 1.0);
+        }
+      }
+      console.log(nodeData);
+      for (var i = 0; i < graph.edges.length; i++) {
+        var source = graph.edges[i].source;
+        var target = graph.edges[i].target;
+        edgeData.push(source, target);
+      }
+      graph.edges.sort(function(a,b) {return (a.source > b.source) ? 1 : ((b.source > a.source) ? -1 : 0);} );
+      for (var i = 0; i < graph.edges.length; i++) {
+        var source = graph.edges[i].source;
+        var target = graph.edges[i].target;
+        sourceEdges.push(source, target);
+      }
+      graph.edges.sort(function(a,b) {return (a.target > b.target) ? 1 : ((b.target > a.target) ? -1 : 0);} );
+      for (var i = 0; i < graph.edges.length; i++) {
+        var source = graph.edges[i].source;
+        var target = graph.edges[i].target;
+        targetEdges.push(source, target);
+      }
+      this.setState({nodeData: nodeData, edgeData: edgeData, sourceEdges: sourceEdges, targetEdges: targetEdges});
+    }
+
     readFiles(event : React.ChangeEvent<HTMLInputElement>) {
         const files : FileList = event.target.files!;
         console.log(files);
         var nodeIDToValue = {};
-        // var nodeIDToPos = {};
         var nodeIDToIndex = {};
-        var nodeData : Array<number> = [];
-        var edgeData : Array<number> = [];
-        var degreeMatrix : Array<Array<number>> = [];
-        var adjacencyMatrix : Array<Array<number>> = [];
+        var nodeData : Array<node> = [];
+        var edgeData : Array<edge> = [];
         const edgeReader = new FileReader();
         edgeReader.onload = (event) => {
           var edgeRaw = (edgeReader.result as string).split("\n");
           for (var element of edgeRaw) {
             var parts = element.split("\t");
             if (nodeIDToValue[parts[0]] && nodeIDToValue[parts[1]]) {
-              edgeData.push(
-                nodeIDToIndex[parts[0]], 
-                nodeIDToIndex[parts[1]],
-              );
-              degreeMatrix[nodeIDToIndex[parts[0]]][nodeIDToIndex[parts[0]]] += 1;
-              degreeMatrix[nodeIDToIndex[parts[1]]][nodeIDToIndex[parts[1]]] += 1;
-              adjacencyMatrix[nodeIDToIndex[parts[0]]][nodeIDToIndex[parts[1]]] += 1;
-              adjacencyMatrix[nodeIDToIndex[parts[1]]][nodeIDToIndex[parts[0]]] += 1;
+              edgeData.push({
+                source: nodeIDToIndex[parts[0]], 
+                target: nodeIDToIndex[parts[1]],
+              });
             }
           }
-          console.log(edgeData);
-          this.setState({edgeData: edgeData});
-          // var laplacian : Matrix = subtract(sparse(degreeMatrix), sparse(adjacencyMatrix)) as Matrix;
-          // console.log(laplacian);
-          // this.setState({laplacian: laplacian, adjacencyMatrix: adjacencyMatrix});
+          this.readGraph({nodes: nodeData, edges: edgeData});
         };
         const layoutReader = new FileReader();
         layoutReader.onload = (event) => {
@@ -108,20 +133,12 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           for (var element of layoutData) {
             var parts = element.split("\t");
             if (nodeIDToValue[parts[0]]) {
-              nodeIDToIndex[parts[0]] = nodeData.length / 4;
+              nodeIDToIndex[parts[0]] = nodeData.length;
               // Pushes values to node data in order of struct for WebGPU:
               // nodeValue, nodeX, nodeY, nodeSize
-              nodeData.push(parseFloat(nodeIDToValue[parts[0]]), parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
+              nodeData.push({name: nodeData.length.toString(), value: parseFloat(nodeIDToValue[parts[0]]), 
+              x: parseFloat(parts[1]), y: parseFloat(parts[2])});
               // nodeIDToPos[parts[0]] = [parseFloat(parts[1]) * 2.0 - 1, parseFloat(parts[2]) * 2.0 - 1];
-            }
-          }
-          this.setState({nodeData: nodeData});
-          for (var i = 0; i < nodeData.length / 4; i++) {
-            degreeMatrix.push([]);
-            adjacencyMatrix.push([]);
-            for (var j = 0; j < nodeData.length / 4; j++) {
-              degreeMatrix[i].push(0);
-              adjacencyMatrix[i].push(0);
             }
           }
           edgeReader.readAsText(files[2]);
@@ -141,61 +158,12 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     readJson(event : React.ChangeEvent<HTMLInputElement>) {
       const files : FileList = event.target.files!;
       const jsonReader = new FileReader();
-      var nodeData : Array<number> = [];
-      var edgeData : Array<number> = [];
-      var sourceEdges : Array<number> = [];
-      var targetEdges : Array<number> = [];
       jsonReader.onload = (event) => {
         var graph : Graph = JSON.parse(jsonReader.result as string);
-        console.log(graph);
-        for (var i = 0; i < graph.nodes.length; i++) {
-          if (graph.nodes[i].x) {
-            nodeData.push(0.0, graph.nodes[i].x, graph.nodes[i].y, 1.0);
-          } else {
-            nodeData.push(0.0, Math.random(), Math.random(), 1.0);
-          }
-        }
-        for (var i = 0; i < graph.edges.length; i++) {
-          var source = graph.edges[i].source;
-          var target = graph.edges[i].target;
-          edgeData.push(source, target);
-        }
-        graph.edges.sort(function(a,b) {return (a.source > b.source) ? 1 : ((b.source > a.source) ? -1 : 0);} );
-        for (var i = 0; i < graph.edges.length; i++) {
-          var source = graph.edges[i].source;
-          var target = graph.edges[i].target;
-          sourceEdges.push(source, target);
-        }
-        console.log(sourceEdges);
-        graph.edges.sort(function(a,b) {return (a.target > b.target) ? 1 : ((b.target > a.target) ? -1 : 0);} );
-        for (var i = 0; i < graph.edges.length; i++) {
-          var source = graph.edges[i].source;
-          var target = graph.edges[i].target;
-          targetEdges.push(source, target);
-        }
-        console.log(graph.edges);
-        this.setState({nodeData: nodeData, edgeData: edgeData, sourceEdges: sourceEdges, targetEdges: targetEdges});
+        this.readGraph(graph);
       };
       jsonReader.readAsText(files[0]);
     }
-
-    // applySpectral() {
-    //   var e = eigs(this.state.laplacian);
-    //   console.log(e);
-    //   var nodeData = this.state.nodeData;
-    //   var x = column(e.vectors, 1) as Matrix;
-    //   var y = column(e.vectors, 2) as Matrix;
-    //   var x_max = max(x);
-    //   var y_max = max(y);
-    //   var x_min = min(x);
-    //   var y_min = min(y);
-    //   for (var i = 0; i < nodeData.length / 4; i++) {
-    //     nodeData[i * 4 + 1] = (x.get([i, 0]) - x_min) / (x_max - x_min);
-    //     nodeData[i * 4 + 2] = (y.get([i, 0]) - y_min) / (y_max - y_min);
-    //   }
-    //   this.setState({nodeData: nodeData});
-    //   this.props.setNodeEdgeData(nodeData, this.state.edgeData);
-    // }
 
     onSaveXML() {
       var xw = new XMLWriter(true);
