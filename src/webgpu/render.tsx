@@ -14,6 +14,7 @@ class Renderer {
   public edgeBindGroup: GPUBindGroup | null = null;
   public nodeDataBuffer: GPUBuffer | null = null;
   public edgeDataBuffer: GPUBuffer | null = null;
+  public testFrame: (() => Promise<void>) | null = null;
   public colorTexture: GPUTexture | null = null;
   public viewBoxBuffer: GPUBuffer | null = null;
   public nodePipeline: GPURenderPipeline | null = null;
@@ -30,6 +31,7 @@ class Renderer {
   public idealLength: number = 0.05;
   public coolingFactor: number = 0.9;
   public iterRef: React.RefObject<HTMLLabelElement>;
+  public edgeList: Array<number> = [0];
 
   constructor(
     adapter: GPUAdapter,
@@ -45,6 +47,7 @@ class Renderer {
     this.colormapImage = colormapImage;
     this.outCanvasRef = outCanvasRef;
     this.device = device;
+
     // Check that canvas is active
     if (canvasRef.current === null) return;
     const context = canvasRef.current.getContext("webgpu")!;
@@ -60,8 +63,11 @@ class Renderer {
     context.configure({
       device,
       format: presentationFormat,
+      compositingAlphaMode: "premultiplied",
       size: presentationSize,
     });
+
+    this.edgeList = [0];
 
     this.edgeDataBuffer = device.createBuffer({
       size: 4 * 4,
@@ -82,16 +88,16 @@ class Renderer {
         }),
         entryPoint: "main",
         buffers: [
-          {
-            arrayStride: 2 * 4 * 1,
-            attributes: [
-              {
-                format: "float32x2" as GPUVertexFormat,
-                offset: 0,
-                shaderLocation: 0,
-              },
-            ],
-          },
+          // {
+          //   arrayStride: 2 * 4 * 1,
+          //   attributes: [
+          //     {
+          //       format: "float32x2" as GPUVertexFormat,
+          //       offset: 0,
+          //       shaderLocation: 0,
+          //     },
+          //   ],
+          // },
         ],
       },
       fragment: {
@@ -133,6 +139,7 @@ class Renderer {
       usage: GPUBufferUsage.VERTEX,
       mappedAtCreation: true,
     });
+
     new Float32Array(nodePositionBuffer.getMappedRange()).set([
       1, -1, -1, -1, -1, 1, 1, -1, -1, 1, 1, 1,
     ]);
@@ -147,7 +154,10 @@ class Renderer {
 
     this.nodeDataBuffer = device.createBuffer({
       size: 4 * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      usage:
+        GPUBufferUsage.STORAGE |
+        GPUBufferUsage.COPY_DST |
+        GPUBufferUsage.COPY_SRC,
       mappedAtCreation: true,
     });
     new Float32Array(this.nodeDataBuffer.getMappedRange()).set([
@@ -486,6 +496,7 @@ class Renderer {
     var render = this;
     var frameCount = 0;
     var timeToSecond = 1000;
+
     async function frame() {
       var start = performance.now();
       // Sample is no longer the active page.
@@ -506,18 +517,21 @@ class Renderer {
 
       const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
       if (render.terrainToggle) {
+        // console.log(" terrain toggle");
         passEncoder.setPipeline(pipeline);
         passEncoder.setVertexBuffer(0, dataBuf2D);
         passEncoder.setBindGroup(0, render.bindGroup2D!);
         passEncoder.draw(6, 1, 0, 0);
       }
       if (render.edgeToggle) {
+        // console.log(" edge toggle");
         passEncoder.setPipeline(render.edgePipeline!);
-        passEncoder.setVertexBuffer(0, edgePositionBuffer);
+        // passEncoder.setVertexBuffer(0, edgePositionBuffer);
         passEncoder.setBindGroup(0, render.edgeBindGroup!);
-        passEncoder.draw(2, render.edgeLength, 0, 0);
+        passEncoder.draw(2, render.edgeLength / 2, 0, 0);
       }
       if (render.nodeToggle) {
+        // console.log(" node toggle");
         passEncoder.setPipeline(render.nodePipeline!);
         passEncoder.setVertexBuffer(0, nodePositionBuffer);
         passEncoder.setBindGroup(0, render.nodeBindGroup!);
@@ -527,6 +541,7 @@ class Renderer {
 
       device.queue.submit([commandEncoder.finish()]);
       await device.queue.onSubmittedWorkDone();
+      // console.log("rendering task finished for", render.edgeLength);
       var end = performance.now();
       if (timeToSecond - (end - start) < 0) {
         fpsRef.current!.innerText = `FPS: ${frameCount}`;
@@ -539,13 +554,46 @@ class Renderer {
       requestAnimationFrame(frame);
     }
 
+    this.testFrame = async () => {
+      const commandEncoder = this.device.createCommandEncoder();
+      const renderPassDescriptor: GPURenderPassDescriptor = {
+        colorAttachments: [
+          {
+            view,
+            resolveTarget: context.getCurrentTexture().createView(),
+            loadValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
+            storeOp: "discard" as GPUStoreOp,
+          },
+        ],
+      };
+      const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+      passEncoder.setPipeline(this.edgePipeline!);
+      passEncoder.setVertexBuffer(0, edgePositionBuffer);
+      passEncoder.setBindGroup(0, this.edgeBindGroup!);
+      passEncoder.draw(2, this.edgeLength / 2);
+      passEncoder.setPipeline(this.nodePipeline!);
+      passEncoder.setVertexBuffer(0, nodePositionBuffer);
+      passEncoder.setBindGroup(0, this.nodeBindGroup!);
+      passEncoder.draw(6, this.nodeLength);
+      passEncoder.endPass();
+      device.queue.submit([commandEncoder.finish()]);
+      await device.queue.onSubmittedWorkDone();
+      await device.queue.onSubmittedWorkDone();
+    };
+
     requestAnimationFrame(frame);
   }
 
-  setNodeEdgeData(nodeData: Array<number>, edgeData: Array<number>) {
+  async setNodeEdgeData(nodeData: Array<number>, edgeData: Array<number>) {
+    this.edgeList = edgeData;
+    this.nodeDataBuffer!.destroy();
+    this.edgeDataBuffer!.destroy();
     this.nodeDataBuffer = this.device.createBuffer({
       size: nodeData.length * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      usage:
+        GPUBufferUsage.STORAGE |
+        GPUBufferUsage.COPY_DST |
+        GPUBufferUsage.COPY_SRC,
       mappedAtCreation: true,
     });
     new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
@@ -599,6 +647,7 @@ class Renderer {
     });
     this.edgeLength = edgeData.length;
     this.nodeLength = nodeData.length / 4;
+    await this.testFrame!();
     // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
   }
 
@@ -659,9 +708,10 @@ class Renderer {
       this.edgeLength,
       this.coolingFactor,
       this.idealLength,
-      10000,
-      100,
-      this.iterRef
+      1000,
+      300,
+      this.iterRef,
+      this.edgeList
     );
   }
 

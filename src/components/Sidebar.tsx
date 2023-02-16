@@ -7,6 +7,7 @@ import * as Constant from "../constant";
 import { CSVLink } from "react-csv";
 import XMLWriter from "xml-writer";
 import * as d3 from "d3";
+import { greadability } from "../greadibility.js";
 
 const headers = [
   { label: "Node", key: "Node" },
@@ -14,14 +15,17 @@ const headers = [
   { label: "FPS", key: "FPS" },
 ];
 
-// const headerLayout = [
-//   { label: "Graph", key: "graph1" },
-//   { label: "Iteration number", key: "Iteration number" },
-//   { label: "time", key: "time" },
-// ];
+const headerForLayout = [
+  { label: "iterationCount", key: "iterationCount" },
+  { label: "time", key: "time" },
+  { label: "renderTime", key: "renderTime" },
+];
 
 type SidebarProps = {
-  setNodeEdgeData: (nodeData: Array<number>, edgeData: Array<number>) => void;
+  setNodeEdgeData: (
+    nodeData: Array<number>,
+    edgeData: Array<number>
+  ) => Promise<void>;
   setWidthFactor: (widthFactor: number) => void;
   setPeakValue: (value: number) => void;
   setValleyValue: (value: number) => void;
@@ -48,7 +52,9 @@ type SidebarState = {
   runBenchmark: boolean;
   jsonFormat: boolean;
   FPSData: Array<Array<string>>;
-  d3timing: timing;
+  d3timing: Array<timing>;
+  mouseCapture: boolean;
+  mouseEvents: mouseStateType;
 
   // canvasAdded: boolean;
 };
@@ -75,7 +81,15 @@ type Graph = {
 };
 
 interface timing {
-  [iteration: string]: number;
+  iterationCount: number;
+  totalTime: number;
+  renderingTime: number;
+}
+
+interface mouseStateType {
+  mouseDown: any[];
+  mouseMove: any[];
+  mouseUp: any[];
 }
 
 class Sidebar extends React.Component<SidebarProps, SidebarState> {
@@ -92,7 +106,14 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       jsonFormat: true,
       runBenchmark: false,
       FPSData: [],
-      d3timing: {},
+      d3timing: [],
+      mouseCapture: false,
+      mouseEvents: {
+        mouseDown: [],
+        mouseMove: [],
+        mouseUp: [],
+      },
+
       // canvasAdded: false,
     };
 
@@ -111,6 +132,82 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     // =========================================================
     this.d3TimingStudy = this.d3TimingStudy.bind(this);
     // this.randomDataGen_Computation = this.randomDataGen_Computation.bind(this);
+    //---------------------------------------------------------------------
+    this.handleMouseDown = this.handleMouseDown.bind(this);
+    this.handleMouseMove = this.handleMouseMove.bind(this);
+    this.handleMouseUp = this.handleMouseUp.bind(this);
+
+    this.mouseDown = this.mouseDown.bind(this);
+    this.mouseMove = this.mouseMove.bind(this);
+    this.mouseUp = this.mouseUp.bind(this);
+  }
+
+  mouseDown(event) {
+    console.log("i am down");
+    this.setState({
+      mouseEvents: {
+        ...this.state.mouseEvents,
+        mouseDown: [...this.state.mouseEvents.mouseDown, event],
+      },
+    });
+  }
+
+  mouseUp(event) {
+    console.log(...this.state.mouseEvents.mouseUp);
+    this.setState({
+      mouseEvents: {
+        ...this.state.mouseEvents,
+        mouseUp: [...this.state.mouseEvents.mouseUp, event],
+      },
+    });
+  }
+
+  mouseMove(event) {
+    this.setState({
+      mouseEvents: {
+        ...this.state.mouseEvents,
+        mouseMove: [...this.state.mouseEvents.mouseMove, event],
+      },
+    });
+  }
+
+  handleMouseUp(event) {
+    event.stopPropogation();
+    this.setState({ mouseCapture: false });
+  }
+
+  handleMouseDown(event) {
+    event.stopPropogation();
+    let positionX = event.clientX;
+    let positionY = event.clientY;
+    console.log(positionX, positionY);
+    this.setState({ mouseCapture: true });
+  }
+
+  handleMouseMove(event) {
+    if (this.state.mouseCapture) {
+      let positionX = event.clientX;
+      let positionY = event.clientY;
+      console.log(positionX, positionY);
+    }
+  }
+
+  async componentDidMount() {
+    let canvasElement: any = document.getElementsByTagName("canvas")[0];
+    if (canvasElement) {
+      canvasElement.addEventListener("mousedown", this.mouseDown);
+      canvasElement.addEventListener("mousemove", this.mouseMove);
+      canvasElement.addEventListener("mouseup", this.mouseUp);
+    }
+  }
+
+  componentWillUnmount() {
+    let canvasElement: any = document.getElementsByTagName("canvas")[0];
+    if (canvasElement) {
+      canvasElement.removeEventListener("mousedown", this.mouseDown);
+      canvasElement.removeEventListener("mousemove", this.mouseMove);
+      canvasElement.removeEventListener("mouseup", this.mouseUp);
+    }
   }
 
   handleSubmit(event) {
@@ -210,102 +307,224 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
     context.fillStyle = "white";
 
-    d3.json("./test_small_spec.json").then((data: any) => {
+    function createLinks(edges, nodes) {}
+
+    d3.json("./sample_test_data/sample_data100_2000.json").then((data: any) => {
       console.log(data);
+      let timeToFormatData = 0;
       startTime = performance.now();
       lastTime = startTime;
       const simulation = d3
         .forceSimulation(data.nodes)
-        .force("charge", d3.forceManyBody().strength(-40))
+        .force("charge", d3.forceManyBody().strength(-0.3))
         .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("link", d3.forceLink(data.edges).distance(5).strength(2.0));
+        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0))
+        .alphaDecay(0.02);
 
       initGraph(data);
 
       function initGraph(data) {
-        console.log(data.edges);
         simulation.on("tick", simulationUpdate);
-        simulation.on("end", () => {
-          let currentTime = performance.now();
-          totalTime = currentTime - startTime;
-          console.log("startTime", startTime);
-          console.log("totalTime", totalTime);
-          console.log("iterationMeasure", iterationMeasure);
+        simulation.on("end", async () => {
+          let nodesFinal = simulation.nodes();
+          console.log(greadability(data.nodes, data.edges));
+          let extraTime = performance.now();
+          await self.props.setNodeEdgeData(
+            self.state.nodeData,
+            self.state.edgeData
+          );
+          let extraEnd = performance.now();
+          let currentTime2 = performance.now();
+          totalTime = currentTime2 - startTime;
+          const [totalAverageTime, layoutAverageTime, renderAverageTime] =
+            findAverage(self.state.d3timing);
+          console.log(
+            "totalAverageTime",
+            totalAverageTime,
+            "layoutAverageTime",
+            layoutAverageTime,
+            "averageTimetoRender",
+            renderAverageTime
+          );
+          console.log("totalTime", totalTime - timeToFormatData);
         });
       }
 
+      function formatData(nodesList, edgesList) {
+        var nodes: Array<number> = [];
+        var edges: Array<number> = [];
+        const data = {
+          nodes: nodes,
+          edges: edges,
+        };
+
+        let nodeCount = nodesList.length;
+        data.nodes = Array(4 * nodeCount).fill(0);
+
+        let maxX = 0;
+        let maxY = 0;
+
+        for (let i = 0; i < 4 * nodeCount; i = i + 4) {
+          data.nodes[i] = 0;
+          let nodeX = Math.abs(nodesList[i / 4].x);
+          let nodeY = Math.abs(nodesList[i / 4].y);
+          if (nodeX > maxX) {
+            maxX = nodeX;
+          }
+          if (nodeY > maxY) {
+            maxY = nodeY;
+          }
+          data.nodes[i + 3] = 1;
+        }
+
+        for (let i = 0; i < 4 * nodeCount; i = i + 4) {
+          data.nodes[i + 1] = nodesList[i / 4].x / maxX;
+          data.nodes[i + 2] = nodesList[i / 4].y / maxY;
+        }
+
+        data.edges = Array(2 * nodeCount * 20).fill(0);
+        for (let i = 0; i < 2 * 20 * nodeCount; i = i + 2) {
+          data.edges[i] = parseInt(edgesList[i / 2].source.name);
+          data.edges[i + 1] = parseInt(edgesList[i / 2].target.name);
+        }
+        return data;
+      }
+
+      function findAverage(d3timing) {
+        let totalAverageTime =
+          d3timing.reduce((a, b) => {
+            return a + b.totalTime;
+          }, 0) / d3timing.length;
+        let renderAvergaeTime =
+          d3timing.reduce((a, b) => a + b.renderingTime, 0) / d3timing.length;
+        let layoutAverageTime =
+          d3timing.reduce((a, b) => a + (b.totalTime - b.renderingTime), 0) /
+          d3timing.length;
+
+        return [totalAverageTime, layoutAverageTime, renderAvergaeTime];
+      }
       function simulationUpdate() {
         let currentTime = performance.now();
         let dt = currentTime - lastTime;
         iterationCount++;
         iterationMeasure[iterationCount] = dt;
         lastTime = currentTime;
-        self.setState({
-          d3timing: { ...self.state.d3timing, iterationCount: dt },
-        });
 
+        let renderingStartTime = performance.now();
         context.save();
-        context.strokeStyle = "#aaa";
+        // context.strokeStyle = "#aaa";
         context.clearRect(0, 0, width, height);
 
-        data.edges.forEach(function (d) {
+        data.edges.forEach(function (d, index) {
+          if (index == 0) {
+            console.log(d.source.x);
+          }
           context.beginPath();
+          context.strokeStyle = "rgba(255, 0.0, 0.0, 0.4)";
           context.moveTo(d.source.x, d.source.y);
           context.lineTo(d.target.x, d.target.y);
           context.stroke();
         });
 
-        data.nodes.forEach(function (d, i) {
+        data.nodes.forEach(function (d) {
           context.beginPath();
           context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
-          context.fillStyle = d.col ? "red" : "black";
+          context.fillStyle = d.col ? "black" : "rgba(100, 100.0, 100.0, 0.4)";
           context.fill();
         });
         context.restore();
+        let renderingEndTime = performance.now();
+        let renderTime = renderingEndTime - renderingStartTime;
+        self.setState({
+          d3timing: [
+            ...self.state.d3timing,
+            {
+              iterationCount: iterationCount,
+              totalTime: dt,
+              renderingTime: renderTime,
+            },
+          ],
+        });
       }
+
+      // async function simulationUpdate() {
+      //   let currentTime = performance.now();
+
+      //   let formatStartTime = performance.now();
+      //   let newData = formatData(data.nodes, data.edges);
+      //   let formatStopTime = performance.now();
+      //   let localtimeToFormatData = formatStopTime - formatStartTime;
+      //   timeToFormatData += localtimeToFormatData;
+      //   self.setState({ nodeData: newData.nodes });
+      //   await self.props.setNodeEdgeData(newData.nodes, newData.edges);
+
+      //   let renderTime = 0;
+
+      //   let endTime = performance.now();
+      //   // lastTime = currentTime;
+      //   let dt = endTime - currentTime - localtimeToFormatData;
+      //   iterationCount++;
+      //   console.log(iterationCount, dt);
+      //   iterationMeasure[iterationCount] = dt;
+      //   self.setState({
+      //     d3timing: [
+      //       ...self.state.d3timing,
+      //       {
+      //         iterationCount: iterationCount,
+      //         totalTime: dt,
+      //         renderingTime: renderTime,
+      //       },
+      //     ],
+      //   });
+      // }
     });
   }
 
   async runBenchmark(event: React.MouseEvent) {
-    event.preventDefault();
-    const nodeCounts = [1e6];
-    const density = 20;
-    const edgeCounts = nodeCounts.map((n) => n * density);
-    let stats = Stats();
-    stats.showPanel(0);
-    stats.dom.setAttribute("class", "status");
-    document.body.appendChild(stats.dom);
-    this.setState({ runBenchmark: true });
-    let renderingCanvas = document.querySelectorAll("canvas")[0];
-    renderingCanvas.width = 500;
-    renderingCanvas.height = 500;
-    renderingCanvas.style.width = "500px";
-    renderingCanvas.style.height = "500px";
-    // const testCase = {
-    //   nodeCounts,
-    //   edgeCounts,
-    // };
+    try {
+      event.preventDefault();
+      // 5e2, 1e3, 2e3, 5e3, 1e4, 2e4, 3e4, 4e4, 1e5
+      const nodeCounts = [1e2, 1e3, 2e3, 5e3, 1e4];
+      const density = 20;
+      const edgeCounts = nodeCounts.map((n) => n * density);
+      this.setState({ runBenchmark: true });
+      let renderingCanvas = document.querySelectorAll("canvas")[0];
+      renderingCanvas.width = 500;
+      renderingCanvas.height = 500;
+      renderingCanvas.style.width = "500px";
+      renderingCanvas.style.height = "500px";
+      // const testCase = {
+      //   nodeCounts,
+      //   edgeCounts,
+      // };
 
-    for (let i = 0; i < nodeCounts.length - 1; i++) {
-      // let stepCount = 0;
-      const nCount = nodeCounts[i].toString();
-      const eCount = edgeCounts[i].toString();
+      for (let i = 0; i < nodeCounts.length; i++) {
+        let stats = Stats();
+        stats.showPanel(0);
+        stats.dom.setAttribute("class", "status");
+        document.body.appendChild(stats.dom);
+        // let stepCount = 0;
+        const nCount = nodeCounts[i].toString();
+        const eCount = edgeCounts[i].toString();
 
-      this.setState({ nodeCount: nCount });
-      this.setState({ edgeCount: eCount });
+        this.setState({ nodeCount: nCount });
+        this.setState({ edgeCount: eCount });
 
-      let data = this.generateRandomData(nodeCounts, edgeCounts, i);
-      this.setState({ nodeData: data.nodes });
-      this.setState({ edgeData: data.edges });
-      // this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
-      await this.testFunc(data, stats);
+        let data = this.generateRandomData(nodeCounts, edgeCounts, i);
+        this.setState({ nodeData: data.nodes });
+        this.setState({ edgeData: data.edges });
+        // this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
+        await this.testFunc(data, stats);
+      }
+
+      this.setState({ runBenchmark: false });
+      renderingCanvas.width = 800;
+      renderingCanvas.height = 800;
+      renderingCanvas.style.width = "800px";
+      renderingCanvas.style.height = "800px";
+    } catch (e) {
+      console.log(e);
     }
-
-    this.setState({ runBenchmark: false });
-    renderingCanvas.width = 800;
-    renderingCanvas.height = 800;
-    renderingCanvas.style.width = "800px";
-    renderingCanvas.style.height = "800px";
   }
 
   generatePair(min, max) {
@@ -347,31 +566,31 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       data.nodes[i + 2] = Math.random();
       data.nodes[i + 3] = 1;
     }
-    const edgeHashMap = new Map();
-
     data.edges = Array(2 * edgeCount).fill(0);
     let pair;
 
     for (let i = 0; i < 2 * edgeCount; i = i + 2) {
-      do {
-        pair = this.generatePair(0, nodeCount);
-      } while (edgeHashMap.has(`${pair.source}_${pair.target}`));
-      edgeHashMap.set(`${pair.source}_${pair.target}`, true);
-      edgeHashMap.set(`${pair.target}_${pair.source}`, true);
+      pair = this.generatePair(0, nodeCount);
       data.edges[i] = pair.source;
       data.edges[i + 1] = pair.target;
     }
+    console.log("data generated");
     return data;
   }
 
   refresh(length) {
-    var nodes: Array<number> = [];
-    for (let i = 0; i < 4 * length; i = i + 4) {
-      nodes[i + 1] = Math.random();
-      nodes[i + 2] = Math.random();
+    try {
+      var nodes: Array<number> = [];
+      for (let i = 0; i < 4 * length; i = i + 4) {
+        nodes[i + 1] = Math.random();
+        nodes[i + 2] = Math.random();
+      }
+      this.setState({ nodeData: nodes });
+      this.props.setNodeEdgeData(nodes, this.state.edgeData);
+      // console.log("rendererd");
+    } catch (err) {
+      console.error(err);
     }
-    this.setState({ nodeData: nodes });
-    this.props.setNodeEdgeData(nodes, this.state.edgeData);
   }
 
   storeFPSResult(nodeLength, edgeLength, fps) {
@@ -387,24 +606,34 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
   async testFunc(data, stats) {
     let nodeLength = data.nodes.length / 4;
     let edgeLength = data.edges.length / 2;
+    console.log(nodeLength);
     await this.runTest(nodeLength, edgeLength, stats);
   }
 
   async runTest(nodeLength, edgeLength, stats) {
-    let requestId;
-    const refreshing = () => {
-      stats.begin();
-      this.refresh(nodeLength);
-      stats.end();
-      requestId = requestAnimationFrame(refreshing);
-    };
-    refreshing();
-    await this.sleep(Constant.TIME_FOR_EACH_TEST);
-    let FPS_Array = stats.getFPSHistory();
-    let FPS = FPS_Array.reduce((a, b) => a + b, 0) / FPS_Array.length;
-    this.storeFPSResult(nodeLength, edgeLength, FPS);
-    cancelAnimationFrame(requestId);
-    return;
+    try {
+      let requestId;
+      let count = 0;
+      const refreshing = () => {
+        stats.begin();
+        // console.log("intiital count", count);
+        // count++;
+        this.refresh(nodeLength);
+        // console.log("final count", count);
+        stats.end();
+        requestId = requestAnimationFrame(refreshing);
+      };
+      refreshing();
+      await this.sleep(Constant.TIME_FOR_EACH_TEST);
+      let FPS_Array = stats.getFPSHistory();
+      console.log(FPS_Array);
+      let FPS = FPS_Array.reduce((a, b) => a + b, 0) / FPS_Array.length;
+      this.storeFPSResult(nodeLength, edgeLength, FPS);
+      cancelAnimationFrame(requestId);
+      return;
+    } catch (err) {
+      console.error(err);
+    }
   }
   readFiles(event: React.ChangeEvent<HTMLInputElement>) {
     const files: FileList = event.target.files!;
@@ -433,6 +662,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           ] += 1;
         }
       }
+      console.log(edgeData);
       this.setState({ edgeData: edgeData });
       var laplacian: Matrix = subtract(
         sparse(degreeMatrix),
@@ -486,6 +716,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     const files: FileList = event.target.files!;
     const jsonReader = new FileReader();
     var nodeData: Array<number> = [];
+    var nodeDataFormat2: Array<Array<number>> = [];
     var edgeData: Array<number> = [];
     jsonReader.onload = (event) => {
       var graph: Graph = JSON.parse(jsonReader.result as string);
@@ -493,8 +724,12 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       for (var i = 0; i < graph.nodes.length; i++) {
         if (graph.nodes[i].x) {
           nodeData.push(0.0, graph.nodes[i].x, graph.nodes[i].y, 1.0);
+          nodeDataFormat2.push([graph.nodes[i].x, graph.nodes[i].y, i]);
         } else {
-          nodeData.push(0.0, Math.random(), Math.random(), 1.0);
+          let positionX = Math.random();
+          let positionY = Math.random();
+          nodeData.push(0.0, positionX, positionY, 1.0);
+          nodeDataFormat2.push([positionX, positionY, i]);
         }
       }
       for (var i = 0; i < graph.edges.length; i++) {
@@ -503,6 +738,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         edgeData.push(source, target);
       }
       this.setState({ nodeData: nodeData, edgeData: edgeData });
+      console.log(edgeData);
     };
     jsonReader.readAsText(files[0]);
   }
@@ -574,7 +810,9 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
         <Button className="d3Timing_test" onClick={this.d3TimingStudy}>
           Run D3
         </Button>
-        {/* <CSVLink data={this.state.d3timing}>Download FPS data</CSVLink> */}
+        <CSVLink data={this.state.d3timing} header={headerForLayout}>
+          Download FPS data
+        </CSVLink>
 
         <Form style={{ color: "white" }} onSubmit={this.handleSubmit}>
           <Form.Group controlId="formFile" className="mt-3 mb-3">
@@ -746,6 +984,13 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             Apply Spectral Layout
           </Button>
           <br />
+          <Button
+            onClick={(e) => {
+              console.log(this.state.mouseEvents);
+            }}
+          >
+            Show Event
+          </Button>
           <Button onClick={(e) => this.props.runForceDirected()}>
             Run Force Directed Layout
           </Button>

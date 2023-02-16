@@ -43,6 +43,7 @@ var file_saver_1 = require("file-saver");
 var force_directed_1 = require("./force_directed");
 var Renderer = /** @class */ (function () {
     function Renderer(adapter, device, canvasRef, colormap, colormapImage, outCanvasRef, fpsRef, iterRef) {
+        var _this = this;
         this.uniform2DBuffer = null;
         this.terrainGenerator = null;
         this.forceDirected = null;
@@ -51,6 +52,7 @@ var Renderer = /** @class */ (function () {
         this.edgeBindGroup = null;
         this.nodeDataBuffer = null;
         this.edgeDataBuffer = null;
+        this.testFrame = null;
         this.colorTexture = null;
         this.viewBoxBuffer = null;
         this.nodePipeline = null;
@@ -64,6 +66,7 @@ var Renderer = /** @class */ (function () {
         this.canvasSize = null;
         this.idealLength = 0.05;
         this.coolingFactor = 0.9;
+        this.edgeList = [0];
         this.iterRef = iterRef;
         this.colormapImage = colormapImage;
         this.outCanvasRef = outCanvasRef;
@@ -82,8 +85,10 @@ var Renderer = /** @class */ (function () {
         context.configure({
             device: device,
             format: presentationFormat,
+            compositingAlphaMode: "premultiplied",
             size: presentationSize
         });
+        this.edgeList = [0];
         this.edgeDataBuffer = device.createBuffer({
             size: 4 * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
@@ -100,16 +105,16 @@ var Renderer = /** @class */ (function () {
                 }),
                 entryPoint: "main",
                 buffers: [
-                    {
-                        arrayStride: 2 * 4 * 1,
-                        attributes: [
-                            {
-                                format: "float32x2",
-                                offset: 0,
-                                shaderLocation: 0
-                            },
-                        ]
-                    },
+                // {
+                //   arrayStride: 2 * 4 * 1,
+                //   attributes: [
+                //     {
+                //       format: "float32x2" as GPUVertexFormat,
+                //       offset: 0,
+                //       shaderLocation: 0,
+                //     },
+                //   ],
+                // },
                 ]
             },
             fragment: {
@@ -162,7 +167,9 @@ var Renderer = /** @class */ (function () {
         edgePositionBuffer.unmap();
         this.nodeDataBuffer = device.createBuffer({
             size: 4 * 4,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+            usage: GPUBufferUsage.STORAGE |
+                GPUBufferUsage.COPY_DST |
+                GPUBufferUsage.COPY_SRC,
             mappedAtCreation: true
         });
         new Float32Array(this.nodeDataBuffer.getMappedRange()).set([
@@ -467,18 +474,21 @@ var Renderer = /** @class */ (function () {
                             };
                             passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
                             if (render.terrainToggle) {
+                                // console.log(" terrain toggle");
                                 passEncoder.setPipeline(pipeline);
                                 passEncoder.setVertexBuffer(0, dataBuf2D);
                                 passEncoder.setBindGroup(0, render.bindGroup2D);
                                 passEncoder.draw(6, 1, 0, 0);
                             }
                             if (render.edgeToggle) {
+                                // console.log(" edge toggle");
                                 passEncoder.setPipeline(render.edgePipeline);
-                                passEncoder.setVertexBuffer(0, edgePositionBuffer);
+                                // passEncoder.setVertexBuffer(0, edgePositionBuffer);
                                 passEncoder.setBindGroup(0, render.edgeBindGroup);
-                                passEncoder.draw(2, render.edgeLength, 0, 0);
+                                passEncoder.draw(2, render.edgeLength / 2, 0, 0);
                             }
                             if (render.nodeToggle) {
+                                // console.log(" node toggle");
                                 passEncoder.setPipeline(render.nodePipeline);
                                 passEncoder.setVertexBuffer(0, nodePositionBuffer);
                                 passEncoder.setBindGroup(0, render.nodeBindGroup);
@@ -505,66 +515,118 @@ var Renderer = /** @class */ (function () {
                 });
             });
         }
+        this.testFrame = function () { return __awaiter(_this, void 0, void 0, function () {
+            var commandEncoder, renderPassDescriptor, passEncoder;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        commandEncoder = this.device.createCommandEncoder();
+                        renderPassDescriptor = {
+                            colorAttachments: [
+                                {
+                                    view: view,
+                                    resolveTarget: context.getCurrentTexture().createView(),
+                                    loadValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
+                                    storeOp: "discard"
+                                },
+                            ]
+                        };
+                        passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+                        passEncoder.setPipeline(this.edgePipeline);
+                        passEncoder.setVertexBuffer(0, edgePositionBuffer);
+                        passEncoder.setBindGroup(0, this.edgeBindGroup);
+                        passEncoder.draw(2, this.edgeLength / 2);
+                        passEncoder.setPipeline(this.nodePipeline);
+                        passEncoder.setVertexBuffer(0, nodePositionBuffer);
+                        passEncoder.setBindGroup(0, this.nodeBindGroup);
+                        passEncoder.draw(6, this.nodeLength);
+                        passEncoder.endPass();
+                        device.queue.submit([commandEncoder.finish()]);
+                        return [4 /*yield*/, device.queue.onSubmittedWorkDone()];
+                    case 1:
+                        _a.sent();
+                        return [4 /*yield*/, device.queue.onSubmittedWorkDone()];
+                    case 2:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        }); };
         requestAnimationFrame(frame);
     }
     Renderer.prototype.setNodeEdgeData = function (nodeData, edgeData) {
-        this.nodeDataBuffer = this.device.createBuffer({
-            size: nodeData.length * 4,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-            mappedAtCreation: true
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        this.edgeList = edgeData;
+                        this.nodeDataBuffer.destroy();
+                        this.edgeDataBuffer.destroy();
+                        this.nodeDataBuffer = this.device.createBuffer({
+                            size: nodeData.length * 4,
+                            usage: GPUBufferUsage.STORAGE |
+                                GPUBufferUsage.COPY_DST |
+                                GPUBufferUsage.COPY_SRC,
+                            mappedAtCreation: true
+                        });
+                        new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
+                        this.nodeDataBuffer.unmap();
+                        this.edgeDataBuffer = this.device.createBuffer({
+                            size: edgeData.length * 4,
+                            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
+                            mappedAtCreation: true
+                        });
+                        new Uint32Array(this.edgeDataBuffer.getMappedRange()).set(edgeData);
+                        this.edgeDataBuffer.unmap();
+                        this.edgeBindGroup = this.device.createBindGroup({
+                            layout: this.edgePipeline.getBindGroupLayout(0),
+                            entries: [
+                                {
+                                    binding: 0,
+                                    resource: {
+                                        buffer: this.viewBoxBuffer
+                                    }
+                                },
+                                {
+                                    binding: 1,
+                                    resource: {
+                                        buffer: this.nodeDataBuffer
+                                    }
+                                },
+                                {
+                                    binding: 2,
+                                    resource: {
+                                        buffer: this.edgeDataBuffer
+                                    }
+                                },
+                            ]
+                        });
+                        this.nodeBindGroup = this.device.createBindGroup({
+                            layout: this.nodePipeline.getBindGroupLayout(0),
+                            entries: [
+                                {
+                                    binding: 0,
+                                    resource: {
+                                        buffer: this.viewBoxBuffer
+                                    }
+                                },
+                                {
+                                    binding: 1,
+                                    resource: {
+                                        buffer: this.nodeDataBuffer
+                                    }
+                                },
+                            ]
+                        });
+                        this.edgeLength = edgeData.length;
+                        this.nodeLength = nodeData.length / 4;
+                        return [4 /*yield*/, this.testFrame()];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
         });
-        new Float32Array(this.nodeDataBuffer.getMappedRange()).set(nodeData);
-        this.nodeDataBuffer.unmap();
-        this.edgeDataBuffer = this.device.createBuffer({
-            size: edgeData.length * 4,
-            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
-            mappedAtCreation: true
-        });
-        new Uint32Array(this.edgeDataBuffer.getMappedRange()).set(edgeData);
-        this.edgeDataBuffer.unmap();
-        this.edgeBindGroup = this.device.createBindGroup({
-            layout: this.edgePipeline.getBindGroupLayout(0),
-            entries: [
-                {
-                    binding: 0,
-                    resource: {
-                        buffer: this.viewBoxBuffer
-                    }
-                },
-                {
-                    binding: 1,
-                    resource: {
-                        buffer: this.nodeDataBuffer
-                    }
-                },
-                {
-                    binding: 2,
-                    resource: {
-                        buffer: this.edgeDataBuffer
-                    }
-                },
-            ]
-        });
-        this.nodeBindGroup = this.device.createBindGroup({
-            layout: this.nodePipeline.getBindGroupLayout(0),
-            entries: [
-                {
-                    binding: 0,
-                    resource: {
-                        buffer: this.viewBoxBuffer
-                    }
-                },
-                {
-                    binding: 1,
-                    resource: {
-                        buffer: this.nodeDataBuffer
-                    }
-                },
-            ]
-        });
-        this.edgeLength = edgeData.length;
-        this.nodeLength = nodeData.length / 4;
-        // this.terrainGenerator!.computeTerrain(this.nodeDataBuffer, undefined, undefined, this.rangeBuffer, this.nodeLength);
     };
     Renderer.prototype.setWidthFactor = function (widthFactor) {
         this.terrainGenerator.computeTerrain(undefined, widthFactor, undefined, this.rangeBuffer, this.nodeLength);
@@ -595,7 +657,7 @@ var Renderer = /** @class */ (function () {
     Renderer.prototype.runForceDirected = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                this.forceDirected.runForces(this.nodeDataBuffer, this.edgeDataBuffer, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 10000, 100, this.iterRef);
+                this.forceDirected.runForces(this.nodeDataBuffer, this.edgeDataBuffer, this.nodeLength, this.edgeLength, this.coolingFactor, this.idealLength, 1000, 300, this.iterRef, this.edgeList);
                 return [2 /*return*/];
             });
         });

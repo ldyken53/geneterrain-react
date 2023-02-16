@@ -29,9 +29,9 @@ struct Edges {
 @group(0) @binding(1) var<storage, read> nodes : Nodes;
 @group(0) @binding(2) var<storage, read> edges : Edges;
 @stage(vertex)
-fn main(@builtin(instance_index) index : u32, @location(0) position: vec2<f32>)-> VertexOutput {
+fn main(@builtin(instance_index) index : u32,  @builtin(vertex_index) vidx : u32)-> VertexOutput {
     var out : VertexOutput;
-    var node : Node = nodes.nodes[edges.edges[index + u32(position.x)]];
+    var node : Node = nodes.nodes[edges.edges[(u32(2.0) *index) + vidx]];
     var inv_zoom : f32 = uniforms.view_box.z - uniforms.view_box.x;
     var expected_x : f32 = 0.5 * (1.0 - inv_zoom); 
     var expected_y : f32 = 0.5 * (1.0 - inv_zoom);

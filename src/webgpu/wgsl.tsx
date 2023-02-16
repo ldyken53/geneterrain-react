@@ -303,10 +303,10 @@ export const  node_frag = `fn sigmoid(x: f32) -> f32 {
 
 @stage(fragment)
 fn main(@location(0) position: vec2<f32>, @location(1) @interpolate(flat) center: vec2<f32>) -> @location(0) vec4<f32> {
-    if (distance(position, center) > 0.005) {
+    if (distance(position, center) > 0.012) {
         discard;
     }
-    return vec4<f32>(0.0, 0.0, 0.0, 1.0 - sigmoid(16.0 * distance(position, center) * 200.0 - 12.0));
+    return vec4<f32>(0.2, 0.2, 0.2, 1.0 - sigmoid(16.0 * distance(position, center) * 50.0 - 12.0));
 }
 `;
 export const  edge_vert = `//this builtin(position) clip_position tells that clip_position is the value we want to use for our vertex position or clip position
@@ -340,9 +340,9 @@ struct Edges {
 @group(0) @binding(1) var<storage, read> nodes : Nodes;
 @group(0) @binding(2) var<storage, read> edges : Edges;
 @stage(vertex)
-fn main(@builtin(instance_index) index : u32, @location(0) position: vec2<f32>)-> VertexOutput {
+fn main(@builtin(instance_index) index : u32,  @builtin(vertex_index) vidx : u32)-> VertexOutput {
     var out : VertexOutput;
-    var node : Node = nodes.nodes[edges.edges[index + u32(position.x)]];
+    var node : Node = nodes.nodes[edges.edges[(u32(2.0) *index) + vidx]];
     var inv_zoom : f32 = uniforms.view_box.z - uniforms.view_box.x;
     var expected_x : f32 = 0.5 * (1.0 - inv_zoom); 
     var expected_y : f32 = 0.5 * (1.0 - inv_zoom);
@@ -354,7 +354,7 @@ fn main(@builtin(instance_index) index : u32, @location(0) position: vec2<f32>)-
 }`;
 export const  edge_frag = `@stage(fragment)
 fn main()->@location(0) vec4<f32>{
-    return vec4<f32>(0.0, 0.0, 0.0, 0.02);
+    return vec4<f32>(0.0, 0.0, 0.0, 0.20);
 }`;
 export const  compute_forces = `struct Node {
     value : f32;

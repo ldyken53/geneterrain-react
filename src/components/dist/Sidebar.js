@@ -76,10 +76,16 @@ var Constant = require("../constant");
 var react_csv_1 = require("react-csv");
 var xml_writer_1 = require("xml-writer");
 var d3 = require("d3");
+var greadibility_js_1 = require("../greadibility.js");
 var headers = [
     { label: "Node", key: "Node" },
     { label: "Edge", key: "Edge" },
     { label: "FPS", key: "FPS" },
+];
+var headerForLayout = [
+    { label: "iterationCount", key: "iterationCount" },
+    { label: "time", key: "time" },
+    { label: "renderTime", key: "renderTime" },
 ];
 var Sidebar = /** @class */ (function (_super) {
     __extends(Sidebar, _super);
@@ -96,7 +102,13 @@ var Sidebar = /** @class */ (function (_super) {
             jsonFormat: true,
             runBenchmark: false,
             FPSData: [],
-            d3timing: {}
+            d3timing: [],
+            mouseCapture: false,
+            mouseEvents: {
+                mouseDown: [],
+                mouseMove: [],
+                mouseUp: []
+            }
         };
         _this.handleSubmit = _this.handleSubmit.bind(_this);
         _this.readFiles = _this.readFiles.bind(_this);
@@ -111,9 +123,73 @@ var Sidebar = /** @class */ (function (_super) {
         _this.storeFPSResult = _this.storeFPSResult.bind(_this);
         // =========================================================
         _this.d3TimingStudy = _this.d3TimingStudy.bind(_this);
-        return _this;
         // this.randomDataGen_Computation = this.randomDataGen_Computation.bind(this);
+        //---------------------------------------------------------------------
+        _this.handleMouseDown = _this.handleMouseDown.bind(_this);
+        _this.handleMouseMove = _this.handleMouseMove.bind(_this);
+        _this.handleMouseUp = _this.handleMouseUp.bind(_this);
+        _this.mouseDown = _this.mouseDown.bind(_this);
+        _this.mouseMove = _this.mouseMove.bind(_this);
+        _this.mouseUp = _this.mouseUp.bind(_this);
+        return _this;
     }
+    Sidebar.prototype.mouseDown = function (event) {
+        console.log("i am down");
+        this.setState({
+            mouseEvents: __assign(__assign({}, this.state.mouseEvents), { mouseDown: __spreadArrays(this.state.mouseEvents.mouseDown, [event]) })
+        });
+    };
+    Sidebar.prototype.mouseUp = function (event) {
+        console.log.apply(console, this.state.mouseEvents.mouseUp);
+        this.setState({
+            mouseEvents: __assign(__assign({}, this.state.mouseEvents), { mouseUp: __spreadArrays(this.state.mouseEvents.mouseUp, [event]) })
+        });
+    };
+    Sidebar.prototype.mouseMove = function (event) {
+        this.setState({
+            mouseEvents: __assign(__assign({}, this.state.mouseEvents), { mouseMove: __spreadArrays(this.state.mouseEvents.mouseMove, [event]) })
+        });
+    };
+    Sidebar.prototype.handleMouseUp = function (event) {
+        event.stopPropogation();
+        this.setState({ mouseCapture: false });
+    };
+    Sidebar.prototype.handleMouseDown = function (event) {
+        event.stopPropogation();
+        var positionX = event.clientX;
+        var positionY = event.clientY;
+        console.log(positionX, positionY);
+        this.setState({ mouseCapture: true });
+    };
+    Sidebar.prototype.handleMouseMove = function (event) {
+        if (this.state.mouseCapture) {
+            var positionX = event.clientX;
+            var positionY = event.clientY;
+            console.log(positionX, positionY);
+        }
+    };
+    Sidebar.prototype.componentDidMount = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var canvasElement;
+            return __generator(this, function (_a) {
+                canvasElement = document.getElementsByTagName("canvas")[0];
+                if (canvasElement) {
+                    canvasElement.addEventListener("mousedown", this.mouseDown);
+                    canvasElement.addEventListener("mousemove", this.mouseMove);
+                    canvasElement.addEventListener("mouseup", this.mouseUp);
+                }
+                return [2 /*return*/];
+            });
+        });
+    };
+    Sidebar.prototype.componentWillUnmount = function () {
+        var canvasElement = document.getElementsByTagName("canvas")[0];
+        if (canvasElement) {
+            canvasElement.removeEventListener("mousedown", this.mouseDown);
+            canvasElement.removeEventListener("mousemove", this.mouseMove);
+            canvasElement.removeEventListener("mouseup", this.mouseUp);
+        }
+    };
     Sidebar.prototype.handleSubmit = function (event) {
         event.preventDefault();
         this.props.setNodeEdgeData(this.state.nodeData, this.state.edgeData);
@@ -171,6 +247,7 @@ var Sidebar = /** @class */ (function (_super) {
     // }
     Sidebar.prototype.d3TimingStudy = function (event) {
         return __awaiter(this, void 0, void 0, function () {
+            function createLinks(edges, nodes) { }
             var self, width, height, iterationCount, iterationMeasure, startTime, lastTime, totalTime, layoutCanvas, layoutDiv, context;
             return __generator(this, function (_a) {
                 event.preventDefault();
@@ -195,26 +272,85 @@ var Sidebar = /** @class */ (function (_super) {
                     return [2 /*return*/];
                 }
                 context.fillStyle = "white";
-                d3.json("./test_small_spec.json").then(function (data) {
+                d3.json("./sample_test_data/sample_data100_2000.json").then(function (data) {
                     console.log(data);
+                    var timeToFormatData = 0;
                     startTime = performance.now();
                     lastTime = startTime;
                     var simulation = d3
                         .forceSimulation(data.nodes)
-                        .force("charge", d3.forceManyBody().strength(-40))
+                        .force("charge", d3.forceManyBody().strength(-0.3))
                         .force("center", d3.forceCenter(width / 2, height / 2))
-                        .force("link", d3.forceLink(data.edges).distance(5).strength(2.0));
+                        .force("link", d3.forceLink(data.edges).distance(400).strength(2.0))
+                        .alphaDecay(0.02);
                     initGraph(data);
                     function initGraph(data) {
-                        console.log(data.edges);
+                        var _this = this;
                         simulation.on("tick", simulationUpdate);
-                        simulation.on("end", function () {
-                            var currentTime = performance.now();
-                            totalTime = currentTime - startTime;
-                            console.log("startTime", startTime);
-                            console.log("totalTime", totalTime);
-                            console.log("iterationMeasure", iterationMeasure);
-                        });
+                        simulation.on("end", function () { return __awaiter(_this, void 0, void 0, function () {
+                            var nodesFinal, extraTime, extraEnd, currentTime2, _a, totalAverageTime, layoutAverageTime, renderAverageTime;
+                            return __generator(this, function (_b) {
+                                switch (_b.label) {
+                                    case 0:
+                                        nodesFinal = simulation.nodes();
+                                        console.log(greadibility_js_1.greadability(data.nodes, data.edges));
+                                        extraTime = performance.now();
+                                        return [4 /*yield*/, self.props.setNodeEdgeData(self.state.nodeData, self.state.edgeData)];
+                                    case 1:
+                                        _b.sent();
+                                        extraEnd = performance.now();
+                                        currentTime2 = performance.now();
+                                        totalTime = currentTime2 - startTime;
+                                        _a = findAverage(self.state.d3timing), totalAverageTime = _a[0], layoutAverageTime = _a[1], renderAverageTime = _a[2];
+                                        console.log("totalAverageTime", totalAverageTime, "layoutAverageTime", layoutAverageTime, "averageTimetoRender", renderAverageTime);
+                                        console.log("totalTime", totalTime - timeToFormatData);
+                                        return [2 /*return*/];
+                                }
+                            });
+                        }); });
+                    }
+                    function formatData(nodesList, edgesList) {
+                        var nodes = [];
+                        var edges = [];
+                        var data = {
+                            nodes: nodes,
+                            edges: edges
+                        };
+                        var nodeCount = nodesList.length;
+                        data.nodes = Array(4 * nodeCount).fill(0);
+                        var maxX = 0;
+                        var maxY = 0;
+                        for (var i = 0; i < 4 * nodeCount; i = i + 4) {
+                            data.nodes[i] = 0;
+                            var nodeX = Math.abs(nodesList[i / 4].x);
+                            var nodeY = Math.abs(nodesList[i / 4].y);
+                            if (nodeX > maxX) {
+                                maxX = nodeX;
+                            }
+                            if (nodeY > maxY) {
+                                maxY = nodeY;
+                            }
+                            data.nodes[i + 3] = 1;
+                        }
+                        for (var i = 0; i < 4 * nodeCount; i = i + 4) {
+                            data.nodes[i + 1] = nodesList[i / 4].x / maxX;
+                            data.nodes[i + 2] = nodesList[i / 4].y / maxY;
+                        }
+                        data.edges = Array(2 * nodeCount * 20).fill(0);
+                        for (var i = 0; i < 2 * 20 * nodeCount; i = i + 2) {
+                            data.edges[i] = parseInt(edgesList[i / 2].source.name);
+                            data.edges[i + 1] = parseInt(edgesList[i / 2].target.name);
+                        }
+                        return data;
+                    }
+                    function findAverage(d3timing) {
+                        var totalAverageTime = d3timing.reduce(function (a, b) {
+                            return a + b.totalTime;
+                        }, 0) / d3timing.length;
+                        var renderAvergaeTime = d3timing.reduce(function (a, b) { return a + b.renderingTime; }, 0) / d3timing.length;
+                        var layoutAverageTime = d3timing.reduce(function (a, b) { return a + (b.totalTime - b.renderingTime); }, 0) /
+                            d3timing.length;
+                        return [totalAverageTime, layoutAverageTime, renderAvergaeTime];
                     }
                     function simulationUpdate() {
                         var currentTime = performance.now();
@@ -222,26 +358,66 @@ var Sidebar = /** @class */ (function (_super) {
                         iterationCount++;
                         iterationMeasure[iterationCount] = dt;
                         lastTime = currentTime;
-                        self.setState({
-                            d3timing: __assign(__assign({}, self.state.d3timing), { iterationCount: dt })
-                        });
+                        var renderingStartTime = performance.now();
                         context.save();
-                        context.strokeStyle = "#aaa";
+                        // context.strokeStyle = "#aaa";
                         context.clearRect(0, 0, width, height);
-                        data.edges.forEach(function (d) {
+                        data.edges.forEach(function (d, index) {
+                            if (index == 0) {
+                                console.log(d.source.x);
+                            }
                             context.beginPath();
+                            context.strokeStyle = "rgba(255, 0.0, 0.0, 0.4)";
                             context.moveTo(d.source.x, d.source.y);
                             context.lineTo(d.target.x, d.target.y);
                             context.stroke();
                         });
-                        data.nodes.forEach(function (d, i) {
+                        data.nodes.forEach(function (d) {
                             context.beginPath();
                             context.arc(d.x, d.y, 2, 0, 2 * Math.PI, true);
-                            context.fillStyle = d.col ? "red" : "black";
+                            context.fillStyle = d.col ? "black" : "rgba(100, 100.0, 100.0, 0.4)";
                             context.fill();
                         });
                         context.restore();
+                        var renderingEndTime = performance.now();
+                        var renderTime = renderingEndTime - renderingStartTime;
+                        self.setState({
+                            d3timing: __spreadArrays(self.state.d3timing, [
+                                {
+                                    iterationCount: iterationCount,
+                                    totalTime: dt,
+                                    renderingTime: renderTime
+                                },
+                            ])
+                        });
                     }
+                    // async function simulationUpdate() {
+                    //   let currentTime = performance.now();
+                    //   let formatStartTime = performance.now();
+                    //   let newData = formatData(data.nodes, data.edges);
+                    //   let formatStopTime = performance.now();
+                    //   let localtimeToFormatData = formatStopTime - formatStartTime;
+                    //   timeToFormatData += localtimeToFormatData;
+                    //   self.setState({ nodeData: newData.nodes });
+                    //   await self.props.setNodeEdgeData(newData.nodes, newData.edges);
+                    //   let renderTime = 0;
+                    //   let endTime = performance.now();
+                    //   // lastTime = currentTime;
+                    //   let dt = endTime - currentTime - localtimeToFormatData;
+                    //   iterationCount++;
+                    //   console.log(iterationCount, dt);
+                    //   iterationMeasure[iterationCount] = dt;
+                    //   self.setState({
+                    //     d3timing: [
+                    //       ...self.state.d3timing,
+                    //       {
+                    //         iterationCount: iterationCount,
+                    //         totalTime: dt,
+                    //         renderingTime: renderTime,
+                    //       },
+                    //     ],
+                    //   });
+                    // }
                 });
                 return [2 /*return*/];
             });
@@ -249,18 +425,15 @@ var Sidebar = /** @class */ (function (_super) {
     };
     Sidebar.prototype.runBenchmark = function (event) {
         return __awaiter(this, void 0, void 0, function () {
-            var nodeCounts, density, edgeCounts, stats, renderingCanvas, i, nCount, eCount, data;
+            var nodeCounts, density_1, edgeCounts, renderingCanvas, i, stats, nCount, eCount, data, e_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        _a.trys.push([0, 5, , 6]);
                         event.preventDefault();
-                        nodeCounts = [1e6];
-                        density = 20;
-                        edgeCounts = nodeCounts.map(function (n) { return n * density; });
-                        stats = stats_module_1["default"]();
-                        stats.showPanel(0);
-                        stats.dom.setAttribute("class", "status");
-                        document.body.appendChild(stats.dom);
+                        nodeCounts = [1e2, 1e3, 2e3, 5e3, 1e4];
+                        density_1 = 20;
+                        edgeCounts = nodeCounts.map(function (n) { return n * density_1; });
                         this.setState({ runBenchmark: true });
                         renderingCanvas = document.querySelectorAll("canvas")[0];
                         renderingCanvas.width = 500;
@@ -270,7 +443,11 @@ var Sidebar = /** @class */ (function (_super) {
                         i = 0;
                         _a.label = 1;
                     case 1:
-                        if (!(i < nodeCounts.length - 1)) return [3 /*break*/, 4];
+                        if (!(i < nodeCounts.length)) return [3 /*break*/, 4];
+                        stats = stats_module_1["default"]();
+                        stats.showPanel(0);
+                        stats.dom.setAttribute("class", "status");
+                        document.body.appendChild(stats.dom);
                         nCount = nodeCounts[i].toString();
                         eCount = edgeCounts[i].toString();
                         this.setState({ nodeCount: nCount });
@@ -293,7 +470,12 @@ var Sidebar = /** @class */ (function (_super) {
                         renderingCanvas.height = 800;
                         renderingCanvas.style.width = "800px";
                         renderingCanvas.style.height = "800px";
-                        return [2 /*return*/];
+                        return [3 /*break*/, 6];
+                    case 5:
+                        e_1 = _a.sent();
+                        console.log(e_1);
+                        return [3 /*break*/, 6];
+                    case 6: return [2 /*return*/];
                 }
             });
         });
@@ -332,28 +514,30 @@ var Sidebar = /** @class */ (function (_super) {
             data.nodes[i + 2] = Math.random();
             data.nodes[i + 3] = 1;
         }
-        var edgeHashMap = new Map();
         data.edges = Array(2 * edgeCount).fill(0);
         var pair;
         for (var i = 0; i < 2 * edgeCount; i = i + 2) {
-            do {
-                pair = this.generatePair(0, nodeCount);
-            } while (edgeHashMap.has(pair.source + "_" + pair.target));
-            edgeHashMap.set(pair.source + "_" + pair.target, true);
-            edgeHashMap.set(pair.target + "_" + pair.source, true);
+            pair = this.generatePair(0, nodeCount);
             data.edges[i] = pair.source;
             data.edges[i + 1] = pair.target;
         }
+        console.log("data generated");
         return data;
     };
     Sidebar.prototype.refresh = function (length) {
-        var nodes = [];
-        for (var i = 0; i < 4 * length; i = i + 4) {
-            nodes[i + 1] = Math.random();
-            nodes[i + 2] = Math.random();
+        try {
+            var nodes = [];
+            for (var i = 0; i < 4 * length; i = i + 4) {
+                nodes[i + 1] = Math.random();
+                nodes[i + 2] = Math.random();
+            }
+            this.setState({ nodeData: nodes });
+            this.props.setNodeEdgeData(nodes, this.state.edgeData);
+            // console.log("rendererd");
         }
-        this.setState({ nodeData: nodes });
-        this.props.setNodeEdgeData(nodes, this.state.edgeData);
+        catch (err) {
+            console.error(err);
+        }
     };
     Sidebar.prototype.storeFPSResult = function (nodeLength, edgeLength, fps) {
         nodeLength = nodeLength.toString();
@@ -371,6 +555,7 @@ var Sidebar = /** @class */ (function (_super) {
                     case 0:
                         nodeLength = data.nodes.length / 4;
                         edgeLength = data.edges.length / 2;
+                        console.log(nodeLength);
                         return [4 /*yield*/, this.runTest(nodeLength, edgeLength, stats)];
                     case 1:
                         _a.sent();
@@ -381,26 +566,37 @@ var Sidebar = /** @class */ (function (_super) {
     };
     Sidebar.prototype.runTest = function (nodeLength, edgeLength, stats) {
         return __awaiter(this, void 0, void 0, function () {
-            var requestId, refreshing, FPS_Array, FPS;
+            var requestId_1, count, refreshing_1, FPS_Array, FPS, err_1;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        refreshing = function () {
+                        _a.trys.push([0, 2, , 3]);
+                        count = 0;
+                        refreshing_1 = function () {
                             stats.begin();
+                            // console.log("intiital count", count);
+                            // count++;
                             _this.refresh(nodeLength);
+                            // console.log("final count", count);
                             stats.end();
-                            requestId = requestAnimationFrame(refreshing);
+                            requestId_1 = requestAnimationFrame(refreshing_1);
                         };
-                        refreshing();
+                        refreshing_1();
                         return [4 /*yield*/, this.sleep(Constant.TIME_FOR_EACH_TEST)];
                     case 1:
                         _a.sent();
                         FPS_Array = stats.getFPSHistory();
+                        console.log(FPS_Array);
                         FPS = FPS_Array.reduce(function (a, b) { return a + b; }, 0) / FPS_Array.length;
                         this.storeFPSResult(nodeLength, edgeLength, FPS);
-                        cancelAnimationFrame(requestId);
+                        cancelAnimationFrame(requestId_1);
                         return [2 /*return*/];
+                    case 2:
+                        err_1 = _a.sent();
+                        console.error(err_1);
+                        return [3 /*break*/, 3];
+                    case 3: return [2 /*return*/];
                 }
             });
         });
@@ -430,6 +626,7 @@ var Sidebar = /** @class */ (function (_super) {
                     adjacencyMatrix[nodeIDToIndex[parts[1]]][nodeIDToIndex[parts[0]]] += 1;
                 }
             }
+            console.log(edgeData);
             _this.setState({ edgeData: edgeData });
             var laplacian = mathjs_1.subtract(mathjs_1.sparse(degreeMatrix), mathjs_1.sparse(adjacencyMatrix));
             console.log(laplacian);
@@ -477,6 +674,7 @@ var Sidebar = /** @class */ (function (_super) {
         var files = event.target.files;
         var jsonReader = new FileReader();
         var nodeData = [];
+        var nodeDataFormat2 = [];
         var edgeData = [];
         jsonReader.onload = function (event) {
             var graph = JSON.parse(jsonReader.result);
@@ -484,9 +682,13 @@ var Sidebar = /** @class */ (function (_super) {
             for (var i = 0; i < graph.nodes.length; i++) {
                 if (graph.nodes[i].x) {
                     nodeData.push(0.0, graph.nodes[i].x, graph.nodes[i].y, 1.0);
+                    nodeDataFormat2.push([graph.nodes[i].x, graph.nodes[i].y, i]);
                 }
                 else {
-                    nodeData.push(0.0, Math.random(), Math.random(), 1.0);
+                    var positionX = Math.random();
+                    var positionY = Math.random();
+                    nodeData.push(0.0, positionX, positionY, 1.0);
+                    nodeDataFormat2.push([positionX, positionY, i]);
                 }
             }
             for (var i = 0; i < graph.edges.length; i++) {
@@ -495,6 +697,7 @@ var Sidebar = /** @class */ (function (_super) {
                 edgeData.push(source, target);
             }
             _this.setState({ nodeData: nodeData, edgeData: edgeData });
+            console.log(edgeData);
         };
         jsonReader.readAsText(files[0]);
     };
@@ -561,6 +764,7 @@ var Sidebar = /** @class */ (function (_super) {
             react_1["default"].createElement(react_csv_1.CSVLink, { data: this.state.FPSData }, "Download FPS data"),
             react_1["default"].createElement("hr", null),
             react_1["default"].createElement(react_bootstrap_1.Button, { className: "d3Timing_test", onClick: this.d3TimingStudy }, "Run D3"),
+            react_1["default"].createElement(react_csv_1.CSVLink, { data: this.state.d3timing, header: headerForLayout }, "Download FPS data"),
             react_1["default"].createElement(react_bootstrap_1.Form, { style: { color: "white" }, onSubmit: this.handleSubmit },
                 react_1["default"].createElement(react_bootstrap_1.Form.Group, { controlId: "formFile", className: "mt-3 mb-3" },
                     react_1["default"].createElement(react_bootstrap_1.Form.Check, { defaultChecked: true, onClick: function () {
@@ -627,6 +831,9 @@ var Sidebar = /** @class */ (function (_super) {
                 react_1["default"].createElement("br", null),
                 react_1["default"].createElement(react_bootstrap_1.Button, { onClick: function (e) { return _this.applySpectral(); } }, "Apply Spectral Layout"),
                 react_1["default"].createElement("br", null),
+                react_1["default"].createElement(react_bootstrap_1.Button, { onClick: function (e) {
+                        console.log(_this.state.mouseEvents);
+                    } }, "Show Event"),
                 react_1["default"].createElement(react_bootstrap_1.Button, { onClick: function (e) { return _this.props.runForceDirected(); } }, "Run Force Directed Layout"),
                 react_1["default"].createElement("br", null),
                 react_1["default"].createElement(react_bootstrap_1.Button, { onClick: function (e) { return _this.onSaveXML(); } }, "Save Terrain to XML"))));
